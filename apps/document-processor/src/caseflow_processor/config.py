@@ -96,3 +96,27 @@ class Settings(BaseModel):
             notification_role_arn=values['TEXTRACT_NOTIFICATION_ROLE_ARN'],
             region=values.get('AWS_REGION', REGION),
         )
+
+
+class CompletionSettings(Settings):
+    completion_queue_arn: str
+
+    @model_validator(mode='after')
+    def validate_completion_queue(self) -> Self:
+        project_id = self.queue_arn.split(':')[4]
+        pattern = rf'arn:aws:sqs:{REGION}:{project_id}:[A-Za-z0-9_-]+'
+        if (
+            not re.fullmatch(pattern, self.completion_queue_arn)
+            or self.completion_queue_arn == self.queue_arn
+        ):
+            raise ValueError('A separate completion queue in the same project is required')
+        return self
+
+    @classmethod
+    def from_environment(cls, environment: Mapping[str, str] | None = None) -> Self:
+        values = os.environ if environment is None else environment
+        settings = Settings.from_environment(values)
+        return cls(
+            **settings.model_dump(),
+            completion_queue_arn=values['TEXTRACT_COMPLETION_QUEUE_ARN'],
+        )

@@ -8,7 +8,7 @@ from ..models import (
     ArtifactReference,
     Claim,
     ClaimedJob,
-    Extraction,
+    DocumentText,
     Preparation,
     claim_adapter,
     preparation_adapter,
@@ -44,6 +44,11 @@ class PostgresJobStore:
             self._call('select caseflow.claim_document_processing(%s)', (job_id,))
         )
 
+    def claim_collection(self, job_id: str, provider_id: str) -> Claim:
+        return claim_adapter.validate_python(
+            self._call('select caseflow.claim_document_collection(%s,%s)', (job_id, provider_id))
+        )
+
     def renew(self, job: ClaimedJob) -> bool:
         return (
             self._call(
@@ -73,7 +78,7 @@ class PostgresJobStore:
     def complete(
         self,
         job: ClaimedJob,
-        result: Extraction,
+        result: DocumentText,
         artifact_set: str,
         artifacts: dict[str, ArtifactReference],
     ) -> bool:

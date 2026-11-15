@@ -17,6 +17,10 @@ PARSE_TIMEOUT_SECONDS = 30
 PARSE_MEMORY_BYTES = 512 * 1024 * 1024
 MAX_BATCH_SIZE = 10
 MAX_MESSAGE_BYTES = 1024
+MAX_NOTIFICATION_BYTES = 16 * 1024
+MAX_OCR_RESPONSES = 100
+OCR_RESPONSE_BLOCKS = 1000
+OCR_COLLECTION_SECONDS = 120
 IO_CHUNK_BYTES = 64 * 1024
 MIN_CALL_TIME_SECONDS = 45
 
@@ -35,6 +39,9 @@ class ExtractionMethod(StrEnum):
 class FailureCode(StrEnum):
     INVALID_DOCUMENT = 'invalid_document'
     LIMIT_EXCEEDED = 'limit_exceeded'
+    OCR_UNAVAILABLE = 'ocr_unavailable'
+    OCR_INCOMPLETE = 'ocr_incomplete'
+    OCR_RESULTS_EXPIRED = 'ocr_results_expired'
 
 
 class ClaimOutcome(StrEnum):

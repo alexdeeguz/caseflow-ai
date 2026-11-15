@@ -13,10 +13,10 @@ Use fictional data for demonstrations and testing.
 - **Documents:** direct S3 uploads with server verification, a paginated library,
   authorized downloads, and reversible removal.
 - **Processing foundation:** atomic job/dispatch creation, an opt-in API dispatcher
-  for SQS, restricted processor database functions, and a Python extraction worker.
+  for SQS, restricted processor database functions, and Python extraction/completion workers.
 
-The Python worker is implemented locally. Deployment, Textract completion handling,
-processing API/UI, operational monitoring, and file previews remain pending. Keep continuous dispatching disabled until both consumers and recovery are ready.
+The Python workers are implemented and tested locally. Deployment, processing API/UI,
+operational monitoring, and file previews remain pending. Keep continuous dispatching disabled until both consumers and recovery are ready.
 
 ## Stack and structure
 
@@ -24,7 +24,7 @@ processing API/UI, operational monitoring, and file previews remain pending. Kee
 | -------------------------------------------------- | ---------------------------------------------------------------------------- |
 | [apps/web](apps/web)                               | Next.js, React, and Tailwind frontend with Microsoft Entra authentication    |
 | [apps/api](apps/api)                               | Fastify API with PostgreSQL authorization, S3 storage, and an SQS dispatcher |
-| [apps/document-processor](apps/document-processor) | Python worker for native PDF extraction and asynchronous Textract starts     |
+| [apps/document-processor](apps/document-processor) | Python workers for native text, Textract starts, and OCR completion          |
 | [packages/schemas](packages/schemas)               | Handwritten shared Zod contracts, constants, and TypeScript types            |
 | [supabase](supabase)                               | PostgreSQL migrations, local configuration, and fictional seed data          |
 | [docs](docs)                                       | Setup guides, feature behavior, and technical references                     |
@@ -90,14 +90,15 @@ individually, integration-test prerequisites, and dependency maintenance.
 
 ## Documentation
 
-| Guide                                              | Contents                                                                             |
-| -------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| [Local development](docs/development.md)           | Docker/PostgreSQL setup, verification, code organization, and dependency maintenance |
-| [Hosted database](docs/hosted-database.md)         | Migrations, TLS, Session pooler credentials, environment switching, and recovery     |
-| [Authentication](docs/authentication.md)           | Entra registration, token validation, session behavior, and sign-in verification     |
-| [Users and cases](docs/users-and-cases.md)         | Permission matrix, Super Admin setup, assignments, editing, and archiving            |
-| [API reference](docs/api.md)                       | Route organization, request/response contracts, pagination, and errors               |
-| [Document management](docs/document-management.md) | S3 configuration, uploads, library, downloads, removal, and consistency rules        |
-| [Document processing](docs/document-processing.md) | Job/dispatch records, dispatcher credentials, SQS permissions, and configuration     |
-| [Processor database](docs/processor-database.md)   | Worker functions, leases, OCR allowance, artifacts, cancellation, and credentials    |
-| [Python processor](docs/python-processor.md)       | Extraction, OCR decisions, resource limits, configuration, and verification          |
+| Guide                                              | Contents                                                                              |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| [Local development](docs/development.md)           | Docker/PostgreSQL setup, verification, code organization, and dependency maintenance  |
+| [Hosted database](docs/hosted-database.md)         | Migrations, TLS, Session pooler credentials, environment switching, and recovery      |
+| [Authentication](docs/authentication.md)           | Entra registration, token validation, session behavior, and sign-in verification      |
+| [Users and cases](docs/users-and-cases.md)         | Permission matrix, Super Admin setup, assignments, editing, and archiving             |
+| [API reference](docs/api.md)                       | Route organization, request/response contracts, pagination, and errors                |
+| [Document management](docs/document-management.md) | S3 configuration, uploads, library, downloads, removal, and consistency rules         |
+| [Document processing](docs/document-processing.md) | Job/dispatch records, dispatcher credentials, SQS permissions, and configuration      |
+| [Processor database](docs/processor-database.md)   | Worker functions, leases, OCR allowance, artifacts, cancellation, and credentials     |
+| [Python processor](docs/python-processor.md)       | Extraction, OCR decisions, resource limits, configuration, and verification           |
+| [Textract completion](docs/textract-completion.md) | Notification validation, result collection, artifact format, and publication recovery |

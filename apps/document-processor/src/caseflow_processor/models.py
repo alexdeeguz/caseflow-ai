@@ -168,9 +168,16 @@ claim_adapter = TypeAdapter(Annotated[Claim, Field(discriminator='outcome')])
 preparation_adapter = TypeAdapter(Annotated[Preparation, Field(discriminator='outcome')])
 
 
+class TextLine(Model):
+    text: str
+    source_block_id: str
+    confidence: Annotated[float, Field(strict=True, ge=0, le=100, allow_inf_nan=False)] | None
+
+
 class PageText(Model):
     page_number: Annotated[StrictInt, Field(ge=1, le=MAX_PDF_PAGES)]
     text: str
+    lines: list[TextLine] | None = None
 
 
 class Extraction(Model):
@@ -186,6 +193,18 @@ class Extraction(Model):
                 raise ValueError('Native results must contain every page in order')
         elif self.pages:
             raise ValueError('OCR decisions cannot publish partial native text')
+        return self
+
+
+class DocumentText(Model):
+    method: ExtractionMethod
+    page_count: PageCount
+    pages: list[PageText]
+
+    @model_validator(mode='after')
+    def check_pages(self) -> Self:
+        if [page.page_number for page in self.pages] != list(range(1, self.page_count + 1)):
+            raise ValueError('Published results must contain every page in order')
         return self
 
 

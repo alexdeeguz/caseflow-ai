@@ -4,7 +4,15 @@ from tempfile import TemporaryDirectory
 from ..config import Settings
 from ..constants import ClaimOutcome, ExtractionMethod, ProcessingStage
 from ..errors import DocumentError, RetryableError
-from ..models import ClaimedJob, Extraction, JobState, OcrRequest, PreparedOcr, ProcessingMessage
+from ..models import (
+    ClaimedJob,
+    DocumentText,
+    Extraction,
+    JobState,
+    OcrRequest,
+    PreparedOcr,
+    ProcessingMessage,
+)
 from ..ports import Checkpoint, DocumentParser, JobStore, ObjectStorage, OcrProvider
 from .artifacts import ArtifactWriter
 
@@ -77,10 +85,11 @@ class Processor:
     def _publish_native_result(
         self, job: ClaimedJob, result: Extraction, checkpoint: Checkpoint
     ) -> None:
-        artifact_set, references = self._artifacts.write(job, result, checkpoint)
+        document = DocumentText.model_validate(result.model_dump(by_alias=True))
+        artifact_set, references = self._artifacts.write(job, document, checkpoint)
         checkpoint()
 
-        if not self._store.complete(job, result, artifact_set, references):
+        if not self._store.complete(job, document, artifact_set, references):
             raise RetryableError('Job publication was rejected')
 
     def _prepare_ocr(self, job: ClaimedJob, page_count: int, checkpoint: Checkpoint) -> None:

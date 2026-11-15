@@ -7,23 +7,26 @@ from .models import (
     ArtifactReference,
     Claim,
     ClaimedJob,
+    DocumentText,
     Extraction,
     OcrRequest,
     Preparation,
 )
+from .ocr.models import CollectedOcr
 
 Checkpoint = Callable[[], None]
 
 
 class JobStore(Protocol):
     def claim(self, job_id: str) -> Claim: ...
+    def claim_collection(self, job_id: str, provider_id: str) -> Claim: ...
     def renew(self, job: ClaimedJob) -> bool: ...
     def prepare(self, job: ClaimedJob, pages: int, topic: str, role: str) -> Preparation: ...
     def bind(self, job: ClaimedJob, provider_id: str) -> bool: ...
     def complete(
         self,
         job: ClaimedJob,
-        result: Extraction,
+        result: DocumentText,
         artifact_set: str,
         artifacts: dict[str, ArtifactReference],
     ) -> bool: ...
@@ -41,3 +44,7 @@ class OcrProvider(Protocol):
 
 class DocumentParser(Protocol):
     def extract(self, path: Path, content_type: str) -> Extraction: ...
+
+
+class OcrResults(Protocol):
+    def collect(self, job: ClaimedJob, checkpoint: Checkpoint) -> CollectedOcr: ...

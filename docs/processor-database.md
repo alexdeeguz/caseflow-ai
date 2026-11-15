@@ -59,6 +59,14 @@ response with `stale`/`terminal`. Boolean mutations return false for a stale lea
 terminal job. A false result must never be interpreted as permission to publish.
 Invalid input and mismatched provider/request parameters raise stable database errors.
 
+The additive `20261115184408_textract_completion_correlation.sql` migration verifies
+provider IDs before returning `terminal` for completion claims. A saved OCR intent
+with no provider receipt returns `awaiting_binding` while still active. A job without
+an OCR intent, an unbound terminal job, or a mismatched provider ID raises
+`PROCESSING_CONFLICT`; the notification remains eligible for retry/DLQ investigation.
+This replacement preserves rows, RLS, existing function signatures, and restricted grants.
+Apply it after the processor migration and before enabling the completion consumer.
+
 Leases last 180 seconds. Extraction and collection each allow five claims. A transient
 external failure can leave the lease to expire and return the SQS message for retry;
 the terminal failure function is for failures that should stop the job. The database

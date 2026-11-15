@@ -2,7 +2,7 @@
 
 [Back to README](../README.md)
 
-The database foundation, API dispatcher, and processor database interface are implemented. The Python extraction worker is implemented locally; the Textract completion handler, deployment, processing API/UI, and operational monitoring remain pending. Keep continuous dispatching disabled until the consumer is ready.
+The database foundation, API dispatcher, and processor database interface are implemented. The Python extraction and Textract completion workers are implemented and tested locally; deployment, processing API/UI, and operational monitoring remain pending. Keep continuous dispatching disabled until the consumer is ready.
 
 - [Job and dispatch records](#job-and-dispatch-records)
 - [Processor database](#processor-database)
@@ -77,8 +77,10 @@ PostgreSQL before applying it to the explicitly selected hosted project.
 The worker validates queue messages, verifies the saved S3 source version/checksum,
 extracts native PDF text in a bounded subprocess, and starts OCR through saved,
 idempotent requests. [Python processor setup](python-processor.md) covers its
-configuration, limits, tests, and remaining activation prerequisites. The completion
-consumer and reconciliation remain separate work; no worker is activated automatically.
+configuration, limits, tests, and remaining activation prerequisites. The
+[Textract completion consumer](textract-completion.md) collects complete OCR results and
+publishes immutable artifacts. Deployment and reconciliation remain separate work;
+no worker is activated automatically.
 
 ## API processing dispatcher
 

@@ -1,109 +1,16 @@
-import base64
-import hashlib
-import os
-from pathlib import Path
 from unittest.mock import Mock
-from uuid import uuid4
 
 import psycopg
 import pytest
+from database_helpers import fake_storage, new_job
 from factories import make_pdf
-from psycopg import sql
-from psycopg.conninfo import conninfo_to_dict, make_conninfo
 
-from caseflow_processor.adapters.database import PostgresJobStore
 from caseflow_processor.errors import RetryableError
 from caseflow_processor.extraction.bounded import BoundedParser
-from caseflow_processor.models import ArtifactReference, ProcessingMessage
+from caseflow_processor.models import ProcessingMessage
 from caseflow_processor.services.processor import Processor
 
 pytestmark = pytest.mark.integration
-ROOT = Path(__file__).resolve().parents[3]
-
-
-@pytest.fixture(scope='module')
-def database(request):
-    url = os.environ.get('PROCESSOR_TEST_DATABASE_URL')
-    if not url:
-        if request.config.getoption('--require-database'):
-            pytest.fail('PROCESSOR_TEST_DATABASE_URL is required for database verification')
-        pytest.skip('Set PROCESSOR_TEST_DATABASE_URL to a disposable local PostgreSQL server')
-    parameters = conninfo_to_dict(url)
-    assert parameters.get('host') in {'localhost', '127.0.0.1', '::1'}
-    assert parameters.get('dbname') == 'postgres'
-    name = 'caseflow_test_' + uuid4().hex
-    login = 'processor_test_' + uuid4().hex
-    password = uuid4().hex
-    owner = None
-    with psycopg.connect(url, autocommit=True) as operator:
-        operator.execute(sql.SQL('create database {}').format(sql.Identifier(name)))
-        try:
-            owner = psycopg.connect(make_conninfo(url, dbname=name), autocommit=True)
-            for migration in sorted((ROOT / 'supabase/migrations').glob('*.sql')):
-                owner.execute(migration.read_text(), prepare=False)
-            owner.execute(
-                sql.SQL(
-                    'create role {} login inherit nosuperuser nocreatedb nocreaterole '
-                    'noreplication nobypassrls password {}'
-                ).format(sql.Identifier(login), sql.Literal(password))
-            )
-            owner.execute(
-                sql.SQL('grant caseflow_processor to {} with inherit true, set false').format(
-                    sql.Identifier(login)
-                )
-            )
-            runtime_url = make_conninfo(url, dbname=name, user=login, password=password)
-            yield owner, PostgresJobStore(runtime_url), runtime_url
-        finally:
-            if owner:
-                owner.close()
-            operator.execute(sql.SQL('drop database {}').format(sql.Identifier(name)))
-            operator.execute(sql.SQL('drop role if exists {}').format(sql.Identifier(login)))
-
-
-def new_job(owner, settings, data):
-    user, case, document = (str(uuid4()) for _ in range(3))
-    checksum = base64.b64encode(hashlib.sha256(data).digest()).decode()
-    with owner.transaction():
-        owner.execute(
-            'insert into caseflow.users(id,tenant_id,subject,display_name,role) values '
-            "(%s,%s,%s,'Fictional tester','super_admin')",
-            (user, str(uuid4()), user),
-        )
-        owner.execute(
-            'insert into caseflow.cases(id,title,client_name,summary,created_by) '
-            "values (%s,'Fictional processor test','Fictional client','',%s)",
-            (case, user),
-        )
-        owner.execute(
-            """insert into caseflow.documents
-          (id,case_id,uploaded_by,filename,content_type,size_bytes,status,storage_bucket,
-           storage_environment,object_version_id,uploaded_at,checksum_sha256,upload_request_id)
-          values (%s,%s,%s,'fixture.pdf','application/pdf',%s,'available',%s,
-                 'dev','original-version',now(),%s,gen_random_uuid())""",
-            (document, case, user, len(data), settings.bucket, checksum),
-        )
-        job_id = owner.execute(
-            'select caseflow.enqueue_document_processing(%s,%s,null)', (document, user)
-        ).fetchone()[0]
-    return str(job_id), document, case
-
-
-def fake_storage(data):
-    storage = Mock()
-    storage.download.side_effect = lambda job, path, deadline: path.write_bytes(data)
-
-    def upload(bucket, key, payload):
-        return ArtifactReference.model_validate(
-            {
-                'versionId': str(uuid4()),
-                'sizeBytes': len(payload),
-                'checksumSha256': base64.b64encode(hashlib.sha256(payload).digest()).decode(),
-            }
-        )
-
-    storage.put.side_effect = upload
-    return storage
 
 
 def test_native_worker_real_restricted_login(database, settings, tmp_path):

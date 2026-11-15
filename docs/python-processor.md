@@ -4,8 +4,9 @@
 
 The extraction worker is implemented in `apps/document-processor`. It consumes
 processing jobs, publishes native PDF text, and starts asynchronous Textract OCR.
-It is not deployed or connected to a queue yet. The OCR completion consumer,
-reconciliation, processing API/UI, and operational monitoring are separate work.
+The completion worker also collects Textract results and publishes OCR artifacts.
+Neither worker is deployed or connected to a queue yet. Reconciliation, processing
+API/UI, and operational monitoring are separate work.
 Keep continuous dispatching disabled until those deployment prerequisites are ready.
 
 ## Structure and local tooling
@@ -14,7 +15,9 @@ Keep continuous dispatching disabled until those deployment prerequisites are re
 | ---------------------------------------- | -------------------------------------------------------------------------------- |
 | `handlers/processing.py`                 | Validate the SQS envelope and return partial batch failures                      |
 | `services/processor.py`                  | Coordinate claims, extraction, OCR starts, and publication                       |
-| `services/artifacts.py`                  | Write immutable text and manifest artifacts                                      |
+| `handlers/completion.py`                 | Validate raw SNS completion messages delivered by SQS                            |
+| `services/collector.py`, `ocr/`          | Collect complete OCR results and preserve page/line provenance                   |
+| `services/artifacts.py`                  | Write immutable native/OCR text, raw OCR, and manifest artifacts                 |
 | `adapters/`                              | Parameterized PostgreSQL calls, versioned S3 operations, and Textract            |
 | `extraction/`                            | Conservative PDF/image inspection in a bounded subprocess                        |
 | `models.py`, `constants.py`, `config.py` | Validated contracts, limits, and server configuration                            |
@@ -168,17 +171,19 @@ deployment secret configuration; never commit credentials.
 | `PROCESSOR_DATABASE_URL`                                     | Separate processor login, transaction pooler port 6543, `sslmode=verify-full`, trusted CA path |
 | `PROCESSOR_QUEUE_ARN`                                        | Only the main processing queue may invoke this handler                                         |
 | `PROCESSOR_STORAGE_BUCKET` / `PROCESSOR_STORAGE_ENVIRONMENT` | Restrict the trusted snapshot to this workload's storage                                       |
+| `TEXTRACT_COMPLETION_QUEUE_ARN`                              | Required by the completion handler; separate standard queue in the same project/Region         |
 | `TEXTRACT_NOTIFICATION_TOPIC_ARN`                            | Existing `AmazonTextract-` SNS topic                                                           |
 | `TEXTRACT_NOTIFICATION_ROLE_ARN`                             | Existing Textract notification role                                                            |
 | `AWS_REGION`                                                 | `us-east-2`                                                                                    |
 
-The eventual handler is `caseflow_processor.handlers.processing.handler`. The public
+The extraction handler is `caseflow_processor.handlers.processing.handler`; the
+completion handler is `caseflow_processor.handlers.completion.handler`. The public
 CA file must be packaged/mounted in the deployment, and the restricted database
 password supplied through the deployment secret store. Boto3 uses the default
 credential chain; deployed code uses its execution role.
 
-Before activation, apply the reviewed processor migration, provision the restricted
-login, implement the completion consumer, and configure Lambda IAM, TLS/secrets,
+Before activation, apply the reviewed processor and completion-correlation migrations,
+provision the restricted login, and configure Lambda IAM, TLS/secrets,
 timeouts, concurrency, and queue triggers. Native artifact writes need narrowly
 scoped `s3:PutObject` and `s3:GetObjectVersion`; source reads need version access.
 Textract starts need text-detection permission and scoped `iam:PassRole`. No additional
@@ -186,6 +191,7 @@ AWS permissions or resources are created by installing or testing this applicati
 
 ## Related guides
 
+- [Textract completion and artifact format](textract-completion.md)
 - [Processor database and function contracts](processor-database.md)
 - [Processing foundation and dispatcher](document-processing.md)
 - [Hosted database](hosted-database.md)

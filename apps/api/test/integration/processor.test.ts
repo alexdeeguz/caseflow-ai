@@ -191,9 +191,10 @@ test('processor database: restricted leases, OCR reservations, results and cance
       async () => {
         const job = await newJob();
         const first = await claim(job.id);
-        assert.equal((await collect(job.id, 'provider-one')).outcome, 'awaiting_binding');
+        await assert.rejects(collect(job.id, 'provider-one'), /PROCESSING_CONFLICT/);
         await assert.rejects(bind(job.id, first.leaseToken, 'provider-one'), /PROCESSING_CONFLICT/);
         const prepared = await prepare(job.id, first.leaseToken);
+        assert.equal((await collect(job.id, 'provider-one')).outcome, 'awaiting_binding');
         assert.equal(prepared.request.clientRequestToken, job.id);
         assert.equal(prepared.request.versionId, 'original-version');
         assert.deepEqual(await prepare(job.id, first.leaseToken), prepared);
@@ -222,6 +223,7 @@ test('processor database: restricted leases, OCR reservations, results and cance
         await assert.rejects(complete(job.id, next.leaseToken, 'ocr', 3), /PROCESSING_CONFLICT/);
         assert.equal(await complete(job.id, next.leaseToken, 'ocr'), true);
         assert.equal((await collect(job.id, 'provider-one')).outcome, 'terminal');
+        await assert.rejects(collect(job.id, 'wrong-provider'), /PROCESSING_CONFLICT/);
         const reservations = await db.owner.query(
           'select * from caseflow.processing_ocr_reservations where job_id=$1',
           [job.id],
