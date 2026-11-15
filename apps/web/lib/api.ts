@@ -1,55 +1,92 @@
+import { ErrorCode, userSchema } from '@caseflow/schemas';
+
 import { getPublicConfig } from './config';
 
-export interface DemoIdentity {
-  subject: string;
-  tenantId: string;
-  name: string | null;
-  access: 'demo';
+export type Parser<T> = { parse(value: unknown): T };
+
+export class ApiError extends Error {
+  constructor(
+    public status: number,
+    public code: string,
+    message: string,
+  ) {
+    super(message);
+  }
 }
 
-export async function fetchIdentity(accessToken: string): Promise<DemoIdentity> {
-  const { apiOrigin } = getPublicConfig();
+export async function apiRequest<T>(
+  accessToken: string,
+  path: string,
+  schema: Parser<T>,
+  options: RequestInit = {},
+): Promise<T> {
+  if (!path.startsWith('/') || path.startsWith('//')) {
+    throw new Error('Invalid API path.');
+  }
+
   let response: Response;
+
   try {
-    response = await fetch(`${apiOrigin}/me`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
+    response = await fetch(`${getPublicConfig().apiOrigin}${path}`, {
+      ...options,
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+      },
       cache: 'no-store',
       redirect: 'error',
-      signal: AbortSignal.timeout(10000),
+      signal: options.signal
+        ? AbortSignal.any([options.signal, AbortSignal.timeout(10000)])
+        : AbortSignal.timeout(10000),
     });
   } catch (error) {
-    if (error instanceof Error && (error.name === 'TimeoutError' || error.name === 'AbortError')) {
+    if (options.signal?.aborted) {
+      throw new DOMException('Request cancelled', 'AbortError');
+    }
+
+    if (error instanceof Error && ['TimeoutError', 'AbortError'].includes(error.name)) {
       throw new Error('The server took too long to respond. Please try again.');
     }
+
     throw new Error('Unable to reach CaseFlow. Please try again shortly.');
   }
+
   if (!response.ok) {
+    let code: string = ErrorCode.RequestFailed;
+
+    try {
+      const body = await response.json();
+
+      if (typeof body?.code === 'string') {
+        code = body.code;
+      }
+    } catch {
+      /* Non-JSON error responses use the generic status message. */
+    }
+
     const messages: Record<number, string> = {
-      401: 'The API could not verify your sign-in. Sign out and try again.',
-      403: 'Your account does not have the required permission. Please contact the demo owner.',
-      503: 'Microsoft verification is temporarily unavailable. Try again shortly.',
+      400: 'Check the supplied values.',
+      401: 'Your session could not be verified. Please sign in again.',
+      403:
+        code === ErrorCode.AccountDisabled
+          ? 'Your account is disabled. Contact an administrator.'
+          : 'You do not have permission for this action.',
+      404: 'This item is unavailable or you no longer have access.',
+      503: 'CaseFlow is temporarily unavailable. Please try again.',
     };
-    throw new Error(messages[response.status] ?? 'The API request failed. Please try again.');
+
+    throw new ApiError(
+      response.status,
+      code,
+      messages[response.status] ?? 'The API request failed. Please try again.',
+    );
   }
-  let data: unknown;
+
   try {
-    data = await response.json();
+    return schema.parse(await response.json());
   } catch {
     throw new Error('The API returned an unexpected response.');
   }
-  if (
-    typeof data !== 'object' ||
-    data === null ||
-    !('subject' in data) ||
-    typeof data.subject !== 'string' ||
-    !('tenantId' in data) ||
-    typeof data.tenantId !== 'string' ||
-    !('name' in data) ||
-    (data.name !== null && typeof data.name !== 'string') ||
-    !('access' in data) ||
-    data.access !== 'demo'
-  ) {
-    throw new Error('The API returned an unexpected response.');
-  }
-  return { subject: data.subject, tenantId: data.tenantId, name: data.name, access: data.access };
 }
+
+export const fetchIdentity = (token: string) => apiRequest(token, '/me', userSchema);

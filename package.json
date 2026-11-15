@@ -13,15 +13,26 @@
   },
   "packageManager": "npm@11.12.1",
   "scripts": {
-    "dev": "concurrently --kill-others --names web,api \"npm run dev:web\" \"npm run dev:api\"",
+    "dev": "concurrently --kill-others --names schemas,web,api \"npm run dev -w @caseflow/schemas\" \"npm run dev:web\" \"npm run dev:api\"",
     "dev:web": "npm run dev -w @caseflow/web",
     "dev:api": "npm run dev -w @caseflow/api",
-    "build": "npm run build --workspaces --if-present",
+    "build": "npm run build -w @caseflow/schemas && npm run build -w @caseflow/api && npm run build -w @caseflow/web",
     "lint": "eslint . --max-warnings=0",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "npm run test --workspaces --if-present"
+    "test": "npm run test --workspaces --if-present",
+    "db:start": "supabase start",
+    "db:stop": "supabase stop",
+    "db:status": "supabase status",
+    "predev": "npm run build -w @caseflow/schemas",
+    "pretest": "npm run build -w @caseflow/schemas",
+    "pretypecheck": "npm run build -w @caseflow/schemas",
+    "test:integration": "npm run build -w @caseflow/schemas && npm run test:integration -w @caseflow/api",
+    "db:migrate": "supabase migration up",
+    "operator:role": "npm run operator:role -w @caseflow/api --",
+    "db:configure": "npm run db:configure -w @caseflow/api",
+    "db:seed": "supabase db query --file supabase/seed.sql"
   },
   "devDependencies": {
     "@eslint/js": "9.39.5",
@@ -30,6 +41,7 @@
     "eslint": "9.39.5",
     "eslint-config-next": "16.4.6",
     "prettier": "3.10.1",
+    "supabase": "3.1.0",
     "tsx": "4.23.15",
     "typescript": "5.9.3",
     "typescript-eslint": "8.72.2"

@@ -8,11 +8,20 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.test.json",
     "start": "node --env-file-if-exists=.env dist/index.js",
-    "test": "node --import tsx --test test/*.test.ts"
+    "test": "node --import tsx --test test/*.test.ts",
+    "test:integration": "node --env-file-if-exists=.env.operator --env-file-if-exists=.env --import tsx --test test/integration/*.test.ts",
+    "operator:role": "node --env-file-if-exists=.env.operator --import tsx scripts/operator-role.ts",
+    "db:configure": "node --env-file-if-exists=.env.operator --import tsx scripts/configure-local.ts"
   },
   "dependencies": {
+    "@caseflow/schemas": "0.1.0",
     "@fastify/cors": "11.4.3",
     "fastify": "5.12.8",
-    "jose": "6.2.17"
+    "jose": "6.2.17",
+    "pg": "8.23.1",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@types/pg": "8.23.1"
   }
 }
