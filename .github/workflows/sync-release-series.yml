@@ -1,0 +1,50 @@
+name: CaseFlow Sync Release Series
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: caseflow-release-series
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  sync:
+    name: Sync release series
+    if: ${{ !github.event.release.prerelease }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Read the latest stable release series
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          release_tag=$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq '.tag_name')
+          tag_pattern='^v?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
+
+          if [[ ! $release_tag =~ $tag_pattern ]]; then
+            echo '::error::The latest stable release must have a version tag such as v0.2.0.'
+            exit 1
+          fi
+
+          printf 'series=%s.%s\n' "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}" >> "$GITHUB_OUTPUT"
+
+      - name: Update the repository variable
+        env:
+          GH_TOKEN: ${{ secrets.CASEFLOW_RELEASE_VARIABLES_TOKEN }}
+          RELEASE_SERIES: ${{ steps.release.outputs.series }}
+        run: |
+          if [[ -z $GH_TOKEN ]]; then
+            echo '::error::Add the CASEFLOW_RELEASE_VARIABLES_TOKEN Actions secret with Variables: Read and write access to this repository.'
+            exit 1
+          fi
+
+          gh variable set CASEFLOW_RELEASE_SERIES --repo "$GITHUB_REPOSITORY" --body "$RELEASE_SERIES"
+          printf 'Synced CASEFLOW_RELEASE_SERIES to %s.\n' "$RELEASE_SERIES"
