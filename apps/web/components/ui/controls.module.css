@@ -15,28 +15,35 @@
     background-color 220ms,
     border-color 220ms;
 }
+
 .primary {
   background: var(--brand-yellow);
   color: var(--brand-ink);
 }
+
 .primary:hover:not(:disabled) {
   background: var(--brand-yellow-hover);
 }
+
 .secondary {
   background: var(--brand-white);
   color: var(--brand-navy);
   border-color: var(--brand-line);
 }
+
 .secondary:hover:not(:disabled) {
   background: var(--brand-cream);
 }
+
 .button:focus-visible {
   outline-color: var(--brand-navy);
 }
+
 .button:disabled {
   opacity: 0.55;
   cursor: not-allowed;
 }
+
 .status {
   padding: 14px 16px;
   border-radius: var(--radius-control);
@@ -47,9 +54,11 @@
   line-height: 1.6;
   overflow-wrap: anywhere;
 }
+
 .success {
   border-color: var(--brand-success);
 }
+
 .error {
   border-color: var(--brand-danger);
 }

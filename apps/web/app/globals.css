@@ -39,21 +39,26 @@ body {
   color: var(--brand-ink);
   font-family: var(--font-sans);
 }
+
 button,
 a {
   -webkit-tap-highlight-color: transparent;
 }
+
 button {
   font: inherit;
 }
+
 :focus-visible {
   outline: 3px solid var(--brand-yellow);
   outline-offset: 5px;
 }
+
 ::selection {
   background: var(--brand-yellow);
   color: var(--brand-navy);
 }
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

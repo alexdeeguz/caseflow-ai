@@ -8,6 +8,10 @@ export default defineConfig([
   { settings: { next: { rootDir: 'apps/web/' } } },
   js.configs.recommended,
   ...tseslint.configs.recommended,
+  {
+    files: ['**/*.{ts,tsx}'],
+    rules: { curly: ['error', 'all'], 'one-var': ['error', 'never'] },
+  },
   ...nextVitals.map((config) => ({ ...config, files: ['apps/web/**/*.{ts,tsx,js,mjs}'] })),
   {
     files: ['apps/api/**/*.ts'],

@@ -1,4 +1,5 @@
 import type { NextConfig } from 'next';
+
 const config: NextConfig = {
   async headers() {
     return [
@@ -12,4 +13,5 @@ const config: NextConfig = {
     ];
   },
 };
+
 export default config;

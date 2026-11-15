@@ -13,6 +13,7 @@ export function AuthPanel({
   children: ReactNode;
 }) {
   const titleId = useId();
+
   return (
     <section className={styles.panel} aria-labelledby={titleId}>
       <div className={styles.icon} aria-hidden="true">

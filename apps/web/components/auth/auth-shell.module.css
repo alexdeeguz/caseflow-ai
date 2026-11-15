@@ -6,12 +6,14 @@
   color: var(--brand-white);
   border-top: 5px solid var(--brand-yellow);
 }
+
 .header,
 .main,
 .footer {
   width: min(100% - 96px, 1184px);
   margin-inline: auto;
 }
+
 .header {
   display: flex;
   align-items: center;
@@ -20,6 +22,7 @@
   padding-block: 30px;
   border-bottom: 1px solid var(--brand-on-navy-line);
 }
+
 .badge {
   font-size: 12px;
   font-weight: 600;
@@ -28,6 +31,7 @@
   border-radius: 999px;
   color: var(--brand-on-navy-muted);
 }
+
 .main {
   flex: 1;
   display: grid;
@@ -36,6 +40,7 @@
   gap: 96px;
   padding-block: 80px;
 }
+
 .eyebrow {
   display: flex;
   align-items: center;
@@ -45,20 +50,24 @@
   letter-spacing: 0.16em;
   margin-bottom: 28px;
 }
+
 .eyebrow > span {
   width: 24px;
   height: 2px;
   background: var(--brand-yellow);
 }
+
 .intro h1 {
   font-size: clamp(48px, 5.4vw, 76px);
   font-weight: 800;
   line-height: 1.06;
   letter-spacing: -0.055em;
 }
+
 .intro h1 > span {
   color: var(--brand-yellow);
 }
+
 .description {
   max-width: 430px;
   margin-top: 28px;
@@ -66,6 +75,7 @@
   font-size: 18px;
   line-height: 1.8;
 }
+
 .note {
   margin-top: 54px;
   padding-top: 24px;
@@ -74,23 +84,28 @@
   gap: 18px;
   align-items: flex-start;
 }
+
 .noteNumber {
   font-size: 13px;
   color: var(--brand-yellow);
   padding-top: 2px;
 }
+
 .noteTitle {
   font-size: 14px;
   font-weight: 600;
 }
+
 .noteBody {
   font-size: 13px;
   margin-top: 6px;
   color: var(--brand-on-navy-muted);
 }
+
 .cardColumn {
   min-width: 0;
 }
+
 .footer {
   display: flex;
   justify-content: space-between;
@@ -101,9 +116,11 @@
   line-height: 1.6;
   color: var(--brand-on-navy-muted);
 }
+
 .footer span {
   margin-inline: 10px;
 }
+
 .skip {
   position: absolute;
   top: 12px;
@@ -115,19 +132,23 @@
   border-radius: 8px;
   z-index: 20;
 }
+
 .skip:focus {
   transform: none;
 }
+
 @media (max-width: 960px) {
   .main {
     gap: 40px;
   }
+
   .header,
   .main,
   .footer {
     width: min(100% - 48px, 1184px);
   }
 }
+
 @media (max-width: 720px) {
   .main {
     grid-template-columns: 1fr;
@@ -135,22 +156,28 @@
     padding-block: 44px;
     max-width: 520px;
   }
+
   .header {
     padding-block: 22px;
   }
+
   .intro h1 {
     font-size: clamp(42px, 10vw, 62px);
   }
+
   .eyebrow {
     margin-bottom: 20px;
   }
+
   .description {
     font-size: 16px;
     margin-top: 20px;
   }
+
   .note {
     display: none;
   }
+
   .footer {
     flex-direction: column;
     gap: 6px;

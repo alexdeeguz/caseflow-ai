@@ -8,13 +8,16 @@ import { AuthPanel } from '../../../components/auth/auth-panel';
 import { StatusMessage } from '../../../components/ui/status-message';
 
 let completion: Promise<void> | undefined;
+
 export default function AuthCallback() {
   const [failed, setFailed] = useState(false);
+
   useEffect(() => {
     // Keep the bridge separate from MSAL client initialization, including in Strict Mode.
     completion ??= broadcastResponseToMainFrame();
     void completion.catch(() => setFailed(true));
   }, []);
+
   return (
     <AuthShell>
       <AuthPanel

@@ -15,17 +15,29 @@ export function getAuthClient(): Promise<PublicClientApplication> {
       },
       cache: { cacheLocation: 'sessionStorage' },
     });
+
     await client.initialize();
+
     const response = await client.handleRedirectPromise();
-    if (response?.account) client.setActiveAccount(response.account);
+
+    if (response?.account) {
+      client.setActiveAccount(response.account);
+    }
+
     // Do not silently select among multiple cached identities.
     const accounts = client.getAllAccounts();
     const onlyAccount = accounts.length === 1 ? accounts[0] : undefined;
-    if (!client.getActiveAccount() && onlyAccount) client.setActiveAccount(onlyAccount);
+
+    if (!client.getActiveAccount() && onlyAccount) {
+      client.setActiveAccount(onlyAccount);
+    }
+
     return client;
   })().catch((error: unknown) => {
     initialization = undefined;
+
     throw error;
   });
+
   return initialization;
 }

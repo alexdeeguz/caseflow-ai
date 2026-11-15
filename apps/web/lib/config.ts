@@ -6,22 +6,27 @@ interface PublicConfigInput {
 
 export function validatePublicConfig(input: PublicConfigInput) {
   const guid = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
+
   if (!input.clientId || !new RegExp(`^${guid}$`, 'i').test(input.clientId)) {
     throw new Error(
       'Microsoft sign-in is not configured correctly. Please contact the demo owner.',
     );
   }
+
   if (!input.apiScope || !new RegExp(`^api://${guid}/access_as_user$`, 'i').test(input.apiScope)) {
     throw new Error(
       'The API permission is not configured correctly. Please contact the demo owner.',
     );
   }
+
   let origin: URL;
+
   try {
     origin = new URL(input.apiOrigin ?? '');
   } catch {
     throw new Error('The API address is not configured correctly. Please contact the demo owner.');
   }
+
   if (
     origin.username ||
     origin.password ||
@@ -33,6 +38,7 @@ export function validatePublicConfig(input: PublicConfigInput) {
   ) {
     throw new Error('The API must use HTTPS, or HTTP localhost for local development.');
   }
+
   return { clientId: input.clientId, apiScope: input.apiScope, apiOrigin: origin.origin };
 }
 
