@@ -10,13 +10,14 @@ import {
   preloadResource,
   withResourceInvalidation,
 } from '../../lib/resources';
-import { Button } from '../ui/button';
 import { RoleBadge } from './role-badge';
 import { Profile } from './profile';
 import { Cases } from './cases/cases';
 import { Users } from './users';
 import { AuditHistory } from './audit';
 import { WorkspaceFrame } from './workspace-frame';
+import { WorkspaceNavigation } from './workspace-navigation';
+import { SignOutIcon } from './workspace-icons';
 import { WorkspaceTab, tabLabels, tabResource } from './navigation';
 import styles from './workspace.module.css';
 
@@ -73,39 +74,36 @@ function WorkspaceContent({ user, request, signOut, refreshProfile }: WorkspaceP
     }
   }
 
-  const tabs: WorkspaceTab[] =
-    user.role === Role.Staff
-      ? [WorkspaceTab.Cases, WorkspaceTab.Profile]
-      : [WorkspaceTab.Cases, WorkspaceTab.Profile, WorkspaceTab.Users, WorkspaceTab.Audit];
-
   return (
     <WorkspaceFrame
       busy={pendingTab !== null}
-      headerActions={
+      account={
         <>
-          <span>{user.displayName}</span>
-          <RoleBadge role={user.role} />
-          <Button onClick={() => void signOut()}>Sign out</Button>
+          <div className={styles.accountDetails}>
+            <span className={styles.accountName}>{user.displayName}</span>
+            <RoleBadge role={user.role} />
+          </div>
+          <button type="button" className={styles.signOut} onClick={() => void signOut()}>
+            <SignOutIcon />
+            <span>Sign out</span>
+          </button>
         </>
       }
-      navigation={
-        <nav aria-label="Workspace" className={styles.nav}>
-          {tabs.map((item) => (
-            <button
-              key={item}
-              aria-current={item === tab ? 'page' : undefined}
-              aria-busy={pendingTab === item}
-              onClick={() => void selectTab(item)}
-            >
-              {tabLabels[item]}
-            </button>
-          ))}
-          <span role="status" className="sr-only">
-            {pendingTab ? `Opening ${tabLabels[pendingTab]}…` : ''}
-          </span>
-        </nav>
-      }
+      navigation={(closeNavigation) => (
+        <WorkspaceNavigation
+          role={user.role}
+          currentTab={tab}
+          pendingTab={pendingTab}
+          onSelect={(nextTab) => {
+            closeNavigation();
+            void selectTab(nextTab);
+          }}
+        />
+      )}
     >
+      <span role="status" className="sr-only">
+        {pendingTab ? `Opening ${tabLabels[pendingTab]}…` : ''}
+      </span>
       {tab === WorkspaceTab.Cases && <Cases request={request} user={user} />}
       {tab === WorkspaceTab.Profile && (
         <Profile user={user} request={request} onSaved={refreshProfile} />
