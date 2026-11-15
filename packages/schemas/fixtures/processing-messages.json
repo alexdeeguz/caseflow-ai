@@ -1,0 +1,148 @@
+[
+  {
+    "name": "valid",
+    "valid": true,
+    "message": {
+      "schemaVersion": 1,
+      "jobId": "b6f12f0f-524b-4fa5-b1a5-542401b00001"
+    }
+  },
+  {
+    "name": "schemaVersion-1",
+    "valid": false,
+    "message": {
+      "schemaVersion": "1",
+      "jobId": "b6f12f0f-524b-4fa5-b1a5-542401b00001"
+    }
+  },
+  {
+    "name": "schemaVersion-True",
+    "valid": false,
+    "message": {
+      "schemaVersion": true,
+      "jobId": "b6f12f0f-524b-4fa5-b1a5-542401b00001"
+    }
+  },
+  {
+    "name": "schemaVersion-2",
+    "valid": false,
+    "message": {
+      "schemaVersion": 2,
+      "jobId": "b6f12f0f-524b-4fa5-b1a5-542401b00001"
+    }
+  },
+  {
+    "name": "schemaVersion-1.5",
+    "valid": false,
+    "message": {
+      "schemaVersion": 1.5,
+      "jobId": "b6f12f0f-524b-4fa5-b1a5-542401b00001"
+    }
+  },
+  {
+    "name": "jobId-bad",
+    "valid": false,
+    "message": {
+      "schemaVersion": 1,
+      "jobId": "bad"
+    }
+  },
+  {
+    "name": "jobId-12",
+    "valid": false,
+    "message": {
+      "schemaVersion": 1,
+      "jobId": 12
+    }
+  },
+  {
+    "name": "jobId-b6f12f0f-524b-0fa5-b1a5-542401b00001",
+    "valid": false,
+    "message": {
+      "schemaVersion": 1,
+      "jobId": "b6f12f0f-524b-0fa5-b1a5-542401b00001"
+    }
+  },
+  {
+    "name": "jobId-b6f12f0f-524b-4fa5-01a5-542401b00001",
+    "valid": false,
+    "message": {
+      "schemaVersion": 1,
+      "jobId": "b6f12f0f-524b-4fa5-01a5-542401b00001"
+    }
+  },
+  {
+    "name": "extra",
+    "valid": false,
+    "message": {
+      "schemaVersion": 1,
+      "jobId": "b6f12f0f-524b-4fa5-b1a5-542401b00001",
+      "bucket": "forged"
+    }
+  },
+  {
+    "name": "snake",
+    "valid": false,
+    "message": {
+      "schema_version": 1,
+      "job_id": "b6f12f0f-524b-4fa5-b1a5-542401b00001"
+    }
+  },
+  {
+    "name": "missing",
+    "valid": false,
+    "message": {
+      "schemaVersion": 1
+    }
+  },
+  {
+    "name": "array",
+    "valid": false,
+    "message": []
+  },
+  {
+    "name": "null",
+    "valid": false,
+    "message": null
+  },
+  {
+    "name": "nil",
+    "valid": true,
+    "message": {
+      "schemaVersion": 1,
+      "jobId": "00000000-0000-0000-0000-000000000000"
+    }
+  },
+  {
+    "name": "max",
+    "valid": true,
+    "message": {
+      "schemaVersion": 1,
+      "jobId": "ffffffff-ffff-ffff-ffff-ffffffffffff"
+    }
+  },
+  {
+    "name": "uppercase",
+    "valid": true,
+    "message": {
+      "schemaVersion": 1,
+      "jobId": "B6F12F0F-524B-4FA5-B1A5-542401B00001"
+    }
+  },
+  {
+    "name": "v7",
+    "valid": true,
+    "message": {
+      "schemaVersion": 1,
+      "jobId": "b6f12f0f-524b-7fa5-b1a5-542401b00001"
+    }
+  },
+  {
+    "name": "json-integral-number",
+    "valid": true,
+    "message": {
+      "schemaVersion": 1.0,
+      "jobId": "b6f12f0f-524b-4fa5-b1a5-542401b00001"
+    }
+  }
+]

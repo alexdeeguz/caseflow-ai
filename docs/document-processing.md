@@ -2,7 +2,7 @@
 
 [Back to README](../README.md)
 
-The database foundation, API dispatcher, and processor database interface are implemented. Python workers, the Textract completion handler, processing API/UI, and operational monitoring remain pending. Keep continuous dispatching disabled until the consumer is ready.
+The database foundation, API dispatcher, and processor database interface are implemented. The Python extraction worker is implemented locally; the Textract completion handler, deployment, processing API/UI, and operational monitoring remain pending. Keep continuous dispatching disabled until the consumer is ready.
 
 - [Job and dispatch records](#job-and-dispatch-records)
 - [Processor database](#processor-database)
@@ -39,13 +39,13 @@ The database foundation includes:
   Dispatch retries are not capped; monitoring must surface repeated send failures.
 
 The queue sender must commit its claim before making network requests. A crash after
-sending but before acknowledgment can deliver a job more than once; the future worker
-must deduplicate by job ID. Messages contain only a schema version and job ID, never
+sending but before acknowledgment can deliver a job more than once; the worker
+deduplicates by job ID. Messages contain only a schema version and job ID, never
 client-provided storage locations or credentials.
 
 This foundation does not create cloud resources, run OCR, add processing API routes,
 or display processing status. The [API dispatcher](#api-processing-dispatcher) sends queued jobs once enabled;
-Python workers and operational monitoring remain separate steps. Apply the migration
+Worker deployment and operational monitoring remain separate steps. Apply the migration
 through the existing reviewed migration workflow; starting the API never applies it.
 Until dispatching is enabled, new jobs remain queued in PostgreSQL.
 
@@ -71,6 +71,14 @@ The audit API remains compatible while the migration is pending, returning a nul
 service identity for existing records. The migration does not start workers, run OCR,
 or enable continuous dispatching. Verify it on disposable
 PostgreSQL before applying it to the explicitly selected hosted project.
+
+## Python extraction worker
+
+The worker validates queue messages, verifies the saved S3 source version/checksum,
+extracts native PDF text in a bounded subprocess, and starts OCR through saved,
+idempotent requests. [Python processor setup](python-processor.md) covers its
+configuration, limits, tests, and remaining activation prerequisites. The completion
+consumer and reconciliation remain separate work; no worker is activated automatically.
 
 ## API processing dispatcher
 

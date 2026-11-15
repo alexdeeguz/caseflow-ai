@@ -1,6 +1,6 @@
 # CaseFlow AI
 
-CaseFlow AI is a case and document workspace built with TypeScript. It combines
+CaseFlow AI is a case and document workspace built with TypeScript and Python. It combines
 Microsoft sign-in, role-based access, case management, and private document storage.
 Use fictional data for demonstrations and testing.
 
@@ -13,21 +13,21 @@ Use fictional data for demonstrations and testing.
 - **Documents:** direct S3 uploads with server verification, a paginated library,
   authorized downloads, and reversible removal.
 - **Processing foundation:** atomic job/dispatch creation, an opt-in API dispatcher
-  for SQS, and restricted processor database functions.
+  for SQS, restricted processor database functions, and a Python extraction worker.
 
-File previews and background document processing are not available yet. Python
-workers, Textract completion handling, processing API/UI, and operational monitoring
-remain pending. Keep continuous dispatching disabled until the consumer is ready.
+The Python worker is implemented locally. Deployment, Textract completion handling,
+processing API/UI, operational monitoring, and file previews remain pending. Keep continuous dispatching disabled until both consumers and recovery are ready.
 
 ## Stack and structure
 
-| Location                             | Responsibility                                                               |
-| ------------------------------------ | ---------------------------------------------------------------------------- |
-| [apps/web](apps/web)                 | Next.js, React, and Tailwind frontend with Microsoft Entra authentication    |
-| [apps/api](apps/api)                 | Fastify API with PostgreSQL authorization, S3 storage, and an SQS dispatcher |
-| [packages/schemas](packages/schemas) | Handwritten shared Zod contracts, constants, and TypeScript types            |
-| [supabase](supabase)                 | PostgreSQL migrations, local configuration, and fictional seed data          |
-| [docs](docs)                         | Setup guides, feature behavior, and technical references                     |
+| Location                                           | Responsibility                                                               |
+| -------------------------------------------------- | ---------------------------------------------------------------------------- |
+| [apps/web](apps/web)                               | Next.js, React, and Tailwind frontend with Microsoft Entra authentication    |
+| [apps/api](apps/api)                               | Fastify API with PostgreSQL authorization, S3 storage, and an SQS dispatcher |
+| [apps/document-processor](apps/document-processor) | Python worker for native PDF extraction and asynchronous Textract starts     |
+| [packages/schemas](packages/schemas)               | Handwritten shared Zod contracts, constants, and TypeScript types            |
+| [supabase](supabase)                               | PostgreSQL migrations, local configuration, and fictional seed data          |
+| [docs](docs)                                       | Setup guides, feature behavior, and technical references                     |
 
 The API connects to a private PostgreSQL schema using restricted credentials.
 Microsoft Entra provides authentication; S3 stores document bytes. The browser does
@@ -78,6 +78,7 @@ Run commands from the repository root.
 | -------------------------- | -------------------------------------------------------------- |
 | `npm run dev`              | Start the frontend, API, and shared-schema watcher             |
 | `npm run build`            | Build all workspaces for production                            |
+| `npm run test:processor`   | Run Python unit tests (requires uv/Python setup)               |
 | `npm test`                 | Run unit tests                                                 |
 | `npm run test:integration` | Run PostgreSQL integration tests on disposable local databases |
 | `npm run lint`             | Check ESLint rules                                             |
@@ -99,3 +100,4 @@ individually, integration-test prerequisites, and dependency maintenance.
 | [Document management](docs/document-management.md) | S3 configuration, uploads, library, downloads, removal, and consistency rules        |
 | [Document processing](docs/document-processing.md) | Job/dispatch records, dispatcher credentials, SQS permissions, and configuration     |
 | [Processor database](docs/processor-database.md)   | Worker functions, leases, OCR allowance, artifacts, cancellation, and credentials    |
+| [Python processor](docs/python-processor.md)       | Extraction, OCR decisions, resource limits, configuration, and verification          |

@@ -72,6 +72,24 @@ jobs:
         run: npm run db:configure
       - name: Run PostgreSQL integration tests
         run: npm run test:integration
+      - name: Install Python tooling
+        run: |
+          python3 -m venv "$RUNNER_TEMP/processor-tools"
+          "$RUNNER_TEMP/processor-tools/bin/pip" install uv==0.13.8
+          echo "$RUNNER_TEMP/processor-tools/bin" >> "$GITHUB_PATH"
+      - name: Install locked processor dependencies
+        run: uv sync --project apps/document-processor --locked
+      - name: Check Python code
+        run: |
+          uv run --project apps/document-processor --locked ruff check apps/document-processor
+          uv run --project apps/document-processor --locked ruff format --check apps/document-processor
+          uv run --project apps/document-processor --locked mypy apps/document-processor/src --strict
+      - name: Run processor unit and PostgreSQL tests
+        env:
+          PROCESSOR_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: uv run --project apps/document-processor --locked pytest apps/document-processor/tests --require-database
+      - name: Build the processor package
+        run: uv build --project apps/document-processor
 
   build:
     name: Build & Package

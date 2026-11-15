@@ -97,6 +97,7 @@ When the application uses hosted Supabase, follow [local tests and switching env
 
 - `apps/web`: Next.js, React, and Tailwind frontend with Microsoft sign-in.
 - `apps/api`: Fastify API with database-enforced user and case permissions.
+- `apps/document-processor`: Python extraction worker; [setup and verification](python-processor.md).
 - `packages/schemas`: shared strict Zod request/response contracts and TypeScript types.
 
 Shared domain values live in `packages/schemas/src/constants` (roles, case statuses, archive filters and limits, error codes,
@@ -143,3 +144,10 @@ upstream dependency resolves a patched version. Regenerate the lockfile and reru
 - [Hosted database](hosted-database.md)
 - [Authentication](authentication.md)
 - [API reference](api.md)
+
+## Python formatting
+
+Use `npm run format:python` for the processor and `npm run format:python:check` to
+check it without changes. The root `format` and `format:check` commands include both
+Prettier and Ruff. See [Python setup and style](python-processor.md#formatting-and-readability)
+for the required uv environment and editor integration.
