@@ -38,7 +38,13 @@ function matchesExtension(file: { filename: string; contentType: DocumentContent
 }
 
 export const documentUploadRequestSchema = z
-  .strictObject(documentFileFields)
+  .strictObject({
+    ...documentFileFields,
+    requestId: idSchema,
+    checksumSha256: z
+      .string()
+      .regex(/^[A-Za-z0-9+/]{42}[AEIMQUYcgkosw048]=$/, 'Provide a base64 SHA-256 checksum.'),
+  })
   .refine(matchesExtension, {
     path: ['filename'],
     message: 'Choose a PDF, JPEG, or PNG file matching its content type.',
@@ -117,3 +123,27 @@ export const documentVersionSchema = z.strictObject({
 });
 
 export const documentPageSchema = pageSchema(documentSchema);
+
+export const documentUploadResultSchema = z.strictObject({
+  document: documentSchema,
+  session: uploadSessionSchema,
+});
+
+export const uploadAuthorizationSchema = z.strictObject({
+  method: z.literal('PUT'),
+  url: z.url().refine((value) => new URL(value).protocol === 'https:'),
+  expiresAt: z.iso.datetime(),
+  headers: z.strictObject({
+    'Content-Type': documentContentTypeSchema,
+    'If-None-Match': z.literal('*'),
+    'x-amz-checksum-sha256': z.string(),
+  }),
+});
+
+export type UploadAuthorization = z.infer<typeof uploadAuthorizationSchema>;
+
+export const documentUploadAuthorizationSchema = documentUploadResultSchema.extend({
+  upload: uploadAuthorizationSchema.nullable(),
+});
+
+export const documentUploadCompleteSchema = z.strictObject({});

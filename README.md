@@ -1,6 +1,6 @@
 # CaseFlow AI
 
-TypeScript monorepo with Microsoft Entra sign-in, persistent profiles, role-based permissions, case creation, editing, reversible archiving, Staff assignments, and audit history. Document metadata and S3 client foundations are present; document uploads and processing are not implemented.
+TypeScript monorepo with Microsoft Entra sign-in, persistent profiles, role-based permissions, case creation, editing, reversible archiving, Staff assignments, and audit history. Direct S3 upload authorization and server-verified completion are implemented. Document browsing, download/removal workflows, upload UI, and processing remain pending.
 
 ## Structure
 
@@ -276,15 +276,18 @@ They create and drop a uniquely named disposable database, apply migrations and
 seeds there, and exercise real restricted-login permissions. They never reset the
 working database and do not silently skip when the database is unavailable. Coverage includes partial edits, archive access/filtering, retained assignments, concurrent writes, demotion/disable races, audit rollback, migration preservation, and direct runtime-role restrictions.
 
-## Document storage foundation
+## Document storage and uploads
 
-The API has a reusable S3 client, shared document contracts, and private document
-tables. Upload, completion, listing, download, removal, and restoration endpoints
-and their UI are not implemented yet.
+The API supports upload authorization and verified completion. Document listing,
+download, removal/restoration, upload UI, and background processing are not yet implemented.
 
-S3 configuration lives in `apps/api/src/storage/config.ts`; the client and its
-Fastify lifecycle live in `src/storage/s3.ts`. Install dependencies with `npm install`
-and apply the additive migration with `npm run db:migrate`.
+Storage configuration and S3 adapters live in `apps/api/src/storage`. Upload
+orchestration lives in `src/documents/upload-service.ts`, HTTP definitions in
+`src/routes/documents.ts`, and database queries in `src/database/documents.ts`.
+Shared contracts and limits live in `packages/schemas`. Install dependencies with
+`npm install` and apply additive migrations with `npm run db:migrate`.
+
+### Configuration
 
 Configure these values only in the ignored `apps/api/.env`:
 
@@ -295,66 +298,110 @@ S3_ENVIRONMENT=dev
 AWS_PROFILE=caseflow-api-dev
 ```
 
-`AWS_PROFILE` selects a restricted local assume-role profile stored outside the
-repository in the AWS shared configuration. It takes precedence over ambient
-access keys. Refresh its source login with `aws login --profile <source-profile>`
-when needed. Do not use an administrator profile for the API or place AWS
-credentials in frontend variables. For deployment, omit `AWS_PROFILE` and configure
-temporary workload credentials supported by the SDK's default credential chain.
+`AWS_PROFILE` selects a restricted local assume-role profile outside the repository.
+It takes precedence over ambient access keys. Refresh its source login with
+`aws login --profile <source-profile>`. For deployment, omit `AWS_PROFILE` and
+configure temporary workload credentials supported by the SDK's default chain.
+Keep credentials and storage configuration out of frontend environment variables.
 
-When both `S3_BUCKET` and `S3_ENVIRONMENT` are absent, storage is disabled and existing
-features remain available. Partial or malformed settings fail startup. Credentials
-are resolved lazily on S3 requests; starting the API does not prove bucket access.
-The client is reused, has bounded retries, timeouts, and sockets, and is destroyed
-when Fastify closes. Restart the API after changing its environment.
+When both S3-specific settings are absent, storage is disabled; existing features
+remain available and upload endpoints return 503 after checking case access.
+Partial settings fail startup. Restart the API after changing its environment.
+The shared client uses bounded retries, timeouts, and sockets and closes with Fastify.
 
 The bucket must remain private, enforce HTTPS, disable ACLs, use encryption, and
-have versioning enabled. Its browser CORS policy should allow only the intended
-frontend origins. The runtime role needs `s3:PutObject`, `s3:GetObject`, and
-`s3:GetObjectVersion` on the intended environment's original-document prefix;
-it does not need bucket administration, listing, or permanent deletion.
+have versioning enabled. The runtime role needs `s3:PutObject`, `s3:GetObject`, and
+`s3:GetObjectVersion` on the environment's original-document prefix. It does not
+need bucket administration, listing, or deletion. Missing objects can therefore
+return S3 403; completion treats unavailable objects as retryable rather than
+claiming a file failed validation.
 
-Original keys are generated in PostgreSQL from validated metadata:
+Browser CORS must allow the intended frontend origin, `PUT`, and the request headers
+`Content-Type`, `If-None-Match`, and `x-amz-checksum-sha256`. A matching wildcard
+header rule also works. Completion obtains the S3 version server-side, so the
+browser does not need to read or submit S3 version headers.
 
-```text
-{environment}/cases/{case-id}/documents/{document-id}/original/{filename}
-```
+### Upload protocol
 
-`caseflow.documents` stores case/uploader references, filename, declared size and
-type, lifecycle state, timestamps, version, and internal S3 location/version
-metadata. `caseflow.document_upload_sessions` tracks one attempt per document with
-an expiry, terminal timestamp, and bounded failure codes. A fresh attempt uses a
-fresh document/key. Neither table is exposed through Supabase's Data API.
+1. Compute the raw file's SHA-256 digest, encode it as canonical base64, and generate
+   a UUID request ID. Reuse that ID and metadata for retries of the same attempt.
+2. Call `POST /cases/:caseId/document-uploads` with a Microsoft bearer token and JSON:
 
-- Files: PDF, JPEG, or PNG; 1 byte through 25 MiB. Contracts reject unknown fields,
-  paths, control characters, mismatched extensions/types, and client-supplied
-  storage identifiers. Actual object and content verification belongs to the
-  completion handler; filename/type validation alone does not verify file bytes.
-- Document states: `pending_upload`, `available`, `removed`. An available or
-  removed document requires a pinned, non-null S3 version and upload timestamp.
-  Soft removal requires both a timestamp and actor; it retains the object.
-- Session states: `pending`, `completed`, `failed`, `expired`, `cancelled`. The
-  database bounds session lifetime to five minutes; no expiry worker exists yet.
-- RLS inherits active-account and case-assignment checks. Staff can read available
-  documents on assigned cases and their own pending uploads/sessions. Admins can
-  read all states on accessible cases. Removed documents are hidden from Staff.
-  Archived case reads remain allowed; later write handlers must reject archived
-  cases and recheck permissions inside their transactions.
-- The runtime role has SELECT only on these tables. Document write functions and
-  atomic audit writes will be introduced with the upload/removal endpoints.
-  Shared audit actions distinguish upload initiation/completion, removal,
-  restoration, and download authorization; authorization is not proof of download.
+   ```json
+   {
+     "requestId": "10000000-0000-4000-8000-000000000001",
+     "filename": "fictional-record.pdf",
+     "contentType": "application/pdf",
+     "sizeBytes": 1234,
+     "checksumSha256": "<base64 SHA-256 of the exact file bytes>"
+   }
+   ```
 
-Shared limits reserve ten files per selection, two concurrent uploads, a 1 GiB
-workspace quota, five-minute uploads, and one-minute download links for the next
-implementation step. Selection/concurrency limits, quota accounting/reservations,
-presigned requests, cleanup, and cross-table lifecycle transitions are not enforced
-by this foundation alone.
+   The 201 response contains `document`, `session`, and `upload` (method, URL,
+   required headers, expiry). The API generates storage identifiers. Repeating an
+   identical request returns the same session without extending its five-minute
+   lifetime or duplicating its audit event. Changed metadata with the same request
+   ID returns `UPLOAD_CONFLICT`. An already completed request returns `upload: null`.
 
-Unit tests cover contracts, unsafe configuration, explicit profile selection,
-request signing, and client shutdown. Integration tests use a disposable PostgreSQL
-database to verify migration preservation, constraints, RLS, foreign keys, and
-restricted-role behavior without uploading objects or changing AWS resources.
+3. Send the raw File/Blob to `upload.url` using `PUT` and exactly `upload.headers`.
+   Do not use FormData or send the Microsoft bearer token to S3. The browser supplies
+   Content-Length from the body; scripts cannot set that header themselves. The
+   signature binds the exact size, type, checksum, key, and `If-None-Match: *`.
+   A successful first upload cannot be overwritten with the same authorization.
+   If a PUT response is lost or a retry returns 412, call completion to verify the
+   existing object before deciding whether to start another attempt.
+4. Call `POST /cases/:caseId/document-uploads/:sessionId/complete` with the bearer
+   token and `{}`. A 200 response contains the available document and completed
+   session. Retries return the same saved result without another S3 read or audit.
+
+Staff may upload to assigned, current cases. Admin/Super Admin may upload to all
+current cases and complete uploads for those cases. Staff may only complete their
+own sessions. Disabled/unprovisioned users and inaccessible case/session IDs are
+rejected. Archived cases reject uploads and completion.
+
+### Verification and consistency
+
+Before availability, the server reads S3 metadata, requires a non-null object
+version, and streams that exact version. It validates the complete byte count and
+SHA-256 checksum and checks the binary signature against PDF/JPEG/PNG. Streams
+have a 30-second deadline, four concurrent verifications per API process, and a
+bounded signature buffer. Bodies are consumed or destroyed on every path. Binary
+signature detection does not establish that a document is safe or fully parseable;
+malware scanning and document parsing are separate processing concerns.
+
+No S3 call runs inside a database transaction. Narrow private functions acquire the
+existing permission lock and recheck active status, current assignments/role,
+archive state, and session expiry before writes. Document/session changes and
+upload-started/completed audit events commit atomically. The runtime database role
+retains no direct table-write privileges; application tables remain outside the
+Supabase Data API with RLS-controlled reads.
+
+- Allowed files: PDF/JPEG/PNG, 1 byte through 25 MiB. Unknown fields, unsafe filenames,
+  mismatched extensions/types, and client-supplied storage fields are rejected.
+- The shared workspace reserves up to 1 GiB under the transaction lock. Pending,
+  completed, removed, failed, and expired records all count until verified object
+  cleanup is implemented. Expiry alone does not prove an issued upload failed to
+  reach S3, so reservations are deliberately retained. This is an application quota,
+  not an AWS billing limit.
+- Expired sessions are marked when accessed. Invalid bytes produce a terminal
+  `UPLOAD_VERIFICATION_FAILED` (422); start a fresh attempt with a new request ID.
+  Expired/conflicting sessions and quota exhaustion return distinct 409 codes.
+  Temporary storage/signing errors return safe 503 messages and remain retryable.
+- Access is rechecked after signing and before finalization. An already-issued S3
+  URL remains valid until its short expiry; it cannot grant application visibility
+  after access is revoked. Signed URLs must be treated as temporary credentials.
+- Original keys follow
+  `{environment}/cases/{case-id}/documents/{document-id}/original/{filename}`.
+  Availability pins a version; removal/restoration and processed outputs remain later work.
+- Ten files per selection and two simultaneous browser uploads are reserved UI
+  limits. Cancellation, scheduled expiry, orphan cleanup, and quota reclamation
+  remain later work. Do not release reservations by deleting metadata manually.
+
+Unit tests exercise upload signing restrictions, byte verification, safe failures,
+and client shutdown. PostgreSQL integration tests use disposable databases for
+permissions, idempotency, quota races, role/assignment/archive races, atomic audit
+rollback, restricted runtime access, and migration preservation. They do not reset
+the working database or require live S3 credentials.
 
 ## Authentication
 

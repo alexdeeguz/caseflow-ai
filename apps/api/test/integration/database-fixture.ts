@@ -30,7 +30,7 @@ export async function createTestDatabase(
     await store.close();
     await runtime.end();
     await owner.end();
-    await operator.query(`drop database "${name}" with (force)`);
+    await dropTestDatabase(operator, name);
     await operator.end();
   }
 
@@ -67,4 +67,21 @@ export async function waitForPermissionLock(owner: Pool) {
   }
 
   throw new Error('Request did not reach the permission lock.');
+}
+
+export async function dropTestDatabase(operator: Pool, name: string) {
+  assert.match(name, /^caseflow_test_[0-9a-f]{32}$/);
+  const deadline = Date.now() + 3000;
+
+  // Pool.end can resolve before PostgreSQL has processed every socket close.
+  // Wait for disconnection instead of forcibly terminating closing test clients.
+  while (Date.now() < deadline) {
+    const active = await operator.query('select 1 from pg_stat_activity where datname=$1', [name]);
+    if (active.rowCount === 0) {
+      await operator.query(`drop database "${name}"`);
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  throw new Error('Test database still has connections after pool shutdown.');
 }

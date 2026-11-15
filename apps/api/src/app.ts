@@ -12,6 +12,8 @@ import { registerCaseRoutes } from './routes/cases.js';
 import { registerProfileRoutes } from './routes/profile.js';
 import { createProtectedRouteRegistrar } from './routes/protected-route.js';
 import { registerUserRoutes } from './routes/users.js';
+import { registerDocumentRoutes } from './routes/documents.js';
+import { createUploadStorage, type UploadStorage } from './storage/uploads.js';
 import { createDocumentStorage } from './storage/s3.js';
 
 export async function buildApp(
@@ -19,6 +21,7 @@ export async function buildApp(
   verify = createTokenVerifier(config),
   logger = true,
   store: WorkspaceStore = createDatabase(config.databaseUrl),
+  uploadStorage?: UploadStorage,
 ) {
   const app = Fastify({
     bodyLimit: 16384,
@@ -94,6 +97,11 @@ export async function buildApp(
   registerUserRoutes(route);
   registerCaseRoutes(route);
   registerAuditRoutes(route);
+  registerDocumentRoutes(
+    route,
+    store,
+    uploadStorage ?? (storage ? createUploadStorage(storage) : null),
+  );
 
   return app;
 }

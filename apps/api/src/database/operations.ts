@@ -13,6 +13,10 @@ export const Operation = {
   AssignCase: 'assign',
   UnassignCase: 'unassign',
   ListAudit: 'audit',
+  StartDocumentUpload: 'document.upload.start',
+  CheckDocumentUpload: 'document.upload.check',
+  CompleteDocumentUpload: 'document.upload.complete',
+  FailDocumentUpload: 'document.upload.fail',
 } as const;
 
 export type Operation = (typeof Operation)[keyof typeof Operation];
@@ -32,4 +36,8 @@ export const operationRequiresAdmin: Readonly<Record<Operation, boolean>> = {
   [Operation.AssignCase]: true,
   [Operation.UnassignCase]: true,
   [Operation.ListAudit]: true,
+  [Operation.StartDocumentUpload]: false,
+  [Operation.CheckDocumentUpload]: false,
+  [Operation.CompleteDocumentUpload]: false,
+  [Operation.FailDocumentUpload]: false,
 };

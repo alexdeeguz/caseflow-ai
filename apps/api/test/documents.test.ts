@@ -18,6 +18,7 @@ const file = {
   sizeBytes: 100,
 };
 const id = '10000000-0000-4000-8000-000000000001';
+const uploadFields = { requestId: id, checksumSha256: 'A'.repeat(43) + '=' };
 const timestamp = '2026-11-14T20:00:00Z';
 const document = {
   ...file,
@@ -41,6 +42,7 @@ test('document contracts accept supported files and exact size limits', () => {
     ['写真.png', DocumentContentType.Png],
   ]) {
     const parsed = documentUploadRequestSchema.parse({
+      ...uploadFields,
       filename,
       contentType,
       sizeBytes: DocumentLimits.FileSizeBytes,
@@ -75,7 +77,7 @@ test('upload contracts reject paths, control characters, wrong types, sizes and 
     { objectVersionId: 'forged' },
   ]) {
     assert.equal(
-      documentUploadRequestSchema.safeParse({ ...file, ...patch }).success,
+      documentUploadRequestSchema.safeParse({ ...file, ...uploadFields, ...patch }).success,
       false,
       JSON.stringify(patch),
     );

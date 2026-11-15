@@ -11,6 +11,8 @@ import {
   setCaseArchived,
 } from './cases.js';
 
+import { executeDocumentUpload } from './documents.js';
+
 export const userColumns = 'id, display_name as "displayName", role, active';
 
 type AuditRow = Omit<Audit, 'createdAt'> & { createdAt: Date };
@@ -95,6 +97,12 @@ export async function executeOperation(
     case Operation.AssignCase:
     case Operation.UnassignCase:
       return setCaseAssignment(client, input, operation === Operation.AssignCase);
+
+    case Operation.StartDocumentUpload:
+    case Operation.CheckDocumentUpload:
+    case Operation.CompleteDocumentUpload:
+    case Operation.FailDocumentUpload:
+      return executeDocumentUpload(client, operation, input);
 
     case Operation.ListAudit: {
       const count = await client.query('select count(*)::int as total from caseflow.audit_events');

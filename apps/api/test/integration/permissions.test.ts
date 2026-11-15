@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import { readFile, readdir } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { Pool } from 'pg';
+import { dropTestDatabase } from './database-fixture.js';
 import { createDatabase } from '../../src/database/index.js';
 import { Operation } from '../../src/database/operations.js';
 import { buildApp } from '../../src/app.js';
@@ -347,7 +348,7 @@ test('PostgreSQL permission boundaries and API integration', async (t) => {
     await store.close();
     await raw.end();
     await owner.end();
-    await admin.query(`drop database "${name}" with (force)`);
+    await dropTestDatabase(admin, name);
     await admin.end();
   }
 });

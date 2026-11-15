@@ -29,6 +29,19 @@ const applicationErrors: Partial<Record<ErrorCode, { status: number; message: st
     status: 409,
     message: 'Restore this archived case before editing it.',
   },
+  [ErrorCode.UploadConflict]: {
+    status: 409,
+    message: 'This upload cannot be reused. Start a new upload.',
+  },
+  [ErrorCode.UploadExpired]: { status: 409, message: 'This upload expired. Start a new upload.' },
+  [ErrorCode.UploadVerificationFailed]: {
+    status: 422,
+    message: 'The file did not match its declared size, checksum, or type. Start a new upload.',
+  },
+  [ErrorCode.StorageQuotaExceeded]: {
+    status: 409,
+    message: 'The document storage limit has been reached.',
+  },
   [ErrorCode.NotFound]: { status: 404, message: 'Not found.' },
   [ErrorCode.InvalidInput]: { status: 400, message: 'Check the supplied values.' },
 };

@@ -2,20 +2,25 @@ import type { FastifyInstance } from 'fastify';
 import type { z } from 'zod';
 import { ErrorCode, idSchema } from '@caseflow/schemas';
 
-import { AuthError, type createTokenVerifier } from '../auth.js';
+import { AuthError, type createTokenVerifier, type Identity } from '../auth.js';
 import type { WorkspaceStore } from '../database/index.js';
 import type { Operation } from '../database/operations.js';
 import { AppError } from '../errors.js';
 
-interface ProtectedRouteDefinition {
+type ProtectedRouteDefinition = {
   method: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
   successStatus?: 200 | 201;
   url: string;
-  operation: Operation;
   output: z.ZodType;
   body?: z.ZodType;
   query?: z.ZodType;
-}
+} & (
+  | { operation: Operation; execute?: never }
+  | {
+      operation?: never;
+      execute: (identity: Identity, input: Record<string, unknown>) => Promise<unknown>;
+    }
+);
 
 export function createProtectedRouteRegistrar(
   app: FastifyInstance,
@@ -27,6 +32,7 @@ export function createProtectedRouteRegistrar(
     successStatus = 200,
     url,
     operation,
+    execute,
     output,
     body,
     query,
@@ -54,7 +60,9 @@ export function createProtectedRouteRegistrar(
           ...(body ? (body.parse(request.body) as object) : {}),
           ...(query ? (query.parse(request.query) as object) : {}),
         };
-        const result = await store.execute(identity, operation, input);
+        const result = execute
+          ? await execute(identity, input)
+          : await store.execute(identity, operation, input);
         const parsed = output.safeParse(result);
 
         if (!parsed.success) {
