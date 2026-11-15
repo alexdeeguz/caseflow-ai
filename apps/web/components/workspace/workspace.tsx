@@ -6,6 +6,10 @@ import { Role, type User } from '@caseflow/schemas';
 
 import type { AuthRequest } from '../../hooks/use-authentication';
 import { createResourceClient, withResourceInvalidation } from '../../lib/resources';
+import { createUploadQueue, withUploadAccessChecks } from '../../lib/documents/upload-queue';
+import { browserUploadTransport } from '../../lib/documents/upload-transport';
+import { UploadProvider } from './documents/upload-provider';
+import { UploadQueuePanel } from './documents/upload-queue-panel';
 import { RoleBadge } from './role-badge';
 import { Profile } from './profile';
 import { Cases } from './cases/cases';
@@ -32,10 +36,17 @@ interface WorkspaceProps {
 export function Workspace(props: WorkspaceProps) {
   const [client] = useState(createResourceClient);
   const [drafts] = useState(createCaseDraftStore);
+  const [uploads] = useState(() => createUploadQueue(props.request, browserUploadTransport));
   const request = useMemo(
-    () => withResourceInvalidation(client, withDraftAccessChecks(props.request, drafts)),
-    [client, props.request, drafts],
+    () =>
+      withResourceInvalidation(
+        client,
+        withUploadAccessChecks(withDraftAccessChecks(props.request, drafts), uploads),
+      ),
+    [client, props.request, drafts, uploads],
   );
+
+  useEffect(() => uploads.setRequest(request), [uploads, request]);
 
   // The parent remounts this boundary when the authenticated user or role changes.
   useEffect(() => () => client.clear(), [client]);
@@ -43,16 +54,19 @@ export function Workspace(props: WorkspaceProps) {
   return (
     <QueryClientProvider client={client}>
       <ToastProvider>
-        <CaseDraftProvider store={drafts}>
-          <WorkspaceContent
-            {...props}
-            request={request}
-            signOut={() => {
-              drafts.clear();
-              return props.signOut();
-            }}
-          />
-        </CaseDraftProvider>
+        <UploadProvider store={uploads}>
+          <CaseDraftProvider store={drafts}>
+            <WorkspaceContent
+              {...props}
+              request={request}
+              signOut={() => {
+                uploads.clear();
+                drafts.clear();
+                return props.signOut();
+              }}
+            />
+          </CaseDraftProvider>
+        </UploadProvider>
       </ToastProvider>
     </QueryClientProvider>
   );
@@ -97,6 +111,7 @@ function WorkspaceContent({ user, request, signOut, refreshProfile }: WorkspaceP
         />
       )}
     >
+      <UploadQueuePanel />
       <span role="status" className="sr-only">
         {pendingTab ? `Opening ${tabLabels[pendingTab]}…` : ''}
       </span>

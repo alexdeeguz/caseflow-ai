@@ -1,10 +1,12 @@
 'use client';
 
 import { Fragment, useId, useState } from 'react';
-import { DocumentStatus, type Document } from '@caseflow/schemas';
+import { DocumentStatus, type Document, type Role } from '@caseflow/schemas';
 import { documentTypeLabels, formatFileSize } from '../../../lib/documents/presentation';
 import { DocumentIcon } from './document-icon';
 import { DocumentDate, DocumentDetails } from './document-details';
+import { DocumentActions } from './document-actions';
+import type { DocumentAction } from '../../../lib/documents/actions';
 import styles from './documents.module.css';
 
 function DocumentStatusBadge({ status }: { status: DocumentStatus }) {
@@ -68,7 +70,19 @@ function DetailsToggle({
   );
 }
 
-export function DocumentList({ items }: { items: Document[] }) {
+export function DocumentList({
+  items,
+  role,
+  archived,
+  busy,
+  onAction,
+}: {
+  items: Document[];
+  role: Role;
+  archived: boolean;
+  busy: { id: string; action: DocumentAction } | null;
+  onAction: (document: Document, action: DocumentAction) => void;
+}) {
   const prefix = useId();
   const [expanded, setExpanded] = useState<string | null>(null);
   const toggle = (id: string) => setExpanded((current) => (current === id ? null : id));
@@ -85,7 +99,7 @@ export function DocumentList({ items }: { items: Document[] }) {
               <th scope="col">Uploaded</th>
               <th scope="col">Status</th>
               <th scope="col">
-                <span className="sr-only">Details</span>
+                <span className="sr-only">Actions</span>
               </th>
             </tr>
           </thead>
@@ -107,6 +121,13 @@ export function DocumentList({ items }: { items: Document[] }) {
                       <DocumentStatusBadge status={document.status} />
                     </td>
                     <td>
+                      <DocumentActions
+                        document={document}
+                        role={role}
+                        archived={archived}
+                        busy={busy}
+                        onAction={onAction}
+                      />
                       <DetailsToggle
                         document={document}
                         open={open}
@@ -148,6 +169,13 @@ export function DocumentList({ items }: { items: Document[] }) {
                   onToggle={() => toggle(document.id)}
                 />
               </div>
+              <DocumentActions
+                document={document}
+                role={role}
+                archived={archived}
+                busy={busy}
+                onAction={onAction}
+              />
               <div id={detailsId} hidden={!open}>
                 {open && <DocumentDetails document={document} />}
               </div>

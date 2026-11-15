@@ -37,6 +37,13 @@ function matchesExtension(file: { filename: string; contentType: DocumentContent
   return file.filename.includes('.') && documentExtensions[file.contentType].includes(extension);
 }
 
+export const documentFileSchema = z.strictObject(documentFileFields).refine(matchesExtension, {
+  path: ['filename'],
+  message: 'Choose a PDF, JPEG, or PNG file matching its content type.',
+});
+
+export type DocumentFile = z.infer<typeof documentFileSchema>;
+
 export const documentUploadRequestSchema = z
   .strictObject({
     ...documentFileFields,

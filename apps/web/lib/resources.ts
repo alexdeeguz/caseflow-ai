@@ -1,6 +1,6 @@
 import { QueryClient, queryOptions } from '@tanstack/react-query';
 import type { AuthRequest } from '../hooks/use-authentication';
-import { ApiError, type Parser } from './api';
+import { ApiError, type Parser, type ApiRequestOptions } from './api';
 
 export interface Resource<T> {
   path: string;
@@ -46,13 +46,28 @@ export function resourceState<T>({ data, error }: { data: T | undefined; error: 
 }
 
 export function withResourceInvalidation(client: QueryClient, request: AuthRequest): AuthRequest {
-  return async <T>(path: string, schema: Parser<T>, options: RequestInit = {}) => {
+  return async <T>(path: string, schema: Parser<T>, options: ApiRequestOptions = {}) => {
     const method = (options.method ?? 'GET').toUpperCase();
     const mutation = method !== 'GET' && method !== 'HEAD';
     try {
       const result = await request(path, schema, options);
       if (mutation) {
-        await client.invalidateQueries();
+        const documents = /^\/cases\/([^/]+)\/(documents|document-uploads)(?:\/|$)/.exec(path);
+        if (documents) {
+          // Starting uploads and authorizing downloads do not change the library.
+          const libraryChanged = /\/(complete|remove|restore)$/.test(path);
+          void client.invalidateQueries({
+            predicate: ({ queryKey }) => {
+              const key = String(queryKey[0]);
+              return (
+                key.startsWith('/admin/audit') ||
+                (libraryChanged && key.startsWith(`/cases/${documents[1]}/documents?`))
+              );
+            },
+          });
+        } else {
+          await client.invalidateQueries();
+        }
       }
       return result;
     } catch (error) {

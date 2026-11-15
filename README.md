@@ -1,6 +1,6 @@
 # CaseFlow AI
 
-TypeScript monorepo with Microsoft Entra sign-in, persistent profiles, role-based permissions, case creation, editing, reversible archiving, Staff assignments, and audit history. Direct S3 upload authorization and server-verified completion are implemented. Document browsing, download/removal workflows, upload UI, and processing remain pending.
+TypeScript monorepo with Microsoft Entra sign-in, persistent profiles, role-based permissions, case creation, editing, reversible archiving, Staff assignments, and audit history. Document management includes direct S3 uploads, server-verified completion, a paginated library, authorized downloads, and reversible removal. File previews and background processing remain pending.
 
 ## Structure
 
@@ -280,9 +280,8 @@ working database and do not silently skip when the database is unavailable. Cove
 ## Document storage and uploads
 
 The API supports upload authorization, verified completion, paginated document listing,
-short-lived downloads, and administrative removal/restoration. The document library UI
-is available. Upload, download, and remove/restore controls and background processing
-remain later work.
+short-lived downloads, and administrative removal/restoration. The case document UI
+supports these workflows. File previews and background processing remain later work.
 
 Storage configuration and S3 adapters live in `apps/api/src/storage`. Upload and download
 orchestration live in `src/documents`, HTTP definitions in
@@ -380,9 +379,39 @@ Protected resources are revalidated on navigation; rejected access clears the ca
 view. An empty library contains no verified files for that view; failed or pending
 upload attempts do not appear in the library.
 
-The interface uses the existing listing API without new database migrations or
-storage configuration. File previews, uploading, downloading, and remove/restore
-controls are not part of this UI step.
+Select **Upload files** to choose or drop PDF, JPEG, and PNG files. Review the selection
+before uploading. Validation rejects empty files, unsupported types/extensions, unsafe
+names, and files over 25 MiB. A selection supports up to ten files; the workspace queue
+also retains at most ten unfinished files. Two full upload pipelines run concurrently,
+including checksum preparation, authorization, transfer, and server verification.
+Progress reports transferred bytes; **Verifying** is a separate stage before availability.
+
+The in-memory queue continues across tabs and cases within the current workspace.
+Each entry retains its original case. Files, session state, and signed URLs are never
+persisted in browser storage or URLs. Refresh/closing warns while work remains, but
+uploads cannot resume across a reload. Sign-out, user/role changes, and rejected access
+abort and clear the affected queue. Completed entries release their File references.
+
+**Stop upload** stops local preparation or transfer; it is unavailable once server
+verification begins. It does not delete received bytes, cancel the server session, or
+reclaim reserved storage. **Retry** reuses the request/session identity and reconciles
+ambiguous transfer/completion responses before resending bytes. Terminal or expired
+attempts offer an explicit **New attempt**. Their original reservations remain retained.
+
+**Download** requests a fresh authorization for the saved object version, then hands the
+attachment to the browser. The notification confirms the request, not a completed
+download. Admin/Super Admin users can remove a current document through a filename-specific
+confirmation modal, or restore it from Removed/All. These actions use the displayed
+version; conflicts refresh the library and require review before another action.
+Archived cases keep download access but hide upload/remove/restore controls.
+
+Success feedback uses workspace toasts; per-file failures remain in the queue.
+Document changes invalidate the affected library and audit queries. Storage-related API
+requests have a bounded 60-second timeout; ordinary API requests retain their 10-second
+timeout. Frontend document components and state/transport helpers live in
+`apps/web/components/workspace/documents` and `apps/web/lib/documents`.
+No new database migrations, browser AWS credentials, or frontend dependencies are required.
+File previews remain outside this implementation.
 
 ### Document listing and downloads
 
@@ -481,9 +510,10 @@ Supabase Data API with RLS-controlled reads.
   `{environment}/cases/{case-id}/documents/{document-id}/original/{filename}`.
   Availability pins a version; removal/restoration preserve that version. Processed
   outputs remain later work.
-- Ten files per selection and two simultaneous browser uploads are reserved UI
-  limits. Cancellation, scheduled expiry, orphan cleanup, and quota reclamation
-  remain later work. Do not release reservations by deleting metadata manually.
+- The UI enforces ten files per selection, ten unfinished queue entries, and two
+  concurrent upload pipelines. Local transfer stopping is supported; server-side
+  cancellation, scheduled expiry, orphan cleanup, and quota reclamation remain
+  later work. Do not release reservations by deleting metadata manually.
 
 Unit tests exercise upload signing restrictions, byte verification, safe failures,
 and client shutdown. PostgreSQL integration tests use disposable databases for

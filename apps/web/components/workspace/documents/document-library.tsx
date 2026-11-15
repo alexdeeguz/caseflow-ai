@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { DocumentFilter, Role } from '@caseflow/schemas';
 import type { AuthRequest } from '../../../hooks/use-authentication';
@@ -13,11 +13,17 @@ import { documentEmptyState, documentFilterLabels } from '../../../lib/documents
 import { Button } from '../../ui/button';
 import { Pagination } from '../../ui/pagination';
 import { DocumentIcon } from './document-icon';
+import { ConfirmDialog } from '../../ui/confirm-dialog';
+import { StatusMessage } from '../../ui/status-message';
+import { UploadPanel } from './upload-panel';
+import { useDocumentActions } from './use-document-actions';
 import { DocumentList } from './document-list';
 import styles from './documents.module.css';
 
 export function DocumentLibrary({
   caseId,
+  caseLabel,
+  archived,
   role,
   request,
   location,
@@ -26,6 +32,8 @@ export function DocumentLibrary({
   onAccessRejected,
 }: {
   caseId: string;
+  caseLabel: string;
+  archived: boolean;
   role: Role;
   request: AuthRequest;
   location: WorkspaceLocation;
@@ -44,6 +52,25 @@ export function DocumentLibrary({
     }
   }, [denied, error, onAccessRejected]);
 
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const heading = useRef<HTMLHeadingElement>(null);
+  const errorSummary = useRef<HTMLDivElement>(null);
+  const uploadButton = useRef<HTMLButtonElement>(null);
+  const actions = useDocumentActions(request, () => query.refetch(), onAccessRejected);
+  useEffect(() => {
+    if (actions.completedAction) {
+      heading.current?.focus();
+    }
+  }, [actions.completedAction]);
+  useEffect(() => {
+    if (actions.error && !actions.removing) {
+      errorSummary.current?.focus();
+    }
+  }, [actions.error, actions.removing]);
+  const closeUpload = () => {
+    setUploadOpen(false);
+    uploadButton.current?.focus();
+  };
   const empty = documentEmptyState(filter, page);
   const navigating = pendingLocation !== null;
   const selectPage = (documentPage: number) =>
@@ -54,7 +81,9 @@ export function DocumentLibrary({
       <header className={styles.header}>
         <div>
           <div className={styles.heading}>
-            <h2 id="documents-heading">Documents</h2>
+            <h2 id="documents-heading" ref={heading} tabIndex={-1}>
+              Documents
+            </h2>
             {data && (
               <span
                 className={styles.count}
@@ -66,8 +95,51 @@ export function DocumentLibrary({
           </div>
           <p className={styles.subtitle}>Files and supporting records for this case.</p>
         </div>
-        <span className={styles.order}>Newest first</span>
+        <div className={styles.headerActions}>
+          <span className={styles.order}>Newest first</span>
+          {!archived && (
+            <Button
+              ref={uploadButton}
+              aria-expanded={uploadOpen}
+              onClick={() => setUploadOpen((value) => !value)}
+            >
+              Upload files
+            </Button>
+          )}
+        </div>
       </header>
+      {archived && (
+        <p className={styles.archiveHint}>
+          Downloads remain available. Restore this case before uploading, removing, or restoring
+          documents.
+        </p>
+      )}
+      {!archived && uploadOpen && (
+        <UploadPanel key={caseId} target={{ id: caseId, label: caseLabel }} onClose={closeUpload} />
+      )}
+      {actions.error && !actions.removing && (
+        <div ref={errorSummary} tabIndex={-1}>
+          <StatusMessage tone="error">{actions.error}</StatusMessage>
+        </div>
+      )}
+      <ConfirmDialog
+        open={actions.removing !== null}
+        title="Remove document?"
+        confirmLabel="Remove document"
+        cancelLabel="Keep document"
+        busy={actions.busy !== null}
+        onCancel={actions.cancel}
+        onConfirm={actions.confirm}
+      >
+        <p>
+          <strong className={styles.filename}>{actions.removing?.filename}</strong>
+        </p>
+        <p>
+          The file and its history are retained. An administrator can restore it later. Previously
+          issued download links may work for up to 60 seconds.
+        </p>
+        {actions.error && <StatusMessage tone="error">{actions.error}</StatusMessage>}
+      </ConfirmDialog>
       {role !== Role.Staff && (
         <div role="group" aria-label="Document visibility" className={styles.filters}>
           {Object.values(DocumentFilter).map((value) => (
@@ -129,7 +201,14 @@ export function DocumentLibrary({
                 )}
               </div>
             ) : (
-              <DocumentList key={`${caseId}-${filter}-${page}`} items={data.items} />
+              <DocumentList
+                key={`${caseId}-${filter}-${page}`}
+                items={data.items}
+                role={role}
+                archived={archived}
+                busy={actions.busy}
+                onAction={actions.act}
+              />
             )}
           </div>
           {(data.total > data.pageSize || page > 1) && <Pagination {...data} onPage={selectPage} />}

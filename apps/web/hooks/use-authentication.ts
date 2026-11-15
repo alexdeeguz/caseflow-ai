@@ -6,13 +6,17 @@ import { InteractionRequiredAuthError, type AccountInfo } from '@azure/msal-brow
 
 import { getAuthClient } from '../lib/auth';
 import { getPublicConfig } from '../lib/config';
-import { apiRequest, ApiError, type Parser } from '../lib/api';
+import { apiRequest, ApiError, type Parser, type ApiRequestOptions } from '../lib/api';
 import { isAccessRejected } from '../lib/auth-errors';
 import { rememberWorkspaceShell } from '../lib/session-presentation';
 
 const permissionsChangedEvent = 'caseflow:permissions';
 
-export type AuthRequest = <T>(path: string, schema: Parser<T>, options?: RequestInit) => Promise<T>;
+export type AuthRequest = <T>(
+  path: string,
+  schema: Parser<T>,
+  options?: ApiRequestOptions,
+) => Promise<T>;
 
 export function useAuthentication() {
   const [ready, setReady] = useState(false);
@@ -47,7 +51,7 @@ export function useAuthentication() {
   }, [lifecycle]);
 
   const request: AuthRequest = useCallback(
-    async <T>(path: string, schema: Parser<T>, options: RequestInit = {}) => {
+    async <T>(path: string, schema: Parser<T>, options: ApiRequestOptions = {}) => {
       const version = lifecycle.current.generation;
 
       if (!account) {

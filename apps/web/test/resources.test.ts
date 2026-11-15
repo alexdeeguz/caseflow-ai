@@ -172,3 +172,35 @@ test('disposing a workspace aborts in-flight resource requests', async () => {
     client.clear();
   }
 });
+
+test('document mutations invalidate only affected libraries and audit; signed authorizations are not cached', async () => {
+  for (const action of ['start', 'download', 'complete', 'remove', 'restore']) {
+    const client = testResourceClient();
+    const keys = [
+      '/cases/one/documents?page=1',
+      '/cases/two/documents?page=1',
+      '/cases?page=1',
+      '/admin/audit?page=1',
+    ];
+    keys.forEach((key) => client.setQueryData([key], []));
+    const request = withResourceInvalidation(client, async (_path, schema) =>
+      schema.parse({ success: true }),
+    );
+    const path =
+      action === 'start'
+        ? '/cases/one/document-uploads'
+        : action === 'complete'
+          ? '/cases/one/document-uploads/session/complete'
+          : `/cases/one/documents/document/${action}`;
+    await request(path, successSchema, { method: 'POST' });
+    assert.equal(
+      client.getQueryState([keys[0]])?.isInvalidated,
+      ['complete', 'remove', 'restore'].includes(action),
+    );
+    assert.equal(client.getQueryState([keys[1]])?.isInvalidated, false);
+    assert.equal(client.getQueryState([keys[2]])?.isInvalidated, false);
+    assert.equal(client.getQueryState([keys[3]])?.isInvalidated, true);
+    assert.equal(client.getQueryData([path]), undefined);
+    client.clear();
+  }
+});

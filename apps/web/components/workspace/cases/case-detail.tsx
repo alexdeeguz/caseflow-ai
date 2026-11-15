@@ -78,7 +78,10 @@ export function CaseDetail({
           </nav>
           {location.section === CaseSection.Documents ? (
             <DocumentLibrary
+              key={id}
               caseId={id}
+              caseLabel={data.case.caseNumber}
+              archived={data.case.archivedAt !== null}
               role={user.role}
               request={request}
               location={location}

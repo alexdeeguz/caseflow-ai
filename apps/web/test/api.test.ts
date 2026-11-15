@@ -147,3 +147,29 @@ test('only access rejection clears an existing workspace during profile refresh'
   }
   assert.equal(isAccessRejected(new Error('Connection interrupted')), false);
 });
+
+test('storage-operation timeout is bounded and not passed to fetch as an extra option', async () => {
+  let duration = 0;
+  mock.method(AbortSignal, 'timeout', (value: number) => {
+    duration = value;
+    return new AbortController().signal;
+  });
+  mock.method(globalThis, 'fetch', async (_url: string, options: RequestInit) => {
+    assert.equal('timeoutMs' in options, false);
+    return Response.json({});
+  });
+  await apiRequest('token', '/cases', { parse: () => null }, { timeoutMs: 90000 });
+  assert.equal(duration, 60000);
+  await apiRequest('token', '/cases', { parse: () => null });
+  assert.equal(duration, 10000);
+});
+
+test('document conflicts use document-specific safe messages', async () => {
+  mock.method(globalThis, 'fetch', async () =>
+    Response.json({ code: 'DOCUMENT_CONFLICT', error: 'provider details' }, { status: 409 }),
+  );
+  await assert.rejects(
+    apiRequest('token', '/cases', { parse: () => null }),
+    /This document changed/,
+  );
+});

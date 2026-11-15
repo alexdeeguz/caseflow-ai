@@ -341,3 +341,36 @@
     padding-inline: 0.75rem;
   }
 }
+
+.headerActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+}
+.documentActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.75rem;
+}
+.actionButton {
+  min-height: 44px;
+  padding: 0.5rem 0;
+  color: var(--brand-navy);
+  font-size: 0.75rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+.actionButton:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.actionButton:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+.archiveHint {
+  margin-bottom: 1.5rem;
+  font-size: 0.8125rem;
+  color: var(--brand-muted);
+}
