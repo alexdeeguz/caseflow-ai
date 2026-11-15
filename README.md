@@ -280,8 +280,9 @@ working database and do not silently skip when the database is unavailable. Cove
 ## Document storage and uploads
 
 The API supports upload authorization, verified completion, paginated document listing,
-short-lived downloads, and administrative removal/restoration. The document UI and
-background processing are not yet implemented.
+short-lived downloads, and administrative removal/restoration. The document library UI
+is available. Upload, download, and remove/restore controls and background processing
+remain later work.
 
 Storage configuration and S3 adapters live in `apps/api/src/storage`. Upload and download
 orchestration live in `src/documents`, HTTP definitions in
@@ -364,6 +365,24 @@ Staff may upload to assigned, current cases. Admin/Super Admin may upload to all
 current cases and complete uploads for those cases. Staff may only complete their
 own sessions. Disabled/unprovisioned users and inaccessible case/session IDs are
 rejected. Archived cases reject uploads and completion.
+
+### Document library interface
+
+Open a case and select **Documents** to browse its verified files. The library has a
+desktop table, responsive cards, expandable file metadata, and paginated results.
+Admin/Super Admin users can switch between Current, Removed, and All. Staff see only
+current documents on assigned cases. Archived cases retain library access.
+
+The case section, document filter, and document page are stored in `section`,
+`documentFilter`, and `documentPage` URL parameters independently of case-list filters
+and pagination. Bookmarks, refresh, and Back/Forward preserve the selected view.
+Protected resources are revalidated on navigation; rejected access clears the case
+view. An empty library contains no verified files for that view; failed or pending
+upload attempts do not appear in the library.
+
+The interface uses the existing listing API without new database migrations or
+storage configuration. File previews, uploading, downloading, and remove/restore
+controls are not part of this UI step.
 
 ### Document listing and downloads
 

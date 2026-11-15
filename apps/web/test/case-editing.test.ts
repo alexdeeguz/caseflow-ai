@@ -54,6 +54,7 @@ test('partial contracts never apply creation defaults and require an explicit ve
 
 test('edit bookmarks and archive filters round-trip without putting drafts in the URL', () => {
   const location = {
+    ...parseWorkspaceLocation(new URLSearchParams()),
     tab: WorkspaceTab.Cases,
     case: record.id,
     mode: CaseMode.Edit,

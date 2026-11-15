@@ -65,6 +65,9 @@ export function Cases({ request, user, location, navigate, pendingLocation }: Ca
       <CaseDetail
         key={location.case}
         id={location.case}
+        location={location}
+        navigate={navigate}
+        pendingLocation={pendingLocation?.case === location.case ? pendingLocation : null}
         user={user}
         request={request}
         onBack={onBack}

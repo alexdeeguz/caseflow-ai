@@ -1,20 +1,19 @@
 'use client';
 
 import { useState } from 'react';
-import { Role, successSchema, type User } from '@caseflow/schemas';
-
+import type { User } from '@caseflow/schemas';
 import type { AuthRequest } from '../../../hooks/use-authentication';
+import type { WorkspaceNavigate } from '../../../hooks/use-workspace-navigation';
+import type { WorkspaceLocation } from '../../../lib/workspace-location';
 import { useResource } from '../../../hooks/use-resource';
-import { useToast } from '../../ui/toast-provider';
+import { caseDetailResource } from '../../../lib/workspace-resources';
+import { CaseSection, caseSectionLabels } from '../../../lib/constants/navigation';
 import { Button } from '../../ui/button';
 import { StatusMessage } from '../../ui/status-message';
 import { LoadState } from '../../ui/load-state';
-import { RoleBadge } from '../role-badge';
-import { StaffPicker } from './staff-picker';
-import { caseDetailResource } from '../../../lib/workspace-resources';
-import { CaseActions } from './case-actions';
+import { DocumentLibrary } from '../documents/document-library';
+import { CaseOverview } from './case-overview';
 import { CaseStatusBadge } from './case-status-badge';
-import { formatIncidentDate } from '../../../lib/case-dates';
 import styles from './cases.module.css';
 
 export function CaseDetail({
@@ -23,41 +22,29 @@ export function CaseDetail({
   request,
   onBack,
   onEdit,
+  location,
+  navigate,
+  pendingLocation,
 }: {
   id: string;
   user: User;
   request: AuthRequest;
   onBack: () => void;
   onEdit: () => void;
+  location: WorkspaceLocation;
+  navigate: WorkspaceNavigate;
+  pendingLocation: WorkspaceLocation | null;
 }) {
-  const notify = useToast();
-  const [error, setError] = useState('');
-  const [busy, setBusy] = useState(false);
-  const { data, error: loadError } = useResource(request, caseDetailResource(id));
-
-  async function assign(userId: string, assigned: boolean) {
-    setBusy(true);
-    setError('');
-
-    try {
-      await request(`/admin/cases/${id}/assignments/${userId}`, successSchema, {
-        method: assigned ? 'PUT' : 'DELETE',
-      });
-      notify(assigned ? 'Staff assigned to case.' : 'Assignment removed.');
-    } catch (error) {
-      setError((error as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  }
+  const { data, error } = useResource(request, caseDetailResource(id));
+  const [accessError, setAccessError] = useState<string | null>(null);
 
   return (
     <section>
       <Button variant="secondary" onClick={onBack}>
         Back to cases
       </Button>
-      {!data ? (
-        <LoadState error={loadError} />
+      {!data || accessError ? (
+        <LoadState error={accessError ?? error} />
       ) : (
         <>
           <header className="mt-8">
@@ -76,74 +63,34 @@ export function CaseDetail({
               . Case details are read-only until restored. Data and assignments are retained.
             </StatusMessage>
           )}
-          {user.role !== Role.Staff && (
-            <CaseActions record={data.case} request={request} onEdit={onEdit} />
-          )}
-          <dl className={styles.metadata}>
-            <div>
-              <dt>Client</dt>
-              <dd>{data.case.clientName}</dd>
-            </div>
-            <div>
-              <dt>Incident date</dt>
-              <dd>{formatIncidentDate(data.case.incidentDate)}</dd>
-            </div>
-            <div>
-              <dt>Created</dt>
-              <dd>
-                <time dateTime={data.case.createdAt}>
-                  {new Date(data.case.createdAt).toLocaleString()}
-                </time>
-              </dd>
-            </div>
-            <div>
-              <dt>Last updated</dt>
-              <dd>
-                <time dateTime={data.case.updatedAt}>
-                  {new Date(data.case.updatedAt).toLocaleString()}
-                </time>
-              </dd>
-            </div>
-          </dl>
-          <h2 className="font-semibold text-lg">Summary</h2>
-          <p className="mt-3 whitespace-pre-wrap break-words text-ink-soft">
-            {data.case.summary || 'No summary provided.'}
-          </p>
-          {user.role !== Role.Staff && (
-            <>
-              <h2 className="mt-8">Assigned people</h2>
-              {data.assignedUsers.map((person) => (
-                <div className="flex flex-wrap items-center gap-4 py-3" key={person.id}>
-                  <span>{person.displayName}</span>
-                  <RoleBadge role={person.role} />
-                  {!person.active && <span>Disabled</span>}
-                  {person.role === Role.Staff ? (
-                    <Button
-                      disabled={busy}
-                      variant="secondary"
-                      onClick={() => void assign(person.id, false)}
-                    >
-                      Remove assignment
-                    </Button>
-                  ) : (
-                    <span className="text-sm text-muted">
-                      Assignment retained; currently has all-case access.
-                    </span>
-                  )}
-                </div>
-              ))}
-              {!data.assignedUsers.length && <p>No assignments yet.</p>}
-              <StaffPicker
-                request={request}
-                assigned={data.assignedUsers.map((u) => u.id)}
-                busy={busy}
-                onAssign={(id) => void assign(id, true)}
-              />
-            </>
+          <nav aria-label="Case sections" className={styles.sections}>
+            {Object.values(CaseSection).map((section) => (
+              <button
+                key={section}
+                type="button"
+                aria-current={location.section === section ? 'page' : undefined}
+                aria-busy={pendingLocation?.section === section && location.section !== section}
+                onClick={() => void navigate({ ...location, section })}
+              >
+                {caseSectionLabels[section]}
+              </button>
+            ))}
+          </nav>
+          {location.section === CaseSection.Documents ? (
+            <DocumentLibrary
+              caseId={id}
+              role={user.role}
+              request={request}
+              location={location}
+              navigate={navigate}
+              pendingLocation={pendingLocation}
+              onAccessRejected={setAccessError}
+            />
+          ) : (
+            <CaseOverview data={data} user={user} request={request} onEdit={onEdit} />
           )}
         </>
       )}
-      {error && <StatusMessage tone="error">{error}</StatusMessage>}
     </section>
   );
 }

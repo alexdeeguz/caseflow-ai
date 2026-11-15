@@ -1,5 +1,6 @@
 'use client';
 
+import type { Role } from '@caseflow/schemas';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
@@ -10,7 +11,7 @@ import {
   type WorkspaceLocation,
 } from '../lib/workspace-location';
 import { preloadResource } from '../lib/resources';
-import { locationResource } from '../components/workspace/navigation';
+import { locationResources } from '../components/workspace/navigation';
 
 interface NavigationOptions {
   replace?: boolean;
@@ -22,7 +23,11 @@ export type WorkspaceNavigate = (
   options?: NavigationOptions,
 ) => Promise<void>;
 
-export function useWorkspaceNavigation(request: AuthRequest, refreshProfile: () => Promise<void>) {
+export function useWorkspaceNavigation(
+  request: AuthRequest,
+  refreshProfile: () => Promise<void>,
+  role: Role,
+) {
   const params = useSearchParams();
   const serialized = params.toString();
   const location = useMemo(
@@ -71,18 +76,18 @@ export function useWorkspaceNavigation(request: AuthRequest, refreshProfile: () 
         }
       }
 
-      const resource = locationResource(next);
+      const resources = locationResources(next, role);
 
       await Promise.all([
         refreshProfile(),
-        resource ? preloadResource(client, request, resource) : Promise.resolve(),
+        ...resources.map((resource) => preloadResource(client, request, resource)),
       ]);
 
       if (lifecycle.current.sequence === current) {
         router[replace ? 'replace' : 'push'](workspaceHref(next), { scroll: false });
       }
     },
-    [client, location, refreshProfile, request, router, serialized],
+    [client, location, refreshProfile, request, role, router, serialized],
   );
 
   const pending = pendingNavigation?.from === serialized ? pendingNavigation.destination : null;

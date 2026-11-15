@@ -1,3 +1,4 @@
+import type { Role } from '@caseflow/schemas';
 import {
   auditListResource,
   caseDetailResource,
@@ -6,22 +7,32 @@ import {
 } from '../../lib/workspace-resources';
 import type { Resource } from '../../lib/resources';
 import type { WorkspaceLocation } from '../../lib/workspace-location';
-import { CaseView, WorkspaceTab } from '../../lib/constants/navigation';
+import { CaseSection, CaseView, WorkspaceTab } from '../../lib/constants/navigation';
+
+import { documentLibraryQuery, documentListResource } from '../../lib/documents/resources';
 
 export { WorkspaceTab, tabLabels } from '../../lib/constants/navigation';
 
-export function locationResource(location: WorkspaceLocation): Resource<unknown> | null {
+export function locationResources(location: WorkspaceLocation, role: Role): Resource<unknown>[] {
   switch (location.tab) {
     case WorkspaceTab.Cases:
       if (location.case === CaseView.New) {
-        return null;
+        return [];
       }
-      return location.case ? caseDetailResource(location.case) : caseListResource(location);
+      if (!location.case) {
+        return [caseListResource(location)];
+      }
+      return [
+        caseDetailResource(location.case),
+        ...(location.section === CaseSection.Documents && !location.mode
+          ? [documentListResource(location.case, documentLibraryQuery(location, role))]
+          : []),
+      ];
     case WorkspaceTab.Users:
-      return userListResource();
+      return [userListResource()];
     case WorkspaceTab.Audit:
-      return auditListResource();
+      return [auditListResource()];
     case WorkspaceTab.Profile:
-      return null;
+      return [];
   }
 }

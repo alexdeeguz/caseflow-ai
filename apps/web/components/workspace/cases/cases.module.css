@@ -192,3 +192,29 @@
     flex: 1 1 10rem;
   }
 }
+
+.sections {
+  display: flex;
+  gap: 1.5rem;
+  border-bottom: 1px solid var(--brand-line);
+  margin: 1.5rem 0 2rem;
+}
+.sections button {
+  min-height: 48px;
+  padding: 0.75rem 0.25rem;
+  border-bottom: 3px solid transparent;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--brand-muted);
+  cursor: pointer;
+}
+.sections button:hover {
+  color: var(--brand-navy);
+}
+.sections button[aria-current] {
+  color: var(--brand-navy);
+  border-bottom-color: var(--brand-navy);
+}
+.sections button[aria-busy='true'] {
+  border-bottom-color: var(--brand-yellow);
+}

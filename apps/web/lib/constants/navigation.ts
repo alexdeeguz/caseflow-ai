@@ -17,6 +17,14 @@ export const tabLabels: Readonly<Record<WorkspaceTab, string>> = {
 export const CaseView = { New: 'new' } as const;
 export const CaseMode = { Edit: 'edit' } as const;
 
+export const CaseSection = { Overview: 'overview', Documents: 'documents' } as const;
+export type CaseSection = (typeof CaseSection)[keyof typeof CaseSection];
+
+export const caseSectionLabels: Readonly<Record<CaseSection, string>> = {
+  [CaseSection.Overview]: 'Overview',
+  [CaseSection.Documents]: 'Documents',
+};
+
 export const WorkspaceParam = {
   Tab: 'tab',
   Case: 'case',
@@ -25,4 +33,7 @@ export const WorkspaceParam = {
   Search: 'search',
   Status: 'status',
   Page: 'page',
+  Section: 'section',
+  DocumentFilter: 'documentFilter',
+  DocumentPage: 'documentPage',
 } as const;

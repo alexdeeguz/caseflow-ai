@@ -10,6 +10,7 @@ const caseId = '10000000-0000-4000-8000-000000000001';
 
 test('case links preserve list context without accepting arbitrary destinations', () => {
   const location = {
+    ...parseWorkspaceLocation(new URLSearchParams()),
     tab: WorkspaceTab.Cases,
     case: caseId,
     search: 'A & B / 100%',
@@ -36,6 +37,7 @@ test('case links preserve list context without accepting arbitrary destinations'
 
 test('leaving Cases clears the selected case but retains list filters', () => {
   const location = {
+    ...parseWorkspaceLocation(new URLSearchParams()),
     tab: WorkspaceTab.Profile,
     case: caseId,
     search: 'client',

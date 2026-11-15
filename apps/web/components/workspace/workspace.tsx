@@ -59,7 +59,11 @@ export function Workspace(props: WorkspaceProps) {
 }
 
 function WorkspaceContent({ user, request, signOut, refreshProfile }: WorkspaceProps) {
-  const { location, pending, navigate } = useWorkspaceNavigation(request, refreshProfile);
+  const { location, pending, navigate } = useWorkspaceNavigation(
+    request,
+    refreshProfile,
+    user.role,
+  );
   const tab = location.tab;
   const pendingTab = pending?.tab ?? null;
 
