@@ -1,898 +1,101 @@
 # CaseFlow AI
 
-TypeScript monorepo with Microsoft Entra sign-in, persistent profiles, role-based permissions, case creation, editing, reversible archiving, Staff assignments, and audit history. Document management includes direct S3 uploads, server-verified completion, a paginated library, authorized downloads, and reversible removal. File previews and background processing remain pending.
+CaseFlow AI is a case and document workspace built with TypeScript. It combines
+Microsoft sign-in, role-based access, case management, and private document storage.
+Use fictional data for demonstrations and testing.
 
-## Structure
+## Features
 
-- `apps/web`: Next.js, React, and Tailwind frontend with Microsoft sign-in.
-- `apps/api`: Fastify API with database-enforced user and case permissions.
-- `packages/schemas`: shared strict Zod request/response contracts and TypeScript types.
+- **Users and permissions:** persistent profiles, Staff/Admin/Super Admin roles,
+  case assignments, account access controls, and audit history.
+- **Cases:** creation, searchable lists, details, editing, and reversible archiving
+  with version checks to prevent overwriting concurrent changes.
+- **Documents:** direct S3 uploads with server verification, a paginated library,
+  authorized downloads, and reversible removal.
+- **Processing foundation:** atomic job/dispatch creation, an opt-in API dispatcher
+  for SQS, and restricted processor database functions.
 
-Shared domain values live in `packages/schemas/src/constants` (roles, case statuses, archive filters and limits, error codes,
-and audit actions). Request/response schemas and inferred types live in
-`packages/schemas/src/contracts`, grouped by feature. Import both through
-`@caseflow/schemas`; the package entry point only re-exports its public API.
+File previews and background document processing are not available yet. Python
+workers, Textract completion handling, processing API/UI, and operational monitoring
+remain pending. Keep continuous dispatching disabled until the consumer is ready.
 
-API database code lives in `apps/api/src/database`: connection/transaction lifecycle
-in `index.ts`, operation identifiers and access requirements in `operations.ts`,
-operation dispatch and shared queries in `queries.ts`, case queries in `cases.ts`, connection URL validation in
-`connection-config.ts`, and safe database-error translation in `errors.ts`. Application errors are defined separately in `apps/api/src/errors.ts`.
+## Stack and structure
 
-Frontend workspace components live in `apps/web/components/workspace`; case list,
-shared create/edit form, versioned drafts, status badge, detail, and assignment-picker components are grouped under `cases/`. Reusable
-controls, accessible confirmation dialogs, toast notifications, and loading/pagination components live in `components/ui`. In-memory edit drafts are owned by the current workspace through `lib/case-drafts.ts`. Constants used
-by one component stay with that component. Shared workspace navigation constants live in
-`lib/constants/navigation.ts`; URL parsing/serialization lives in `lib/workspace-location.ts`.
+| Location                             | Responsibility                                                               |
+| ------------------------------------ | ---------------------------------------------------------------------------- |
+| [apps/web](apps/web)                 | Next.js, React, and Tailwind frontend with Microsoft Entra authentication    |
+| [apps/api](apps/api)                 | Fastify API with PostgreSQL authorization, S3 storage, and an SQS dispatcher |
+| [packages/schemas](packages/schemas) | Handwritten shared Zod contracts, constants, and TypeScript types            |
+| [supabase](supabase)                 | PostgreSQL migrations, local configuration, and fictional seed data          |
+| [docs](docs)                         | Setup guides, feature behavior, and technical references                     |
 
-## Setup
+The API connects to a private PostgreSQL schema using restricted credentials.
+Microsoft Entra provides authentication; S3 stores document bytes. The browser does
+not receive database credentials. See [code organization](docs/development.md#code-organization)
+for module boundaries and reusable frontend components.
 
-Use Node.js 24.22.3 and npm 11.x (expected npm version: 11.12.1).
+## Getting started
 
-```sh
-cd caseflow-ai
-npm install
-cp apps/web/.env.example apps/web/.env.local
-cp apps/api/.env.example apps/api/.env
-# Complete either the local or hosted database setup below before starting the app.
-npm run dev
-```
+Use **Node.js 24.22.3** and **npm 11.x** (expected version: **11.12.1**).
+With nvm, run `nvm install` and `nvm use` from the repository root first.
+Local PostgreSQL requires Docker Desktop; hosted Supabase is also supported.
 
-If using nvm, run `nvm install` and `nvm use` first.
-
-The web starter runs at http://localhost:3000. The API binds to http://127.0.0.1:4000; `GET /me` requires a valid CaseFlow access token. The root path returns 404. Stop development with Ctrl+C.
-
-## Commands
-
-```sh
-npm run dev:web
-npm run dev:api
-npm run build
-npm run lint
-npm run typecheck
-npm run format:check
-npm test
-```
-
-## Local database
-
-Install and start Docker Desktop, then run from the repository root:
-
-```sh
-npm run db:start
-npm run db:status
-```
-
-The pinned Supabase CLI manages the local Docker containers. The first start
-downloads the required images. Open Studio at http://127.0.0.1:54323 to inspect
-the database; PostgreSQL listens on port 54322 and the local Supabase API on
-port 54321. `npm run db:status` displays connection details and local development
-keys. Keep privileged keys out of frontend code.
-
-Run `npm run db:stop` when finished. This preserves local data for the next start.
-Do not use `--no-backup` unless you intend to delete local database volumes.
-Stopping the app with Ctrl+C does not stop these containers.
-
-Configuration lives in `supabase/config.toml`. Microsoft Entra remains the sign-in provider.
-Local data is separate from any hosted Supabase project and does not sync automatically.
-
-### First-time database setup
-
-After copying the app environment examples, create the ignored
-`apps/api/.env.operator` with this **local-only** operator connection:
-
-```dotenv
-OPERATOR_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres
-```
-
-Then run from the repository root:
-
-```sh
-npm run db:start
-npm run db:migrate
-npm run db:configure
-npm run db:seed
-npm run dev
-```
-
-`db:configure` generates a random runtime password and writes `DATABASE_URL` to
-`apps/api/.env`. Running it again rotates that local password; restart the API.
-The API requires `caseflow_runtime`, never the operator role. Hosted database
-connections require TLS verification (`sslmode=verify-full`). Connection URLs accept
-TLS options and `application_name`; credentials and host belong in the URL itself,
-not query-string overrides. Operator credentials
-belong only in operator tooling, never in the web app or deployed API environment.
-
-Migrations create a private `caseflow` schema with RLS and a restricted login.
-Do not add this schema to Supabase's exposed schemas or grant access to `anon`,
-`authenticated`, or `service_role`. Runtime writes use narrowly scoped private
-functions with fixed search paths and explicit execution grants. The runtime
-cannot update tables, modify audit history, or call operator functions directly.
-Identity context comes exclusively from verified Microsoft claims and lasts only
-for the request transaction. It is not a defense against a compromised API process.
-
-The seed command adds three fictional cases idempotently. It does not reset users
-or assignments. Migration and seed commands never reset the existing database.
-
-## Hosted database
-
-The API can use hosted Supabase PostgreSQL while the frontend and API run locally.
-Local and hosted databases are independent: migrations create the schema, not a copy
-of local users, assignments, cases, or document metadata. Microsoft Entra remains
-the authentication provider. No Supabase browser keys are needed.
-
-### Project and migrations
-
-1. Create a Supabase project in the same region as the application's storage when
-   available. Disable the Data API and automatic table exposure for this setup;
-   never expose the `caseflow` schema.
-2. From **Database → Settings → SSL Configuration**, enable SSL enforcement and
-   download the CA certificate. Applying enforcement briefly restarts the database.
-   Store the certificate at a stable path outside the repository.
-3. Authenticate the pinned CLI and review pending migrations before applying them:
+1. Install dependencies and create local environment files on first setup:
 
    ```sh
-   export SUPABASE_TELEMETRY_DISABLED=1
-   npx supabase login
-   npx supabase link --project-ref PROJECT_REF
-   npx supabase db push --remote=PROJECT_REF --dry-run --skip-vault
-   npx supabase db push --remote=PROJECT_REF --skip-vault
+   npm install
+   cp apps/web/.env.example apps/web/.env.local
+   cp apps/api/.env.example apps/api/.env
    ```
 
-   Review the target and confirmation before applying. CLI v3 defaults to local
-   targets; explicit `--remote=PROJECT_REF` avoids ambiguity. Do not reset either
-   database. Hosted seeding is optional; it is not part of migration application.
-
-### Runtime connection
-
-Use **Connect → Session pooler** for the persistent Node API. Copy the exact pooler
-host from the dashboard; it cannot be derived from the region alone. The session
-port is `5432`, and the database is `postgres`.
-
-Connect with an administrator through `psql` using TLS verification, then set the
-restricted role's password interactively:
-
-```text
-\password caseflow_runtime
-```
-
-This role already exists after migration. Use a separate password from the
-administrator's password. The `\password` prompt avoids plaintext passwords in
-SQL snippets and shell history.
-
-Set the ignored `apps/api/.env` using URL-encoded credentials and the actual
-absolute certificate path:
-
-```dotenv
-DATABASE_URL=postgresql://caseflow_runtime.PROJECT_REF:URL_ENCODED_PASSWORD@POOLER_HOST:5432/postgres?sslmode=verify-full&sslrootcert=/absolute/path/supabase-ca.crt
-```
-
-The shared pooler username includes the project reference; PostgreSQL still sees
-`caseflow_runtime` as the role. Configuration accepts this qualified username only
-on Supabase pooler hosts. Administrator usernames, unverified remote connections,
-and query parameters that override credentials are rejected.
-
-Restart the API after changing configuration. Keep passwords, full connection
-URLs, and private environment files out of screenshots, logs, and Git. The CA
-certificate is a trust anchor, not a database password. The API retains its bounded
-five-connection pool and transaction-local identity settings.
-
-### First sign-in and verification
-
-A first authenticated `GET /me` creates an active Staff profile in the selected
-database. Existing local privileges do not carry over. In hosted Studio, choose
-**Table Editor → caseflow → users**, or use an administrative SQL session:
-
-```sql
-select id, display_name, role, active, created_at
-from caseflow.users
-order by created_at desc;
-```
-
-To bootstrap the verified application user, run the same audited function used
-by the operator command:
-
-```sql
-select caseflow.operator_set_role('APPLICATION_USER_UUID'::uuid, 'super_admin');
-```
-
-Alternatively, configure a separate hosted `OPERATOR_DATABASE_URL` in the ignored
-`apps/api/.env.operator` and use `npm run operator:role -- USER_UUID super_admin`.
-Check its target first: a local operator connection changes only local roles.
-Never place operator credentials in `apps/api/.env` or the deployed API. The
-operator function protects the last active Super Admin. Disable users to block
-access; deleting a profile allows automatic provisioning on the next sign-in.
-
-Verify hosted configuration with:
-
-```sh
-npx supabase ssl-enforcement get --remote=PROJECT_REF --experimental
-npx supabase db advisors --remote=PROJECT_REF --type security --level warn
-npx supabase db query --remote=PROJECT_REF --read-only \
-  "select version from supabase_migrations.schema_migrations order by version"
-```
-
-Then verify profile loading, creation of a fictional case, upload, download,
-removal/restoration, and audit history through the application. A successful
-Microsoft sign-in alone does not verify the database connection. Download URLs
-are credentials; do not log or save them. If Chrome reports `ERR_BLOCKED_BY_CLIENT`,
-check the browser separately from API authorization and S3 response validation.
-
-### Local tests and switching environments
-
-`npm run db:configure` is **local-only** and overwrites the API's `DATABASE_URL`.
-Do not run it while expecting to retain hosted configuration. Keep local and hosted
-credentials in separately protected configuration and restart the API when switching.
-Existing uploaded S3 objects do not automatically acquire metadata in a new database.
-
-Integration tests create and drop disposable databases. They require explicit
-**local** operator and runtime URLs pointing at the same local server; the runtime
-username must be `caseflow_runtime`. Their fixture rejects hosted targets. When
-`apps/api/.env` targets hosted Supabase, supply local test credentials as shell
-environment variables before `npm run test:integration`; shell values take
-precedence over the environment files. Do not rotate a shared local role password
-just to run tests. Use an isolated PostgreSQL instance when local credentials are
-unavailable.
-
-### Backup, recovery, and deployment
-
-On the Free plan, maintain private exports rather than assuming paid-plan backup
-retention. From an authorized operator session, an application-data export is:
-
-```sh
-umask 077
-npx supabase db dump --remote=PROJECT_REF --schema caseflow \
-  --data-only --use-copy --file /private/backup/location/caseflow-data.sql
-```
-
-Keep exports outside Git and encrypt off-device copies. Reapply the versioned
-migrations to an isolated database, restore the data export with an administrative
-client, and verify row counts, constraints, sequences, and permissions before
-relying on recovery. Re-establish runtime passwords separately. Database backups
-contain document metadata, not S3 file bytes; retain the referenced S3 versions.
-Never test a restore against the working database.
-
-Before deploying the API, provision runtime credentials through the hosting
-platform's secret store, mount the trusted CA certificate, and establish credential
-rotation, scheduled backups, recovery drills, and monitoring for database capacity,
-connections, and application failures. These operational services are not enabled
-by a local `.env` configuration or a one-time backup. Account for Free-plan project
-pausing when preparing demos. No paid-plan upgrade is required by these instructions.
-
-References: [connection modes](https://supabase.com/docs/guides/database/connecting-to-postgres),
-[SSL enforcement](https://supabase.com/docs/guides/platform/ssl-enforcement), and
-[backup guidance](https://supabase.com/docs/guides/platform/backups).
-
-## Roles and administration
-
-| Capability                              | Staff                 | Admin                 | Super Admin           |
-| --------------------------------------- | --------------------- | --------------------- | --------------------- |
-| Edit own display name                   | Yes                   | Yes                   | Yes                   |
-| View cases                              | Assigned only         | All                   | All                   |
-| Create cases                            | No                    | Yes                   | Yes                   |
-| Edit details/status or archive/restore  | No                    | Yes                   | Yes                   |
-| View archived cases                     | Assigned only         | All                   | All                   |
-| Assign/remove Staff                     | No                    | Yes                   | Yes                   |
-| Enable/disable Staff                    | No                    | Yes                   | Yes                   |
-| Promote/demote or enable/disable Admins | No                    | No                    | Yes                   |
-| View audit history                      | No                    | Yes                   | Yes                   |
-| Grant/remove Super Admin                | Operator command only | Operator command only | Operator command only |
-
-New users start as active Staff with no assignments. After first sign-in, copy the
-application user ID from **Profile** and run:
-
-```sh
-npm run operator:role -- USER_UUID super_admin
-```
-
-The same operator command accepts `staff` or `admin` for controlled role recovery.
-It rejects disabled targets and removal of the last active Super Admin, and records
-changes with the database operator's name. It never matches accounts by email or
-display name. The web app cannot change a Super Admin's role/access status; they
-can still edit their own display name.
-
-Admins manage Staff access; Super Admins also manage Admin access. Demotion retains
-explicit assignments. Disabling blocks protected endpoints while retaining those
-assignments. New assignments require active Staff. Existing assignments to promoted
-Admins are retained and can be managed again after demotion.
-
-Permission mutations use a transaction-scoped advisory lock shared with operator
-commands, then reload authorization and commit the mutation and audit together.
-This serializes the demo's small administration workload; ordinary reads remain
-concurrent. New authorization checks observe committed permission changes. Data
-already delivered to a browser cannot be recalled.
-
-### Creating and viewing cases
-
-Admin and Super Admin users can choose **Create case** in the Cases workspace.
-The form requires a case title (up to 200 characters) and fictional client name
-(up to 100). Incident date and summary (up to 2,000 characters) are optional.
-Status defaults to Intake; Active and Closed are also available at creation.
-Admin and Super Admin users can edit all five fields and move freely between the three statuses.
-
-The server generates the UUID, case number, creation time, and creator identity.
-Case numbers use a database sequence, such as `CF-000001`; gaps are expected after
-rollbacks or repeated seed runs. New cases have no Staff assignments. After saving,
-the case details screen provides the existing assignment controls.
-
-The case list supports case-insensitive literal substring search across case number,
-title, and client name, plus status and Current / Archived / All filters (Current by default). Results and totals obey case permissions
-and are ordered newest first, with UUID as a stable tie-breaker. Incident dates are
-calendar dates, so they do not shift with the viewer's time zone.
-
-Case-list filters apply immediately; search updates after a 300 ms typing pause.
-Changing filters resets pagination, and automatic updates replace the current URL entry.
-
-Workspace URLs retain the selected tab, case, search, status, archive filter, and page, allowing
-bookmarks, refresh, and browser Back/Forward. Add `mode=edit` to a case URL to open its edit form. Form drafts are not stored in URLs.
-The desktop list uses a table; narrow screens use case cards.
-
-For an existing local installation, run `npm run db:migrate` before starting the
-updated API. The additive migration preserves existing profiles, case IDs, assignments,
-and audit events, and fills the seeded cases with fictional client metadata.
-Legacy cases have no recorded creator; newly created cases always do. No reset or
-credential rotation is required.
-
-### Editing, archiving, and restoring cases
-
-Choose **Edit case** on current case details. IDs, case numbers, creators, and creation
-times are immutable. Unsaved edits remain in memory while navigating within the same
-user/role workspace. Background refreshes retain dirty fields. Saving or explicitly
-discarding clears the draft; sign-out or loss of access also clears protected drafts.
-Refreshing or closing a page with unsaved edits triggers the browser's leave-page warning;
-drafts do not survive a reload and are never written to browser storage.
-
-Concurrent mutations use an `expectedVersion` check after locking the case row and
-rechecking the actor under the permission lock. A conflict retains the edit draft and
-requires an explicit, confirmed reload of the latest saved case. It never merges or
-retries an outdated edit automatically. No-op requests leave the version, timestamp,
-and audit history unchanged.
-
-**Archive case** opens an in-app confirmation modal naming the case. Archiving preserves
-its Intake/Active/Closed status, data, assignments, and history. Archived case details
-are read-only until **Restore case** is used. Assigned Staff can still read archived
-cases, and administrators can manage assignments while archived. Saved detail links
-continue to work regardless of the list filter. There is no permanent deletion.
-
-Successful case, profile, role, access, and assignment changes use shared toast
-notifications. Toasts dismiss automatically, pause while hovered or focused, and have
-a keyboard-accessible dismiss button. Errors remain beside the relevant controls.
-Confirmation dialogs contain keyboard focus, support Escape, and return focus to the
-trigger when closed. Existing installations only need `npm run db:migrate`: new case
-metadata starts at version 1 with `updatedAt` equal to the original creation time.
-
-### API contracts and verification
-
-Route definitions are grouped by feature under `apps/api/src/routes`:
-
-- `profile.ts`: current-user profile retrieval and updates.
-- `users.ts`: administrative user listing, role changes, and account access.
-- `cases.ts`: case creation, editing, archive/restore, searchable listing, details, and Staff assignments.
-- `audit.ts`: case, permission, profile, and document audit history.
-- `documents.ts`: upload sessions, document listing, download authorization, removal, and restoration.
-- `protected-route.ts`: shared bearer-token verification and request/response validation.
-
-`app.ts` configures Fastify, CORS, error handling, and registers the feature routes.
-Database authorization and queries remain in `src/database`.
-
-All endpoints require a Microsoft bearer access token. Shared contracts live in
-`packages/schemas`; root scripts build that package before consumers, and root
-`npm run dev` watches it. If running an app individually, build schemas first.
-
-| Endpoint                                             | Purpose                                                           |
-| ---------------------------------------------------- | ----------------------------------------------------------------- |
-| `GET /me`                                            | Provision once and return the current profile                     |
-| `PATCH /me`                                          | Change own display name only                                      |
-| `POST /cases`                                        | Admin/Super Admin creates a case; returns 201                     |
-| `GET /cases`, `GET /cases/:id`                       | Search accessible cases and read details                          |
-| `PATCH /cases/:id`                                   | Edit case fields with required `expectedVersion`; returns 200     |
-| `POST /cases/:id/archive`, `POST /cases/:id/restore` | Change archive state with required `expectedVersion`; returns 200 |
-| `GET /admin/users`                                   | Search/paginate users; optional role filter                       |
-| `PATCH /admin/users/:id/role`                        | Super Admin changes Staff/Admin role                              |
-| `PATCH /admin/users/:id/access`                      | Enable/disable permitted target                                   |
-| `PUT`, `DELETE /admin/cases/:id/assignments/:userId` | Assign/remove Staff                                               |
-| `GET /admin/audit`                                   | Paginated audit history                                           |
-
-Lists accept `page` (default 1) and `pageSize` (default 25, maximum 100).
-`GET /cases` also accepts `search` (up to 200 characters) and optional `status`
-(`intake`, `active`, or `closed`), plus `archive=current|archived|all`. `POST /cases` accepts only `title`, `clientName`,
-`incidentDate` (`YYYY-MM-DD` or null), `status`, and `summary`; the last three are
-optional. Creation commits with a `case.created` audit event and rechecks current
-admin authorization inside the permission transaction lock.
-`PATCH /cases/:id` accepts the same editable fields without creation defaults, plus
-required positive integer `expectedVersion`. Omitted fields stay unchanged; null clears
-`incidentDate`, and an empty string clears `summary`. Unknown and server-controlled
-fields are rejected. Archive/restore bodies accept only `expectedVersion`. Case responses
-include `version`, `updatedAt`, `archivedAt`, and `archivedBy`; archive metadata is null
-for current cases. Changed writes atomically record `case.updated`, `case.archived`,
-or `case.restored` with the actor and before/after values. Stale requests return
-`409 CASE_CONFLICT`; edits against an archived case at its current version return
-`409 CASE_ARCHIVED`.
-
-Errors contain stable `code` and safe `error` text. Disabled accounts return
-`403 ACCOUNT_DISABLED`; ordinary permission denials return `403 FORBIDDEN`;
-inaccessible cases return 404; database outages fail closed with 503.
-
-```sh
-npm test
-npm run test:integration
-npm run lint
-npm run typecheck
-npm run format:check
-npm run build
-```
-
-Integration tests require Docker plus the local operator/runtime environment files.
-They create and drop a uniquely named disposable database, apply migrations and
-seeds there, and exercise real restricted-login permissions. They never reset the
-working database and do not silently skip when the database is unavailable. Coverage includes partial edits, archive access/filtering, retained assignments, concurrent writes, demotion/disable races, audit rollback, migration preservation, and direct runtime-role restrictions.
-
-## Document storage and uploads
-
-The API supports upload authorization, verified completion, paginated document listing,
-short-lived downloads, and administrative removal/restoration. The case document UI
-supports these workflows. File previews and background processing remain later work.
-
-Storage configuration and S3 adapters live in `apps/api/src/storage`. Upload and download
-orchestration live in `src/documents`, HTTP definitions in
-`src/routes/documents.ts`, and database queries in `src/database/documents.ts`.
-Shared contracts and limits live in `packages/schemas`. Install dependencies with
-`npm install` and apply additive migrations with `npm run db:migrate`.
-
-### Configuration
-
-Configure these values only in the ignored `apps/api/.env`:
-
-```dotenv
-S3_BUCKET=your-private-document-bucket
-AWS_REGION=us-east-2
-S3_ENVIRONMENT=dev
-AWS_PROFILE=caseflow-api-dev
-```
-
-`AWS_PROFILE` selects a restricted local assume-role profile outside the repository.
-It takes precedence over ambient access keys. Refresh its source login with
-`aws login --profile <source-profile>`. For deployment, omit `AWS_PROFILE` and
-configure temporary workload credentials supported by the SDK's default chain.
-Keep credentials and storage configuration out of frontend environment variables.
-
-When both S3-specific settings are absent, storage is disabled; existing features
-remain available, including document listing and removal/restoration. Upload endpoints
-return 503 after checking case access; download authorization returns 503 after checking
-document access and availability.
-Partial settings fail startup. Restart the API after changing its environment.
-The shared client uses bounded retries, timeouts, and sockets and closes with Fastify.
-
-The bucket must remain private, enforce HTTPS, disable ACLs, use encryption, and
-have versioning enabled. The runtime role needs `s3:PutObject`, `s3:GetObject`, and
-`s3:GetObjectVersion` on the environment's original-document prefix. It does not
-need bucket administration, listing, or deletion. Missing objects can therefore
-return S3 403; completion treats unavailable objects as retryable rather than
-claiming a file failed validation.
-
-Browser CORS must allow the intended frontend origin, `PUT`, and the request headers
-`Content-Type`, `If-None-Match`, and `x-amz-checksum-sha256`. A matching wildcard
-header rule also works. Completion obtains the S3 version server-side, so the
-browser does not need to read or submit S3 version headers.
-
-### Upload protocol
-
-1. Compute the raw file's SHA-256 digest, encode it as canonical base64, and generate
-   a UUID request ID. Reuse that ID and metadata for retries of the same attempt.
-2. Call `POST /cases/:caseId/document-uploads` with a Microsoft bearer token and JSON:
-
-   ```json
-   {
-     "requestId": "10000000-0000-4000-8000-000000000001",
-     "filename": "fictional-record.pdf",
-     "contentType": "application/pdf",
-     "sizeBytes": 1234,
-     "checksumSha256": "<base64 SHA-256 of the exact file bytes>"
-   }
+   Preserve existing environment files when updating an installation.
+
+2. Configure [Microsoft Entra authentication](docs/authentication.md#registration-and-configuration)
+   and choose either [local PostgreSQL](docs/development.md#local-database) or
+   [hosted Supabase](docs/hosted-database.md). Complete that guide's migrations and
+   restricted database connection setup before starting the app.
+3. Start both apps from the repository root:
+
+   ```sh
+   npm run dev
    ```
 
-   The 201 response contains `document`, `session`, and `upload` (method, URL,
-   required headers, expiry). The API generates storage identifiers. Repeating an
-   identical request returns the same session without extending its five-minute
-   lifetime or duplicating its audit event. Changed metadata with the same request
-   ID returns `UPLOAD_CONFLICT`. An already completed request returns `upload: null`.
-
-3. Send the raw File/Blob to `upload.url` using `PUT` and exactly `upload.headers`.
-   Do not use FormData or send the Microsoft bearer token to S3. The browser supplies
-   Content-Length from the body; scripts cannot set that header themselves. The
-   signature binds the exact size, type, checksum, key, and `If-None-Match: *`.
-   A successful first upload cannot be overwritten with the same authorization.
-   If a PUT response is lost or a retry returns 412, call completion to verify the
-   existing object before deciding whether to start another attempt.
-4. Call `POST /cases/:caseId/document-uploads/:sessionId/complete` with the bearer
-   token and `{}`. A 200 response contains the available document and completed
-   session. Retries return the current saved metadata without another S3 read or audit.
-   If subsequently removed, the document is hidden from Staff retries; administrators
-   can still read its removed metadata. Retrying completion never restores a document.
-
-Staff may upload to assigned, current cases. Admin/Super Admin may upload to all
-current cases and complete uploads for those cases. Staff may only complete their
-own sessions. Disabled/unprovisioned users and inaccessible case/session IDs are
-rejected. Archived cases reject uploads and completion.
-
-### Document library interface
-
-Open a case and select **Documents** to browse its verified files. The library has a
-desktop table, responsive cards, expandable file metadata, and paginated results.
-Admin/Super Admin users can switch between Current, Removed, and All. Staff see only
-current documents on assigned cases. Archived cases retain library access.
-
-The case section, document filter, and document page are stored in `section`,
-`documentFilter`, and `documentPage` URL parameters independently of case-list filters
-and pagination. Bookmarks, refresh, and Back/Forward preserve the selected view.
-Protected resources are revalidated on navigation; rejected access clears the case
-view. An empty library contains no verified files for that view; failed or pending
-upload attempts do not appear in the library.
-
-Select **Upload files** to choose or drop PDF, JPEG, and PNG files. Review the selection
-before uploading. Validation rejects empty files, unsupported types/extensions, unsafe
-names, and files over 25 MiB. A selection supports up to ten files; the workspace queue
-also retains at most ten unfinished files. Two full upload pipelines run concurrently,
-including checksum preparation, authorization, transfer, and server verification.
-Progress reports transferred bytes; **Verifying** is a separate stage before availability.
-
-The in-memory queue continues across tabs and cases within the current workspace.
-Each entry retains its original case. Files, session state, and signed URLs are never
-persisted in browser storage or URLs. Refresh/closing warns while work remains, but
-uploads cannot resume across a reload. Sign-out, user/role changes, and rejected access
-abort and clear the affected queue. Completed entries release their File references.
-
-**Stop upload** stops local preparation or transfer; it is unavailable once server
-verification begins. It does not delete received bytes, cancel the server session, or
-reclaim reserved storage. **Retry** reuses the request/session identity and reconciles
-ambiguous transfer/completion responses before resending bytes. Terminal or expired
-attempts offer an explicit **New attempt**. Their original reservations remain retained.
-
-**Download** requests a fresh authorization for the saved object version, then hands the
-attachment to the browser. The notification confirms the request, not a completed
-download. Admin/Super Admin users can remove a current document through a filename-specific
-confirmation modal, or restore it from Removed/All. These actions use the displayed
-version; conflicts refresh the library and require review before another action.
-Archived cases keep download access but hide upload/remove/restore controls.
-
-Success feedback uses workspace toasts; per-file failures remain in the queue.
-Document changes invalidate the affected library and audit queries. Storage-related API
-requests have a bounded 60-second timeout; ordinary API requests retain their 10-second
-timeout. Frontend document components and state/transport helpers live in
-`apps/web/components/workspace/documents` and `apps/web/lib/documents`.
-No new database migrations, browser AWS credentials, or frontend dependencies are required.
-File previews remain outside this implementation.
-
-### Document listing and downloads
-
-| Endpoint                                             | Input                                         | Response                            |
-| ---------------------------------------------------- | --------------------------------------------- | ----------------------------------- |
-| `GET /cases/:caseId/documents`                       | `page`, `pageSize`, `filter` query parameters | `{ items, total, page, pageSize }`  |
-| `POST /cases/:caseId/documents/:documentId/download` | `{}`                                          | `{ method: "GET", url, expiresAt }` |
-| `POST /cases/:caseId/documents/:documentId/remove`   | `{ expectedVersion }`                         | Updated document                    |
-| `POST /cases/:caseId/documents/:documentId/restore`  | `{ expectedVersion }`                         | Updated document                    |
-
-All four endpoints return 200 on success and require a Microsoft bearer token.
-Unknown fields, client-selected storage locations, and malformed identifiers are rejected.
-Metadata responses omit bucket, key, checksum, and S3 version identifiers. A signed
-URL necessarily contains its storage destination and must be treated as a credential.
-
-Listing defaults to page 1, 25 items (maximum 100), and `filter=current`.
-Current includes verified available files; `removed` includes removed files; `all`
-combines them. Pending, failed, expired, and cancelled upload attempts are excluded.
-Staff only see available documents on assigned cases; removed rows and counts remain
-hidden even with `all`, and their `removed` results are empty. Administrators see all
-permitted lifecycle states. Ordering is creation time descending, then document ID
-descending. Visibility, counts, and page rows share one database snapshot. Inaccessible
-cases return 404 rather than an empty page. Archived-case reads remain available.
-
-Downloads require an available document. The API checks the saved S3 object version,
-signs that exact version for at most 60 seconds, then rechecks current access, status,
-and document version under the permission lock before returning the URL. Storage work
-runs outside database transactions. Files download as attachments with encoded original
-filenames, validated content types, and `Cache-Control: private, no-store`.
-Use the returned GET URL directly without a Microsoft bearer token. There is no fallback
-to a newer S3 object version. Storage/signing failures return safe 503 responses.
-
-A successful authorization commits `document.download_authorized` with the actor,
-document, case, document version, and expiry. It records permission to download, not
-proof of a completed transfer. Signed URLs and credentials are never included in audit
-records. Removed files require restoration before a new link can be issued. Invisible
-or mismatched IDs return 404; visible unavailable documents return `409 DOCUMENT_UNAVAILABLE`.
-
-Removal, disablement, or assignment revocation blocks new authorizations. Previously
-issued links may remain usable until their short expiry, and a transfer started before
-expiry may finish afterward. Downloaded files cannot be recalled. Neither S3 tag-based
-revocation nor API file streaming is implemented.
-
-### Document removal and restoration
-
-Only active Admin/Super Admin users can remove or restore documents on current cases.
-Restore an archived case first. Removal changes available documents to removed and stores
-the actor/time; restoration clears the current removal fields and makes the same saved
-version available again. Files, upload sessions, original metadata, assignments, and
-history are preserved. Neither action copies or deletes S3 objects or releases quota.
-
-Both actions require the current positive integer `expectedVersion`. They lock the case
-and document, recheck administrative access, and atomically commit the state change with
-`document.removed` or `document.restored` audit history. Changed records increment version
-and update time. Stale requests return `409 DOCUMENT_CONFLICT`, even if the requested
-state already matches. A matching-version no-op leaves timestamps, version, and audit
-history unchanged. Pending documents return `409 DOCUMENT_UNAVAILABLE`; archived cases
-return `409 CASE_ARCHIVED`.
-
-Apply the additive migration with `npm run db:migrate` before running the updated API.
-It adds private permission-checked functions and preserves existing data, indexes, and
-RLS policies. It does not reset the database, seed documents, or grant direct runtime writes.
-
-### Verification and consistency
-
-Before availability, the server reads S3 metadata, requires a non-null object
-version, and streams that exact version. It validates the complete byte count and
-SHA-256 checksum and checks the binary signature against PDF/JPEG/PNG. Streams
-have a 30-second deadline, four concurrent verifications per API process, and a
-bounded signature buffer. Bodies are consumed or destroyed on every path. Binary
-signature detection does not establish that a document is safe or fully parseable;
-malware scanning and document parsing are separate processing concerns.
-
-No S3 call runs inside a database transaction. Narrow private functions acquire the
-existing permission lock and recheck active status, current assignments/role,
-archive state, and session expiry before writes. Document/session changes and
-upload-started/completed audit events commit atomically. The runtime database role
-retains no direct table-write privileges; application tables remain outside the
-Supabase Data API with RLS-controlled reads.
-
-- Allowed files: PDF/JPEG/PNG, 1 byte through 25 MiB. Unknown fields, unsafe filenames,
-  mismatched extensions/types, and client-supplied storage fields are rejected.
-- The shared workspace reserves up to 1 GiB under the transaction lock. Pending,
-  completed, removed, failed, and expired records all count until verified object
-  cleanup is implemented. Expiry alone does not prove an issued upload failed to
-  reach S3, so reservations are deliberately retained. This is an application quota,
-  not an AWS billing limit.
-- Expired sessions are marked when accessed. Invalid bytes produce a terminal
-  `UPLOAD_VERIFICATION_FAILED` (422); start a fresh attempt with a new request ID.
-  Expired/conflicting sessions and quota exhaustion return distinct 409 codes.
-  Temporary storage/signing errors return safe 503 messages and remain retryable.
-- Access is rechecked after signing and before finalization. An already-issued S3
-  URL remains valid until its short expiry; it cannot grant application visibility
-  after access is revoked. Signed URLs must be treated as temporary credentials.
-- Original keys follow
-  `{environment}/cases/{case-id}/documents/{document-id}/original/{filename}`.
-  Availability pins a version; removal/restoration preserve that version. Processed
-  outputs remain later work.
-- The UI enforces ten files per selection, ten unfinished queue entries, and two
-  concurrent upload pipelines. Local transfer stopping is supported; server-side
-  cancellation, scheduled expiry, orphan cleanup, and quota reclamation remain
-  later work. Do not release reservations by deleting metadata manually.
-
-Unit tests exercise upload signing restrictions, byte verification, safe failures,
-and client shutdown. PostgreSQL integration tests use disposable databases for
-permissions, idempotency, quota races, role/assignment/archive races, atomic audit
-rollback, restricted runtime access, and migration preservation. They do not reset
-the working database or require live S3 credentials.
-
-## Document processing foundation
-
-The processing migration adds `document_processing_jobs` and `processing_dispatches`
-to the private `caseflow` schema. Processing lifecycle is separate from document
-availability and document versions. Historical documents are not automatically queued.
-
-After this migration is applied, verified upload completion atomically saves the
-available document, completed upload session, queued processing job, dispatch record,
-and audit events. Repeated completion requests return the existing upload without
-creating another job. Each job snapshots the verified source object version and checksum.
-
-The database foundation includes:
-
-- Queued, processing, ready, failed, and cancelled job states; no job represents an
-  unprocessed document. Attempts are bounded at five, with fields reserved for worker
-  leases and safe failure codes. Worker state transitions are not implemented yet.
-- An administrator-only start/retry function with expected-job checks and one active
-  job per document. New attempts preserve previous jobs and audit history. Removed
-  documents and archived cases cannot start or retry processing.
-- RLS and column grants for case-authorized job metadata. Runtime credentials cannot
-  write either table or select source storage details from processing jobs.
-- A separate `caseflow_dispatcher` role created without login credentials. Its only
-  application functions claim dispatch records, acknowledge successful sends, or
-  release failed sends for retry. It cannot read application tables directly.
-- Dispatch claims of at most 25 records, 60-second token-fenced leases, and a 30-second
-  delay after send failures. Expired leases can be reclaimed after a sender crash.
-  Dispatch retries are not capped; monitoring must surface repeated send failures.
-
-The queue sender must commit its claim before making network requests. A crash after
-sending but before acknowledgment can deliver a job more than once; the future worker
-must deduplicate by job ID. Messages contain only a schema version and job ID, never
-client-provided storage locations or credentials.
-
-This foundation does not create cloud resources, run OCR, add processing API routes,
-or display processing status. The API dispatcher below sends queued jobs once enabled;
-worker transitions and operational monitoring remain separate steps. Apply the migration
-through the existing reviewed migration workflow; starting the API never applies it.
-Until dispatching is enabled, new jobs remain queued in PostgreSQL.
-
-`npm run test:integration` covers atomic rollback, completion and retry idempotency,
-role changes, RLS, dispatch concurrency and expired claims, migration preservation,
-and repeatable seeds using disposable local databases.
-
-## API processing dispatcher
-
-The API includes an opt-in background dispatcher in `apps/api/src/processing/`.
-Configuration, PostgreSQL queries, SQS operations, orchestration, and Fastify lifecycle
-hooks are separate modules. The internal dispatch-claim schema and type live in the
-API processing module; shared packages contain application and queue contracts.
-There is no public dispatch endpoint and no browser configuration. It starts only after the API begins listening, polls once per second
-between batches, and sends at most five jobs concurrently per API instance. Its
-separate PostgreSQL pool holds at most two connections.
-
-Each database claim commits before SQS I/O. A send has a 20-second deadline, shortened
-when necessary to leave a 10-second lease margin. SDK requests use bounded connection
-and request timeouts with at most three attempts. Successful sends are acknowledged
-with the SQS message ID and lease token; failed sends use the existing 30-second
-database backoff. Expired leases recover interrupted work. Shutdown stops polling,
-aborts pending sends, waits for bounded database operations, and closes both clients.
-
-Delivery is **at least once**. If SQS accepts a message but acknowledgement fails, its
-lease eventually expires and another dispatcher may send the same job again. A send
-timeout also cannot prove SQS rejected the message. Worker idempotency by job ID is
-required. Dispatch attempts are distinct from processing attempts and do not mark a
-processing job failed. PostgreSQL coordinates concurrent API instances; dispatching
-runs only while at least one enabled API process is running.
-
-### Restricted dispatcher login
-
-First apply the processing migration using the reviewed migration workflow. It creates
-a `caseflow_dispatcher` permission role with `NOLOGIN`. Keep that role without a password;
-create a separate login that inherits only its permissions. Run the following once
-through the operator connection to the intended database:
-
-```sql
-create role caseflow_dispatcher_login
-  login inherit nosuperuser nocreatedb nocreaterole noreplication nobypassrls;
-grant caseflow_dispatcher to caseflow_dispatcher_login with inherit true, set false;
-```
-
-In the same interactive `psql` session, assign a unique password without placing it in
-SQL history or this repository:
-
-```text
-\password caseflow_dispatcher_login
-```
-
-For the hosted Session pooler, use `caseflow_dispatcher_login.<project-ref>` as the
-connection username. Use the same host, port, database, and project as the API runtime
-connection, with `sslmode=verify-full` and the trusted certificate path. Local direct
-connections use `caseflow_dispatcher_login`. Do not use the operator password, grant
-this login membership in `caseflow_runtime`, or grant either runtime role membership
-in the dispatcher role. The dispatcher can call only the three dispatch functions;
-it cannot read application tables or manage users.
-
-Production needs its own CA certificate file at the path in `sslrootcert`; a developer's
-local filesystem path is not available inside a deployed container. Include the trusted
-public CA certificate in the image or mount it at a stable path such as
-`/app/certs/supabase-ca.crt`, then configure both database URLs with that path and
-`sslmode=verify-full`. The CA certificate is public trust material. Database passwords
-are secrets and belong in the deployment secret store. The Python processor will also
-need a trusted CA configuration when it is deployed.
-
-### SQS permission and API configuration
-
-Grant the API workload's AWS role this additional permission, substituting the intended
-project ID. Retain its existing scoped S3 permissions. Do not broaden the role to
-administrator access or grant it SQS receive/delete permissions.
-
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": "sqs:SendMessage",
-      "Resource": "arn:aws:sqs:us-east-2:123456789012:caseflow-document-processing"
-    }
-  ]
-}
-```
-
-Set these **server-only** values in the API environment or deployment secret store:
-
-| Setting                              | Value                                                                         |
-| ------------------------------------ | ----------------------------------------------------------------------------- |
-| `PROCESSING_DISPATCHER_ENABLED`      | `false` by default; `true` enables dispatching                                |
-| `PROCESSING_DISPATCHER_DATABASE_URL` | Restricted dispatcher connection described above                              |
-| `PROCESSING_QUEUE_URL`               | HTTPS URL of the standard processing queue, not the completion queue or a DLQ |
-| `AWS_REGION`                         | `us-east-2`                                                                   |
-| `AWS_PROFILE`                        | Local restricted workload profile; omit when using a deployment workload role |
-
-The queue URL must match `AWS_REGION`. Explicit local profiles are used without falling
-back to unrelated environment credentials. Deployment uses the SDK credential chain
-and should supply a workload role, not static keys. Invalid enabled configuration fails
-at startup with value-free errors. Disabled configuration creates no dispatcher clients.
-
-Keep the dispatcher disabled until the queue, restricted database login, IAM permission,
-and processing consumer are ready. A deliberately sent test message can wait for a
-consumer, but SQS retention still applies; messages can expire if the worker is not
-running. The dispatcher does not requeue records already acknowledged as sent. Queue
-age, DLQ depth, database dispatch backlog, and recurring dispatch failures need monitoring
-before deployment. Existing uploaded documents are not automatically backfilled.
-
-Logs contain event names and job/dispatch IDs, never connection strings, credentials,
-lease tokens, document contents, or raw provider errors. `processing_dispatch_sent`
-means SQS accepted the message and PostgreSQL recorded the acknowledgement; it does
-not mean document processing completed. Failed acknowledgements leave the lease for
-recovery. Check IAM permissions, connection configuration, and migration state when
-send or claim failures repeat; leave direct outbox updates to reviewed recovery procedures.
-
-Unit tests cover configuration, signed requests, safe errors, timeouts, and server
-lifecycle. Disposable PostgreSQL integration tests cover concurrent senders, committed
-claims before network I/O, failure backoff, duplicate delivery after acknowledgement
-loss, stale lease fencing, and restricted credentials. These tests use an injected SQS
-adapter and never send messages to the live processing queue.
-
-## Authentication
-
-Both Entra registrations support organizational and personal Microsoft accounts.
-Configure `CaseFlow Web - Local` with the SPA redirect URI
-`http://localhost:3000/auth/callback`. MSAL 5 uses this dedicated redirect bridge;
-the page is outside authentication initialization and is served with `no-store`.
-Do not configure Cross-Origin-Opener-Policy on the callback page.
-
-The API registration exposes `access_as_user` (Admins and users may consent),
-uses v2 access tokens, and the Web registration requests this delegated permission.
-Some organizations require their administrator to approve third-party applications.
-No client secret or Microsoft Graph permission is needed.
-
-Copy each app's `.env.example` as shown above only on first setup; preserve existing
-local settings. The supplied IDs and scope are public registration identifiers.
-Next.js reads `.env.local`; the API loads `.env` through Node's environment-file
-support. Production should supply environment variables through its host. The
-frontend's `NEXT_PUBLIC_*` settings are public and fixed at build time. Rebuild
-when changing them. Use HTTPS origins and register the deployment's callback URI
-before deploying; allow only that frontend origin in API CORS settings.
-
-`GET /me` returns `{ id, displayName, role, active }` from PostgreSQL. Provisioning
-uses the verified Entra tenant ID and subject as immutable identity, never an email
-or editable name. Later sign-ins do not overwrite roles, disabled status, or names.
-
-The API checks RS256 signatures, tenant/issuer consistency, signing-key issuer,
-audience, expiry/not-before, v2 format, allowed client and delegated scope before
-accessing application data. Every request reloads current application authorization.
-
-The frontend waits for session restoration before choosing the sign-in or workspace
-screen. Workspace queries use an in-memory React Query client scoped to the current
-user and role. Navigation revalidates the destination before switching sections;
-mutations invalidate cached resources. Request failures hide cached results, and
-leaving the workspace clears its cache and cancels pending requests.
-
-Tokens are managed by MSAL in session storage, sent only to the configured API,
-and never displayed or deliberately logged. Sign-out clears the local MSAL session
-and redirects to Microsoft; it does not revoke already-issued bearer tokens.
-
-`npm test` runs signed-token API tests using ephemeral local keys, including
-consumer/organizational identity, invalid signatures/claims, missing permission,
-provider failure and CORS. Frontend tests cover configuration validation, network
-errors, timeouts and response validation. API requests refuse HTTP redirects to
-keep bearer tokens scoped to the configured endpoint. These tests do not establish that your live Entra
-registration is configured correctly. To verify live: run `npm run dev`, open
-`http://localhost:3000`, sign in, confirm the workspace opens, then sign out.
-Repeat with a personal and a work/school account when available. Never paste tokens
-or session cookies into issue reports.
-
-## Frontend organization
-
-- `app/globals.css`: brand palette and semantic theme tokens.
-- `components/ui`: shared buttons and accessible status messages.
-- `components/auth`: responsive page shell, panels and sign-in presentation.
-- `hooks/use-authentication.ts`: Microsoft sign-in/session actions, separate from styling.
-- `lib/config.ts`, `lib/auth.ts`, `lib/api.ts`: configuration validation, MSAL initialization and API access.
-
-Inter is self-hosted from the pinned font package. Reuse theme tokens and shared
-components for new screens instead of copying colors or authentication logic.
-
-## Dependency maintenance
-
-The root `package.json` temporarily overrides `minimatch` to `11.0.1` only beneath
-`@typescript-eslint/typescript-estree@8.72.2`. That lint dependency otherwise selects
-an affected `10.x` release. This addresses
-[GHSA-g3hv-75wg-m249](https://github.com/isaacs/minimatch/security/advisories/GHSA-g3hv-75wg-m249).
-When upgrading TypeScript ESLint, revisit this override and remove it once the
-upstream dependency resolves a patched version. Regenerate the lockfile and rerun
-`npm audit`, `npm run lint`, `npm run typecheck`, and `npm run build` after changes.
+4. Open [localhost:3000](http://localhost:3000) and sign in. New users start as Staff
+   with no case assignments. Follow [roles and administration](docs/users-and-cases.md#roles-and-administration)
+   to bootstrap a Super Admin in the selected database.
+5. Configure [document storage](docs/document-management.md#configuration) to enable
+   uploads and downloads. Core profile and case features work without S3 configuration.
+
+The API binds to `http://127.0.0.1:4000`; its root path returns 404 and `GET /me`
+requires a valid CaseFlow access token. Stop the apps with Ctrl+C. If using local
+Supabase, stop its containers separately with `npm run db:stop`.
+
+## Common commands
+
+Run commands from the repository root.
+
+| Command                    | Purpose                                                        |
+| -------------------------- | -------------------------------------------------------------- |
+| `npm run dev`              | Start the frontend, API, and shared-schema watcher             |
+| `npm run build`            | Build all workspaces for production                            |
+| `npm test`                 | Run unit tests                                                 |
+| `npm run test:integration` | Run PostgreSQL integration tests on disposable local databases |
+| `npm run lint`             | Check ESLint rules                                             |
+| `npm run typecheck`        | Check TypeScript types                                         |
+| `npm run format:check`     | Check Prettier formatting                                      |
+
+See [local development](docs/development.md) for database commands, running apps
+individually, integration-test prerequisites, and dependency maintenance.
+
+## Documentation
+
+| Guide                                              | Contents                                                                             |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| [Local development](docs/development.md)           | Docker/PostgreSQL setup, verification, code organization, and dependency maintenance |
+| [Hosted database](docs/hosted-database.md)         | Migrations, TLS, Session pooler credentials, environment switching, and recovery     |
+| [Authentication](docs/authentication.md)           | Entra registration, token validation, session behavior, and sign-in verification     |
+| [Users and cases](docs/users-and-cases.md)         | Permission matrix, Super Admin setup, assignments, editing, and archiving            |
+| [API reference](docs/api.md)                       | Route organization, request/response contracts, pagination, and errors               |
+| [Document management](docs/document-management.md) | S3 configuration, uploads, library, downloads, removal, and consistency rules        |
+| [Document processing](docs/document-processing.md) | Job/dispatch records, dispatcher credentials, SQS permissions, and configuration     |
+| [Processor database](docs/processor-database.md)   | Worker functions, leases, OCR allowance, artifacts, cancellation, and credentials    |

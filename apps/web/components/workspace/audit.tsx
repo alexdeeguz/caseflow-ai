@@ -12,6 +12,9 @@ import { auditListResource } from '../../lib/workspace-resources';
 const labels: Readonly<Record<string, string>> = {
   [AuditAction.DocumentUploadStarted]: 'Document upload started',
   [AuditAction.DocumentProcessingQueued]: 'Document processing queued',
+  [AuditAction.DocumentProcessingCompleted]: 'Document processing completed',
+  [AuditAction.DocumentProcessingFailed]: 'Document processing failed',
+  [AuditAction.DocumentProcessingCancelled]: 'Document processing cancelled',
   [AuditAction.DocumentUploaded]: 'Document uploaded',
   [AuditAction.DocumentRemoved]: 'Document removed',
   [AuditAction.DocumentRestored]: 'Document restored',
@@ -47,13 +50,18 @@ export function AuditHistory({ request }: { request: AuthRequest }) {
               <li key={event.id} className="rounded-xl border border-line p-5 break-words">
                 <h2>{labels[event.action] ?? event.action}</h2>
                 <p>
-                  {event.actorName ?? `Operator: ${event.operatorName}`} ·{' '}
+                  {event.actorName ??
+                    (event.serviceName
+                      ? `Service: ${event.serviceName}`
+                      : `Operator: ${event.operatorName}`)}{' '}
+                  ·{' '}
                   <time dateTime={new Date(event.createdAt).toISOString()}>
                     {new Date(event.createdAt).toLocaleString()}
                   </time>
                 </p>
                 <p className="text-xs text-muted break-all">
-                  Actor: {event.actorId ?? event.operatorName} · Target: {event.targetId}
+                  Actor: {event.actorId ?? event.serviceName ?? event.operatorName} · Target:{' '}
+                  {event.targetId}
                 </p>
                 <details className="mt-3">
                   <summary>View changes</summary>

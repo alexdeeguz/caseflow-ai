@@ -10,6 +10,7 @@ export const auditSchema = z.strictObject({
   actorId: idSchema.nullable(),
   actorName: z.string().nullable(),
   operatorName: z.string().nullable(),
+  serviceName: z.string().nullable(),
   targetId: idSchema,
   action: z.string(),
   before: z.record(z.string(), z.unknown()).nullable(),

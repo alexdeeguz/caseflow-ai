@@ -22,6 +22,9 @@ export const ProcessingFailureCode = {
   OcrUnavailable: 'ocr_unavailable',
   AttemptsExhausted: 'attempts_exhausted',
   InternalError: 'internal_error',
+  OcrBudgetExceeded: 'ocr_budget_exceeded',
+  OcrIncomplete: 'ocr_incomplete',
+  OcrResultsExpired: 'ocr_results_expired',
 } as const;
 
 export const DispatchStatus = {
@@ -32,6 +35,8 @@ export const DispatchStatus = {
 
 export const ProcessingLimits = {
   MaxAttempts: 5,
+  MaxPdfPages: 20,
+  DailyOcrPages: 100,
   DispatchBatchSize: 25,
   DispatchLeaseSeconds: 60,
   DispatchRetrySeconds: 30,

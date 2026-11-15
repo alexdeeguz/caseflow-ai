@@ -441,7 +441,7 @@ test('processing migration preserves existing data and does not queue historical
   const snapshotSql = `select jsonb_build_object(
     'documents', (select jsonb_agg(d order by id) from caseflow.documents d),
     'sessions', (select jsonb_agg(s order by id) from caseflow.document_upload_sessions s),
-    'audit', (select jsonb_agg(a order by id) from caseflow.audit_events a)
+    'audit', (select jsonb_agg(to_jsonb(a) - 'service_name' order by id) from caseflow.audit_events a)
   ) snapshot`;
   const db = await createTestDatabase(async (owner) => {
     const user = randomUUID();

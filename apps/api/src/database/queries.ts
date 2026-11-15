@@ -127,7 +127,7 @@ export async function executeOperation(
       const count = await client.query('select count(*)::int as total from caseflow.audit_events');
       const result = await client.query<AuditRow>(
         `select e.id::text, e.actor_id as "actorId", u.display_name as "actorName",
-                e.operator_name as "operatorName", e.target_id as "targetId", e.action,
+                e.operator_name as "operatorName", to_jsonb(e)->>'service_name' as "serviceName", e.target_id as "targetId", e.action,
                 e.before_value as "before", e.after_value as "after", e.created_at as "createdAt"
          from caseflow.audit_events e
          left join caseflow.users u on u.id = e.actor_id
