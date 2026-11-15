@@ -172,7 +172,7 @@ test('document uploads: API lifecycle, concurrency and database authorization', 
     );
 
     await t.test(
-      'concurrent completion pins one version and emits one audit; later retries skip storage',
+      'concurrent completion pins one version and emits upload and processing audits; later retries skip storage',
       async () => {
         const payload = request();
         const upload = await start(record.id, 'staff', payload);
@@ -186,7 +186,7 @@ test('document uploads: API lifecycle, concurrency and database authorization', 
         assert.equal(result.document.status, 'available');
         assert.equal(result.document.version, 2);
         assert.equal(result.session.status, 'completed');
-        assert.equal((await counts()).audits, before.audits + 1);
+        assert.equal((await counts()).audits, before.audits + 2);
         const stored = (
           await db.owner.query('select object_version_id from caseflow.documents where id=$1', [
             upload.document.id,

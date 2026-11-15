@@ -8,6 +8,7 @@ export const ErrorCode = {
   CaseArchived: 'CASE_ARCHIVED',
   DocumentConflict: 'DOCUMENT_CONFLICT',
   DocumentUnavailable: 'DOCUMENT_UNAVAILABLE',
+  ProcessingConflict: 'PROCESSING_CONFLICT',
   UploadConflict: 'UPLOAD_CONFLICT',
   UploadExpired: 'UPLOAD_EXPIRED',
   UploadVerificationFailed: 'UPLOAD_VERIFICATION_FAILED',

@@ -751,8 +751,8 @@ test('document library migration preserves existing data, policies and indexes w
     'sessions', (select jsonb_agg(to_jsonb(s) order by id) from caseflow.document_upload_sessions s where document_id=$3),
     'assignments', (select jsonb_agg(to_jsonb(a) order by user_id) from caseflow.assignments a where case_id=$2),
     'audit', (select jsonb_agg(to_jsonb(e) order by id) from caseflow.audit_events e where target_id=$3),
-    'policies', (select jsonb_agg(to_jsonb(p) order by tablename,policyname) from pg_policies p where schemaname='caseflow'),
-    'indexes', (select jsonb_agg(to_jsonb(i) order by indexname) from pg_indexes i where schemaname='caseflow')
+    'policies', (select jsonb_agg(to_jsonb(p) order by tablename,policyname) from pg_policies p where schemaname='caseflow' and tablename in ('users','cases','assignments','audit_events','documents','document_upload_sessions')),
+    'indexes', (select jsonb_agg(to_jsonb(i) order by indexname) from pg_indexes i where schemaname='caseflow' and tablename in ('users','cases','assignments','audit_events','documents','document_upload_sessions'))
   ) as snapshot`;
   const db = await createTestDatabase(async (owner) => {
     await owner.query(

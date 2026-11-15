@@ -45,3 +45,9 @@ test('constraint failures do not disclose table names or supplied values', () =>
     assert.ok(!result.message.includes('private diagnostic'));
   }
 });
+
+test('processing conflicts return a safe conflict response', () => {
+  const result = databaseError({ code: 'P0001', message: ErrorCode.ProcessingConflict });
+  assert.equal(result.status, 409);
+  assert.equal(result.code, ErrorCode.ProcessingConflict);
+});

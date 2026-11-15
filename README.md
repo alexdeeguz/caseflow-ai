@@ -521,6 +521,50 @@ permissions, idempotency, quota races, role/assignment/archive races, atomic aud
 rollback, restricted runtime access, and migration preservation. They do not reset
 the working database or require live S3 credentials.
 
+## Document processing foundation
+
+The processing migration adds `document_processing_jobs` and `processing_dispatches`
+to the private `caseflow` schema. Processing lifecycle is separate from document
+availability and document versions. Historical documents are not automatically queued.
+
+After this migration is applied, verified upload completion atomically saves the
+available document, completed upload session, queued processing job, dispatch record,
+and audit events. Repeated completion requests return the existing upload without
+creating another job. Each job snapshots the verified source object version and checksum.
+
+The database foundation includes:
+
+- Queued, processing, ready, failed, and cancelled job states; no job represents an
+  unprocessed document. Attempts are bounded at five, with fields reserved for worker
+  leases and safe failure codes. Worker state transitions are not implemented yet.
+- An administrator-only start/retry function with expected-job checks and one active
+  job per document. New attempts preserve previous jobs and audit history. Removed
+  documents and archived cases cannot start or retry processing.
+- RLS and column grants for case-authorized job metadata. Runtime credentials cannot
+  write either table or select source storage details from processing jobs.
+- A separate `caseflow_dispatcher` role created without login credentials. Its only
+  application functions claim dispatch records, acknowledge successful sends, or
+  release failed sends for retry. It cannot read application tables directly.
+- Dispatch claims of at most 25 records, 60-second token-fenced leases, and a 30-second
+  delay after send failures. Expired leases can be reclaimed after a sender crash.
+  Dispatch retries are not capped; monitoring must surface repeated send failures.
+
+The queue sender must commit its claim before making network requests. A crash after
+sending but before acknowledgment can deliver a job more than once; the future worker
+must deduplicate by job ID. Messages contain only a schema version and job ID, never
+client-provided storage locations or credentials.
+
+This foundation does not create cloud resources, send queue messages, run OCR, add
+processing API routes, or display processing status. Dispatcher credentials, sender
+implementation, worker transitions, and operational monitoring remain separate steps.
+Apply the migration through the existing reviewed migration workflow; it is not
+applied automatically by starting the API. Until the sender and worker are enabled,
+new jobs remain queued after the migration is applied.
+
+`npm run test:integration` covers atomic rollback, completion and retry idempotency,
+role changes, RLS, dispatch concurrency and expired claims, migration preservation,
+and repeatable seeds using disposable local databases.
+
 ## Authentication
 
 Both Entra registrations support organizational and personal Microsoft accounts.

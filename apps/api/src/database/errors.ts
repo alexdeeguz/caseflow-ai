@@ -37,6 +37,10 @@ const applicationErrors: Partial<Record<ErrorCode, { status: number; message: st
     status: 409,
     message: 'This document is not available for this action.',
   },
+  [ErrorCode.ProcessingConflict]: {
+    status: 409,
+    message: 'Processing changed. Reload its latest status before trying again.',
+  },
   [ErrorCode.UploadConflict]: {
     status: 409,
     message: 'This upload cannot be reused. Start a new upload.',
