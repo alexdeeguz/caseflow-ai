@@ -196,3 +196,9 @@ AWS permissions or resources are created by installing or testing this applicati
 - [Processing foundation and dispatcher](document-processing.md)
 - [Hosted database](hosted-database.md)
 - [Textract document limits](https://docs.aws.amazon.com/textract/latest/dg/limits-document.html)
+
+## Lambda deployment
+
+See [Lambda configuration](lambda-configuration.md) for the SAM template, Secrets Manager,
+verified database TLS, container builds, IAM boundaries, and deployment/rollback steps.
+Queue consumption remains disabled until full workflow verification.

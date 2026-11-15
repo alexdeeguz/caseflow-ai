@@ -1,7 +1,7 @@
-import json
 import logging
 import re
 from collections.abc import Callable
+from time import monotonic
 from typing import Protocol
 
 from ..constants import MAX_BATCH_SIZE, MIN_CALL_TIME_SECONDS, REGION
@@ -45,6 +45,7 @@ def consume_batch(
 
     failures = []
     for record in records:
+        started = monotonic()
         try:
             if (
                 record.get('eventSource') != 'aws:sqs'
@@ -59,6 +60,21 @@ def consume_batch(
             consume(body, deadline)
         except Exception:
             # Queue retries are actionable; never log provider errors, document data or credentials.
-            logger.warning(json.dumps({'event': retry_event}))
+            logger.warning(
+                retry_event,
+                extra={
+                    'messageId': record['messageId'],
+                    'durationMs': round((monotonic() - started) * 1000),
+                    'failureCode': 'delivery_retry',
+                },
+            )
             failures.append({'itemIdentifier': record['messageId']})
+        else:
+            logger.info(
+                'processor_delivery_acknowledged',
+                extra={
+                    'messageId': record['messageId'],
+                    'durationMs': round((monotonic() - started) * 1000),
+                },
+            )
     return {'batchItemFailures': failures}

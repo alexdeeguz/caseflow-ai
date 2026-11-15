@@ -1,59 +1,85 @@
 from __future__ import annotations
 
+import os
 from functools import lru_cache
 from typing import TYPE_CHECKING
 
 import boto3
 from botocore.config import Config
+from pydantic import SecretStr
 
 if TYPE_CHECKING:
     from mypy_boto3_textract import TextractClient
 
 from .adapters.database import PostgresJobStore
+from .adapters.secrets import DatabaseCredentials, database_secret_arn
 from .adapters.storage import S3Storage
 from .adapters.textract import TextractProvider
 from .adapters.textract_results import TextractResults
 from .config import CompletionSettings, Settings
+from .constants import REGION
 from .extraction.bounded import BoundedParser
 from .services.collector import Collector
 from .services.processor import Processor
 
 
-def _adapters(settings: Settings) -> tuple[PostgresJobStore, S3Storage, TextractClient]:
-    session = boto3.Session(region_name=settings.region)
-    config = Config(
-        region_name=settings.region,
+def _sdk_config() -> Config:
+    return Config(
+        region_name=REGION,
         retries={'total_max_attempts': 2, 'mode': 'standard'},
         connect_timeout=3,
         read_timeout=5,
         max_pool_connections=2,
     )
+
+
+@lru_cache(maxsize=1)
+def _credentials() -> DatabaseCredentials:
+    session = boto3.Session(region_name=REGION)
+    return DatabaseCredentials(
+        session.client(
+            'secretsmanager',
+            config=_sdk_config(),
+            endpoint_url=f'https://secretsmanager.{REGION}.amazonaws.com',
+        )
+    )
+
+
+def _database_url() -> SecretStr:
+    secret_arn = database_secret_arn(os.environ)
+    if secret_arn is None:
+        return SecretStr(os.environ['PROCESSOR_DATABASE_URL'])
+    return _credentials().load(secret_arn)
+
+
+@lru_cache(maxsize=1)
+def _aws_adapters() -> tuple[S3Storage, TextractClient]:
+    session = boto3.Session(region_name=REGION)
     return (
-        PostgresJobStore(settings.database_url.get_secret_value()),
         S3Storage(
             session.client(
-                's3', config=config, endpoint_url=f'https://s3.{settings.region}.amazonaws.com'
+                's3', config=_sdk_config(), endpoint_url=f'https://s3.{REGION}.amazonaws.com'
             )
         ),
         session.client(
             'textract',
-            config=config,
-            endpoint_url=f'https://textract.{settings.region}.amazonaws.com',
+            config=_sdk_config(),
+            endpoint_url=f'https://textract.{REGION}.amazonaws.com',
         ),
     )
 
 
-@lru_cache(maxsize=1)
 def get_runtime() -> tuple[Settings, Processor]:
-    settings = Settings.from_environment()
-    store, storage, textract = _adapters(settings)
+    settings = Settings.from_environment(database_url=_database_url())
+    storage, textract = _aws_adapters()
+    store = PostgresJobStore(settings.database_url.get_secret_value())
     return settings, Processor(
         settings, store, storage, BoundedParser(), TextractProvider(textract)
     )
 
 
-@lru_cache(maxsize=1)
 def get_completion_runtime() -> tuple[CompletionSettings, Collector]:
-    settings = CompletionSettings.from_environment()
-    store, storage, textract = _adapters(settings)
+    settings = CompletionSettings.from_environment(database_url=_database_url())
+    storage, textract = _aws_adapters()
+    store = PostgresJobStore(settings.database_url.get_secret_value())
     return settings, Collector(settings, store, storage, TextractResults(textract))

@@ -14,6 +14,7 @@ from ..models import (
     ProcessingMessage,
 )
 from ..ports import Checkpoint, DocumentParser, JobStore, ObjectStorage, OcrProvider
+from ..telemetry import record_job
 from .artifacts import ArtifactWriter
 
 
@@ -46,6 +47,7 @@ class Processor:
             raise RetryableError('Job is not available for extraction')
 
         self._validate_snapshot(job)
+        record_job(job, 'claimed')
 
         def checkpoint() -> None:
             deadline()
@@ -71,6 +73,7 @@ class Processor:
             deadline()
             if not self._store.fail(job, error.code):
                 raise RetryableError('Document failure was not persisted') from error
+            record_job(job, 'failed', failure=error.code)
 
     def _extract_original(
         self, job: ClaimedJob, deadline: Checkpoint, checkpoint: Checkpoint
@@ -91,6 +94,7 @@ class Processor:
 
         if not self._store.complete(job, document, artifact_set, references):
             raise RetryableError('Job publication was rejected')
+        record_job(job, 'ready')
 
     def _prepare_ocr(self, job: ClaimedJob, page_count: int, checkpoint: Checkpoint) -> None:
         prepared = self._store.prepare(
@@ -128,3 +132,4 @@ class Processor:
         checkpoint()
         if not self._store.bind(job, provider_id):
             raise RetryableError('Textract receipt was not persisted')
+        record_job(job, 'waiting_for_ocr', stage=ProcessingStage.WAITING_FOR_OCR)

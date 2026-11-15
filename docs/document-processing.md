@@ -201,3 +201,9 @@ adapter and never send messages to the live processing queue.
 - [Document management](document-management.md)
 - [Hosted database](hosted-database.md)
 - [Processor database function reference](processor-database.md)
+
+## Lambda deployment
+
+See [Lambda configuration](lambda-configuration.md) for the SAM template, Secrets Manager,
+verified database TLS, container builds, IAM boundaries, and deployment/rollback steps.
+Queue consumption remains disabled until full workflow verification.

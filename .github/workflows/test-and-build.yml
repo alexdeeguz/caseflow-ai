@@ -12,6 +12,8 @@ permissions:
 
 env:
   NEXT_TELEMETRY_DISABLED: '1'
+  SAM_CLI_TELEMETRY: '0'
+  AWS_EC2_METADATA_DISABLED: 'true'
 
 defaults:
   run:
@@ -91,9 +93,41 @@ jobs:
       - name: Build the processor package
         run: uv build --project apps/document-processor
 
+  lambda:
+    name: Validate & Build Lambda Packages
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install Python tooling
+        run: |
+          python3 -m venv "$RUNNER_TEMP/lambda-tools"
+          "$RUNNER_TEMP/lambda-tools/bin/pip" install uv==0.13.8
+          echo "$RUNNER_TEMP/lambda-tools/bin" >> "$GITHUB_PATH"
+      - name: Install locked validation dependencies
+        run: |
+          uv sync --project infra/document-processing --locked
+          uv sync --project apps/document-processor --locked
+      - name: Check infrastructure scripts
+        run: |
+          uv run --project apps/document-processor --locked ruff check infra/document-processing
+          uv run --project apps/document-processor --locked ruff format --check infra/document-processing
+      - name: Validate SAM and security rules
+        run: |
+          uv run --project infra/document-processing --locked sam validate --lint --region us-east-2 --template-file infra/document-processing/template.yaml
+          uv run --project infra/document-processing --locked python infra/document-processing/scripts/validate_security.py
+          uv run --project infra/document-processing --locked pytest infra/document-processing/tests
+      - name: Build both Linux Lambda functions
+        run: uv run --project infra/document-processing --locked python infra/document-processing/scripts/build.py
+      - name: Verify packaged dependencies and certificate
+        run: uv run --project infra/document-processing --locked python infra/document-processing/scripts/verify_build.py
+
   build:
     name: Build & Package
-    needs: [unit, integration]
+    needs: [unit, integration, lambda]
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:

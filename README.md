@@ -15,19 +15,20 @@ Use fictional data for demonstrations and testing.
 - **Processing foundation:** atomic job/dispatch creation, an opt-in API dispatcher
   for SQS, restricted processor database functions, and Python extraction/completion workers.
 
-The Python workers are implemented and tested locally. Deployment, processing API/UI,
+The Python workers and reviewable SAM configuration are implemented and tested locally. Deployment, processing API/UI,
 operational monitoring, and file previews remain pending. Keep continuous dispatching disabled until both consumers and recovery are ready.
 
 ## Stack and structure
 
-| Location                                           | Responsibility                                                               |
-| -------------------------------------------------- | ---------------------------------------------------------------------------- |
-| [apps/web](apps/web)                               | Next.js, React, and Tailwind frontend with Microsoft Entra authentication    |
-| [apps/api](apps/api)                               | Fastify API with PostgreSQL authorization, S3 storage, and an SQS dispatcher |
-| [apps/document-processor](apps/document-processor) | Python workers for native text, Textract starts, and OCR completion          |
-| [packages/schemas](packages/schemas)               | Handwritten shared Zod contracts, constants, and TypeScript types            |
-| [supabase](supabase)                               | PostgreSQL migrations, local configuration, and fictional seed data          |
-| [docs](docs)                                       | Setup guides, feature behavior, and technical references                     |
+| Location                                               | Responsibility                                                               |
+| ------------------------------------------------------ | ---------------------------------------------------------------------------- |
+| [apps/web](apps/web)                                   | Next.js, React, and Tailwind frontend with Microsoft Entra authentication    |
+| [apps/api](apps/api)                                   | Fastify API with PostgreSQL authorization, S3 storage, and an SQS dispatcher |
+| [apps/document-processor](apps/document-processor)     | Python workers for native text, Textract starts, and OCR completion          |
+| [infra/document-processing](infra/document-processing) | SAM template, isolated validation tooling, and container builds              |
+| [packages/schemas](packages/schemas)                   | Handwritten shared Zod contracts, constants, and TypeScript types            |
+| [supabase](supabase)                                   | PostgreSQL migrations, local configuration, and fictional seed data          |
+| [docs](docs)                                           | Setup guides, feature behavior, and technical references                     |
 
 The API connects to a private PostgreSQL schema using restricted credentials.
 Microsoft Entra provides authentication; S3 stores document bytes. The browser does
@@ -102,3 +103,6 @@ individually, integration-test prerequisites, and dependency maintenance.
 | [Processor database](docs/processor-database.md)   | Worker functions, leases, OCR allowance, artifacts, cancellation, and credentials     |
 | [Python processor](docs/python-processor.md)       | Extraction, OCR decisions, resource limits, configuration, and verification           |
 | [Textract completion](docs/textract-completion.md) | Notification validation, result collection, artifact format, and publication recovery |
+
+See [Lambda configuration](docs/lambda-configuration.md) for secret setup, packaged TLS trust,
+container builds, IAM boundaries, and reviewed deployment with queue mappings disabled.

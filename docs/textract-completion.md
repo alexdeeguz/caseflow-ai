@@ -138,3 +138,9 @@ notifications, failure statuses, expiry, actual bounded SDK retries against a lo
 server, storage failures, stale leases, cancellation, audit rollback, unreferenced-artifact
 recovery, migration preservation, and restricted role grants. Existing API/database
 regressions also exercise the revised correlation behavior.
+
+## Lambda deployment
+
+See [Lambda configuration](lambda-configuration.md) for the SAM template, Secrets Manager,
+verified database TLS, container builds, IAM boundaries, and deployment/rollback steps.
+Queue consumption remains disabled until full workflow verification.

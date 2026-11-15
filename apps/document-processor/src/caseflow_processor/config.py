@@ -11,7 +11,7 @@ from .constants import REGION
 
 
 class Settings(BaseModel):
-    model_config = ConfigDict(extra='forbid', frozen=True)
+    model_config = ConfigDict(extra='forbid', frozen=True, hide_input_in_errors=True)
 
     database_url: SecretStr
     queue_arn: str
@@ -85,10 +85,15 @@ class Settings(BaseModel):
         return self
 
     @classmethod
-    def from_environment(cls, environment: Mapping[str, str] | None = None) -> Self:
+    def from_environment(
+        cls,
+        environment: Mapping[str, str] | None = None,
+        *,
+        database_url: SecretStr | None = None,
+    ) -> Self:
         values = os.environ if environment is None else environment
         return cls(
-            database_url=SecretStr(values['PROCESSOR_DATABASE_URL']),
+            database_url=database_url or SecretStr(values['PROCESSOR_DATABASE_URL']),
             queue_arn=values['PROCESSOR_QUEUE_ARN'],
             bucket=values['PROCESSOR_STORAGE_BUCKET'],
             environment=values['PROCESSOR_STORAGE_ENVIRONMENT'],
@@ -113,9 +118,14 @@ class CompletionSettings(Settings):
         return self
 
     @classmethod
-    def from_environment(cls, environment: Mapping[str, str] | None = None) -> Self:
+    def from_environment(
+        cls,
+        environment: Mapping[str, str] | None = None,
+        *,
+        database_url: SecretStr | None = None,
+    ) -> Self:
         values = os.environ if environment is None else environment
-        settings = Settings.from_environment(values)
+        settings = Settings.from_environment(values, database_url=database_url)
         return cls(
             **settings.model_dump(),
             completion_queue_arn=values['TEXTRACT_COMPLETION_QUEUE_ARN'],

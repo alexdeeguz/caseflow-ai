@@ -16,3 +16,7 @@ __pycache__/
 .ruff_cache/
 .mypy_cache/
 *.egg-info/
+
+# SAM build output and local deployment parameters
+.aws-sam/
+samconfig.toml

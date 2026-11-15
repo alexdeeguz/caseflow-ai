@@ -1,0 +1,31 @@
+let log_groups = Resources.*[ Type == 'AWS::Logs::LogGroup' ]
+let functions = Resources.*[ Type == 'AWS::Serverless::Function' ]
+
+rule runtime_limits {
+    Globals.Function.Runtime == 'python3.13'
+    Globals.Function.Architectures == ['x86_64']
+    Globals.Function.MemorySize == 1024
+    Globals.Function.Timeout == 120
+    Globals.Function.EphemeralStorage.Size == 512
+    Globals.Function.VpcConfig !exists
+    Globals.Function.Environment.Variables.PROCESSOR_DATABASE_URL !exists
+    Parameters.EnableQueueMappings.Default == 'false'
+}
+
+rule restricted_stack_ownership {
+    Resources.*.Type IN ['AWS::IAM::Role', 'AWS::Logs::LogGroup', 'AWS::Serverless::Function']
+}
+
+rule private_function_logging {
+    %functions.Properties {
+        FunctionUrlConfig !exists
+        VpcConfig !exists
+        LoggingConfig.LogFormat == 'JSON'
+        LoggingConfig.ApplicationLogLevel == 'INFO'
+    }
+    %log_groups {
+        Properties.RetentionInDays == 30
+        DeletionPolicy == 'Retain'
+        UpdateReplacePolicy == 'Retain'
+    }
+}

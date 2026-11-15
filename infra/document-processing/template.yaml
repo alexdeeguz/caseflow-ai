@@ -1,0 +1,262 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: CaseFlow document extraction and Textract completion consumers.
+Metadata:
+  Documentation: ../../docs/lambda-configuration.md
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedPattern: '[a-z][a-z0-9-]{0,31}'
+  ProcessingQueueArn:
+    Type: String
+    AllowedPattern: 'arn:aws:sqs:us-east-2:[0-9]{12}:[A-Za-z0-9_-]+'
+  CompletionQueueArn:
+    Type: String
+    AllowedPattern: 'arn:aws:sqs:us-east-2:[0-9]{12}:[A-Za-z0-9_-]+'
+  DocumentBucketName:
+    Type: String
+    AllowedPattern: '[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]'
+  TextractTopicArn:
+    Type: String
+    AllowedPattern: 'arn:aws:sns:us-east-2:[0-9]{12}:AmazonTextract-[A-Za-z0-9_-]+'
+  TextractNotificationRoleArn:
+    Type: String
+    AllowedPattern: 'arn:aws:iam::[0-9]{12}:role/[A-Za-z0-9_+=,.@/-]+'
+  ProcessorDatabaseSecretArn:
+    Type: String
+    Description: Existing AWSCURRENT JSON secret encrypted with aws/secretsmanager.
+    AllowedPattern: 'arn:aws:secretsmanager:us-east-2:[0-9]{12}:secret:[A-Za-z0-9/_+=.@-]+-[A-Za-z0-9]{6}'
+  EnableQueueMappings:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['false', 'true']
+    Description: Keep false until workflow verification and recovery are complete.
+
+Rules:
+  OhioOnly:
+    Assertions:
+      - Assert:
+          Fn::Equals: [{ Ref: 'AWS::Region' }, us-east-2]
+        AssertDescription: Deploy in the selected Ohio Region.
+  SeparateQueues:
+    Assertions:
+      - Assert:
+          Fn::Not:
+            - Fn::Equals: [{ Ref: ProcessingQueueArn }, { Ref: CompletionQueueArn }]
+        AssertDescription: Processing and completion require separate queues.
+
+Conditions:
+  ConsumeQueues:
+    Fn::Equals: [{ Ref: EnableQueueMappings }, 'true']
+
+Globals:
+  Function:
+    Runtime: python3.13
+    Architectures: [x86_64]
+    MemorySize: 1024
+    Timeout: 120
+    EphemeralStorage:
+      Size: 512
+    Environment:
+      Variables:
+        PROCESSOR_DATABASE_SECRET_ARN: { Ref: ProcessorDatabaseSecretArn }
+        PROCESSOR_QUEUE_ARN: { Ref: ProcessingQueueArn }
+        PROCESSOR_STORAGE_BUCKET: { Ref: DocumentBucketName }
+        PROCESSOR_STORAGE_ENVIRONMENT: { Ref: Environment }
+        TEXTRACT_NOTIFICATION_TOPIC_ARN: { Ref: TextractTopicArn }
+        TEXTRACT_NOTIFICATION_ROLE_ARN: { Ref: TextractNotificationRoleArn }
+        PYTHONDONTWRITEBYTECODE: '1'
+    Tags:
+      Application: caseflow
+      Environment: { Ref: Environment }
+
+Resources:
+  ProcessorLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      LogGroupName: { Fn::Sub: '/caseflow/${AWS::StackName}/processor' }
+      RetentionInDays: 30
+  CompletionLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      LogGroupName: { Fn::Sub: '/caseflow/${AWS::StackName}/completion' }
+      RetentionInDays: 30
+
+  ProcessorRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: { Service: lambda.amazonaws.com }
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: ProcessorRuntime
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: ReceiveProcessingJobs
+                Effect: Allow
+                Action: [sqs:ReceiveMessage, sqs:DeleteMessage, sqs:GetQueueAttributes]
+                Resource: { Ref: ProcessingQueueArn }
+              - Sid: WriteOwnLogs
+                Effect: Allow
+                Action: [logs:CreateLogStream, logs:PutLogEvents]
+                Resource: { Fn::GetAtt: [ProcessorLogGroup, Arn] }
+              - Sid: ReadDatabaseSecret
+                Effect: Allow
+                Action: secretsmanager:GetSecretValue
+                Resource: { Ref: ProcessorDatabaseSecretArn }
+              - Sid: ReadOriginalVersions
+                Effect: Allow
+                Action: s3:GetObjectVersion
+                Resource:
+                  Fn::Sub: 'arn:${AWS::Partition}:s3:::${DocumentBucketName}/${Environment}/cases/*/documents/*/original/*'
+              - Sid: VerifyArtifactVersions
+                Effect: Allow
+                Action: s3:GetObjectVersion
+                Resource:
+                  Fn::Sub: 'arn:${AWS::Partition}:s3:::${DocumentBucketName}/${Environment}/cases/*/documents/*/processed/*'
+              - Sid: WriteEncryptedArtifacts
+                Effect: Allow
+                Action: s3:PutObject
+                Resource:
+                  Fn::Sub: 'arn:${AWS::Partition}:s3:::${DocumentBucketName}/${Environment}/cases/*/documents/*/processed/*'
+                Condition:
+                  StringEquals:
+                    s3:x-amz-server-side-encryption: AES256
+              - Sid: StartOcr
+                Effect: Allow
+                Action: textract:StartDocumentTextDetection
+                Resource: '*'
+                Condition:
+                  StringEquals:
+                    aws:RequestedRegion: { Ref: 'AWS::Region' }
+              - Sid: PassNotificationRole
+                Effect: Allow
+                Action: iam:PassRole
+                Resource: { Ref: TextractNotificationRoleArn }
+                Condition:
+                  StringEquals:
+                    iam:PassedToService: textract.amazonaws.com
+
+  CompletionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: { Service: lambda.amazonaws.com }
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: CompletionRuntime
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: ReceiveCompletionNotifications
+                Effect: Allow
+                Action: [sqs:ReceiveMessage, sqs:DeleteMessage, sqs:GetQueueAttributes]
+                Resource: { Ref: CompletionQueueArn }
+              - Sid: WriteOwnLogs
+                Effect: Allow
+                Action: [logs:CreateLogStream, logs:PutLogEvents]
+                Resource: { Fn::GetAtt: [CompletionLogGroup, Arn] }
+              - Sid: ReadDatabaseSecret
+                Effect: Allow
+                Action: secretsmanager:GetSecretValue
+                Resource: { Ref: ProcessorDatabaseSecretArn }
+              - Sid: VerifyArtifactVersions
+                Effect: Allow
+                Action: s3:GetObjectVersion
+                Resource:
+                  Fn::Sub: 'arn:${AWS::Partition}:s3:::${DocumentBucketName}/${Environment}/cases/*/documents/*/processed/*'
+              - Sid: WriteEncryptedArtifacts
+                Effect: Allow
+                Action: s3:PutObject
+                Resource:
+                  Fn::Sub: 'arn:${AWS::Partition}:s3:::${DocumentBucketName}/${Environment}/cases/*/documents/*/processed/*'
+                Condition:
+                  StringEquals:
+                    s3:x-amz-server-side-encryption: AES256
+              - Sid: CollectOcr
+                Effect: Allow
+                Action: textract:GetDocumentTextDetection
+                Resource: '*'
+                Condition:
+                  StringEquals:
+                    aws:RequestedRegion: { Ref: 'AWS::Region' }
+
+  ProcessorFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: makefile
+    Properties:
+      CodeUri: ../../apps/document-processor
+      Handler: caseflow_processor.handlers.processing.handler
+      Role: { Fn::GetAtt: [ProcessorRole, Arn] }
+      LoggingConfig:
+        LogFormat: JSON
+        ApplicationLogLevel: INFO
+        SystemLogLevel: WARN
+        LogGroup: { Ref: ProcessorLogGroup }
+      Events:
+        ProcessingQueue:
+          Type: SQS
+          Properties:
+            Queue: { Ref: ProcessingQueueArn }
+            Enabled: { Fn::If: [ConsumeQueues, true, false] }
+            BatchSize: 1
+            MaximumBatchingWindowInSeconds: 0
+            ScalingConfig:
+              MaximumConcurrency: 2
+            FunctionResponseTypes: [ReportBatchItemFailures]
+
+  CompletionFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: makefile
+    Properties:
+      CodeUri: ../../apps/document-processor
+      Handler: caseflow_processor.handlers.completion.handler
+      Role: { Fn::GetAtt: [CompletionRole, Arn] }
+      Environment:
+        Variables:
+          TEXTRACT_COMPLETION_QUEUE_ARN: { Ref: CompletionQueueArn }
+      LoggingConfig:
+        LogFormat: JSON
+        ApplicationLogLevel: INFO
+        SystemLogLevel: WARN
+        LogGroup: { Ref: CompletionLogGroup }
+      Events:
+        CompletionQueue:
+          Type: SQS
+          Properties:
+            Queue: { Ref: CompletionQueueArn }
+            Enabled: { Fn::If: [ConsumeQueues, true, false] }
+            BatchSize: 1
+            MaximumBatchingWindowInSeconds: 0
+            ScalingConfig:
+              MaximumConcurrency: 2
+            FunctionResponseTypes: [ReportBatchItemFailures]
+
+Outputs:
+  ProcessorFunctionName:
+    Value: { Ref: ProcessorFunction }
+  CompletionFunctionName:
+    Value: { Ref: CompletionFunction }
+  ProcessorRoleArn:
+    Value: { Fn::GetAtt: [ProcessorRole, Arn] }
+  CompletionRoleArn:
+    Value: { Fn::GetAtt: [CompletionRole, Arn] }
+  ProcessorLogs:
+    Value: { Ref: ProcessorLogGroup }
+  CompletionLogs:
+    Value: { Ref: CompletionLogGroup }

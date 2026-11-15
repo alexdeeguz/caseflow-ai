@@ -180,11 +180,15 @@ def test_cancellation_checkpoint_stops_further_requests(job, settings):
 
 @pytest.mark.parametrize('recover', [False, True])
 def test_sdk_retry_budget_uses_runtime_configuration(job, settings, recover):
-    from caseflow_processor.runtime import _adapters
+    from caseflow_processor.runtime import _aws_adapters
 
-    with patch('caseflow_processor.runtime.boto3.Session') as session:
-        _adapters(settings)
-        config = session.return_value.client.call_args.kwargs['config']
+    _aws_adapters.cache_clear()
+    try:
+        with patch('caseflow_processor.runtime.boto3.Session') as session:
+            _aws_adapters()
+            config = session.return_value.client.call_args.kwargs['config']
+    finally:
+        _aws_adapters.cache_clear()
 
     requests = []
 

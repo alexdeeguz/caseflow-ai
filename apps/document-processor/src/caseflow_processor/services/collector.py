@@ -4,6 +4,7 @@ from ..errors import DocumentError, RetryableError
 from ..models import ClaimedJob, JobState
 from ..ocr.models import CompletionNotification, NotificationStatus
 from ..ports import Checkpoint, JobStore, ObjectStorage, OcrResults
+from ..telemetry import record_job
 from .artifacts import ArtifactWriter
 
 
@@ -32,6 +33,7 @@ class Collector:
             raise RetryableError('Job is not available for collection')
 
         self._validate_snapshot(job, notification)
+        record_job(job, 'claimed')
 
         def checkpoint() -> None:
             deadline()
@@ -53,10 +55,12 @@ class Collector:
             checkpoint()
             if not self._store.complete(job, result.document, artifact_set, references):
                 raise RetryableError('OCR publication was rejected')
+            record_job(job, 'ready')
         except DocumentError as error:
             deadline()
             if not self._store.fail(job, error.code):
                 raise RetryableError('OCR failure was not persisted') from error
+            record_job(job, 'failed', failure=error.code)
 
     def _validate_snapshot(self, job: ClaimedJob, notification: CompletionNotification) -> None:
         if (

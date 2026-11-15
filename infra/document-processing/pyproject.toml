@@ -1,0 +1,25 @@
+[project]
+name = "caseflow-lambda-tooling"
+version = "0.1.0"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "aws-sam-cli==1.172.1",
+    "cfn-lint==1.58.0",
+    "pytest==9.2.0",
+    "pyyaml==6.0.3",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["scripts"]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+indent-width = 4
+
+[tool.ruff.format]
+quote-style = "single"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
