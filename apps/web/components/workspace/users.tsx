@@ -5,6 +5,8 @@ import { useState } from 'react';
 
 import type { AuthRequest } from '../../hooks/use-authentication';
 import { useResource } from '../../hooks/use-resource';
+import { ConfirmDialog } from '../ui/confirm-dialog';
+import { useToast } from '../ui/toast-provider';
 import { Button } from '../ui/button';
 import { StatusMessage } from '../ui/status-message';
 import { LoadState } from '../ui/load-state';
@@ -20,6 +22,8 @@ const UserChange = {
 type UserChange = (typeof UserChange)[keyof typeof UserChange];
 
 export function Users({ user, request }: { user: User; request: AuthRequest }) {
+  const notify = useToast();
+  const [confirmation, setConfirmation] = useState<{ target: User; kind: UserChange } | null>(null);
   const [search, setSearch] = useState('');
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
@@ -32,15 +36,6 @@ export function Users({ user, request }: { user: User; request: AuthRequest }) {
 
   async function change(target: User, kind: UserChange) {
     const nextRole = target.role === Role.Staff ? Role.Admin : Role.Staff;
-    const action =
-      kind === UserChange.Role
-        ? `Change ${target.displayName} (${target.id}) to ${roleLabels[nextRole]}?`
-        : `${target.active ? 'Disable' : 'Enable'} ${target.displayName} (${target.id})?`;
-
-    if (!window.confirm(action)) {
-      return;
-    }
-
     setBusy(true);
     setError('');
 
@@ -51,10 +46,12 @@ export function Users({ user, request }: { user: User; request: AuthRequest }) {
           kind === UserChange.Role ? { role: nextRole } : { active: !target.active },
         ),
       });
+      notify(kind === UserChange.Role ? 'User role updated.' : 'User access updated.');
     } catch (error) {
       setError((error as Error).message);
     } finally {
       setBusy(false);
+      setConfirmation(null);
     }
   }
 
@@ -82,6 +79,29 @@ export function Users({ user, request }: { user: User; request: AuthRequest }) {
         />
         <Button type="submit">Search</Button>
       </form>
+      <ConfirmDialog
+        open={confirmation !== null}
+        title={
+          confirmation?.kind === UserChange.Role ? 'Change user role?' : 'Change account access?'
+        }
+        confirmLabel="Confirm change"
+        cancelLabel="Cancel"
+        busy={busy}
+        onCancel={() => setConfirmation(null)}
+        onConfirm={() => {
+          if (confirmation) {
+            void change(confirmation.target, confirmation.kind);
+          }
+        }}
+      >
+        {confirmation && (
+          <p>
+            {confirmation.kind === UserChange.Role
+              ? `Change ${confirmation.target.displayName} to ${roleLabels[confirmation.target.role === Role.Staff ? Role.Admin : Role.Staff]}?`
+              : `${confirmation.target.active ? 'Disable' : 'Enable'} access for ${confirmation.target.displayName}?`}
+          </p>
+        )}
+      </ConfirmDialog>
       {error && <StatusMessage tone="error">{error}</StatusMessage>}
       {!data ? (
         <LoadState error={loadError} />
@@ -103,7 +123,7 @@ export function Users({ user, request }: { user: User; request: AuthRequest }) {
                       <Button
                         variant="secondary"
                         disabled={busy}
-                        onClick={() => void change(target, UserChange.Access)}
+                        onClick={() => setConfirmation({ target, kind: UserChange.Access })}
                       >
                         {target.active ? 'Disable access' : 'Enable access'}
                       </Button>
@@ -112,7 +132,7 @@ export function Users({ user, request }: { user: User; request: AuthRequest }) {
                     <Button
                       variant="secondary"
                       disabled={busy}
-                      onClick={() => void change(target, UserChange.Role)}
+                      onClick={() => setConfirmation({ target, kind: UserChange.Role })}
                     >
                       {target.role === Role.Staff ? 'Make Admin' : 'Make Staff'}
                     </Button>

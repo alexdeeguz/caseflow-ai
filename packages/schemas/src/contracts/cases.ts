@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { CaseArchiveFilter } from '../constants/case-archive.js';
 import { CaseLimits, CaseStatus } from '../constants/case-statuses.js';
 import { idSchema } from './common.js';
 import { pageQuerySchema, pageSchema } from './pagination.js';
@@ -9,13 +10,26 @@ export const incidentDateSchema = z.iso.date().refine((value) => !value.startsWi
   message: 'Enter a valid calendar date.',
 });
 
-export const caseCreateSchema = z.strictObject({
+export const caseFieldsSchema = z.strictObject({
   title: z.string().trim().min(1, 'Enter a case title.').max(CaseLimits.Title),
   clientName: z.string().trim().min(1, 'Enter a fictional client name.').max(CaseLimits.ClientName),
+  incidentDate: incidentDateSchema.nullable(),
+  status: caseStatusSchema,
+  summary: z.string().trim().max(CaseLimits.Summary),
+});
+
+export const caseCreateSchema = caseFieldsSchema.extend({
   incidentDate: incidentDateSchema.nullable().default(null),
   status: caseStatusSchema.default(CaseStatus.Intake),
-  summary: z.string().trim().max(CaseLimits.Summary).default(''),
+  summary: caseFieldsSchema.shape.summary.default(''),
 });
+
+export const caseVersionSchema = z.strictObject({
+  expectedVersion: z.number().int().min(1).max(2147483647),
+});
+
+export const caseUpdateSchema = caseFieldsSchema.partial().extend(caseVersionSchema.shape);
+export type CaseUpdate = z.infer<typeof caseUpdateSchema>;
 
 export type CaseCreate = z.infer<typeof caseCreateSchema>;
 
@@ -27,13 +41,20 @@ export const caseSchema = caseCreateSchema.extend({
   caseNumber: z.string().regex(/^CF-\d{6,}$/),
   createdAt: z.iso.datetime(),
   createdBy: idSchema.nullable(),
+  version: z.number().int().positive(),
+  updatedAt: z.iso.datetime(),
+  archivedAt: z.iso.datetime().nullable(),
+  archivedBy: idSchema.nullable(),
 });
 
 export type Case = z.infer<typeof caseSchema>;
 
+export const caseArchiveSchema = z.enum(CaseArchiveFilter);
+
 export const caseQuerySchema = pageQuerySchema.extend({
   search: z.string().trim().max(CaseLimits.Search).default(''),
   status: caseStatusSchema.optional(),
+  archive: caseArchiveSchema.default(CaseArchiveFilter.Current),
 });
 
 export type CaseQuery = z.infer<typeof caseQuerySchema>;

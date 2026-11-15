@@ -5,6 +5,8 @@ import {
   caseCreateSchema,
   caseQuerySchema,
   caseSchema,
+  caseUpdateSchema,
+  caseVersionSchema,
   successSchema,
 } from '@caseflow/schemas';
 
@@ -34,6 +36,30 @@ export function registerCaseRoutes(route: RegisterProtectedRoute) {
     url: '/cases/:id',
     operation: Operation.GetCase,
     output: caseDetailSchema,
+  });
+
+  route({
+    method: 'PATCH',
+    url: '/cases/:id',
+    operation: Operation.UpdateCase,
+    body: caseUpdateSchema,
+    output: caseSchema,
+  });
+
+  route({
+    method: 'POST',
+    url: '/cases/:id/archive',
+    operation: Operation.ArchiveCase,
+    body: caseVersionSchema,
+    output: caseSchema,
+  });
+
+  route({
+    method: 'POST',
+    url: '/cases/:id/restore',
+    operation: Operation.RestoreCase,
+    body: caseVersionSchema,
+    output: caseSchema,
   });
 
   route({

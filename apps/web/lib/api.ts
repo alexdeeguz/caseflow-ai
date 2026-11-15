@@ -72,6 +72,10 @@ export async function apiRequest<T>(
           ? 'Your account is disabled. Contact an administrator.'
           : 'You do not have permission for this action.',
       404: 'This item is unavailable or you no longer have access.',
+      409:
+        code === ErrorCode.CaseArchived
+          ? 'Restore this archived case before editing it.'
+          : 'This case changed. Reload the latest saved case before trying again.',
       503: 'CaseFlow is temporarily unavailable. Please try again.',
     };
 

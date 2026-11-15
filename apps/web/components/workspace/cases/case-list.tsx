@@ -6,7 +6,7 @@ import { workspaceHref, type WorkspaceLocation } from '../../../lib/workspace-lo
 import styles from './cases.module.css';
 
 export function CaseList({ items, location }: { items: Case[]; location: WorkspaceLocation }) {
-  const href = (id: string) => workspaceHref({ ...location, case: id });
+  const href = (id: string) => workspaceHref({ ...location, case: id, mode: undefined });
 
   return (
     <>
@@ -34,6 +34,7 @@ export function CaseList({ items, location }: { items: Case[]; location: Workspa
                 <td>{formatIncidentDate(item.incidentDate)}</td>
                 <td>
                   <CaseStatusBadge status={item.status} />
+                  {item.archivedAt && <span className="text-sm text-muted ml-2">Archived</span>}
                 </td>
               </tr>
             ))}
@@ -46,6 +47,7 @@ export function CaseList({ items, location }: { items: Case[]; location: Workspa
             <div className="flex flex-wrap justify-between gap-3">
               <span className={styles.caseNumber}>{item.caseNumber}</span>
               <CaseStatusBadge status={item.status} />
+              {item.archivedAt && <span className="text-sm text-muted ml-2">Archived</span>}
             </div>
             <h2>
               <Link href={href(item.id)} scroll={false} className={styles.caseLink}>

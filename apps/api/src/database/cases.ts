@@ -1,15 +1,32 @@
-import { CaseStatus, ErrorCode, type Case, type CaseQuery, type User } from '@caseflow/schemas';
+import {
+  CaseArchiveFilter,
+  CaseStatus,
+  ErrorCode,
+  type Case,
+  type CaseQuery,
+  type User,
+} from '@caseflow/schemas';
 import type { PoolClient } from 'pg';
 import { AppError } from '../errors.js';
 
 const caseColumns = `id, case_number as "caseNumber", title, client_name as "clientName",
   to_char(incident_date, 'YYYY-MM-DD') as "incidentDate", status, summary,
-  created_at as "createdAt", created_by as "createdBy"`;
+  created_at as "createdAt", created_by as "createdBy", version,
+  updated_at as "updatedAt", archived_at as "archivedAt", archived_by as "archivedBy"`;
 
-type CaseRow = Omit<Case, 'createdAt'> & { createdAt: Date };
+type CaseRow = Omit<Case, 'createdAt' | 'updatedAt' | 'archivedAt'> & {
+  createdAt: Date;
+  updatedAt: Date;
+  archivedAt: Date | null;
+};
 
 function serializeCase(row: CaseRow): Case {
-  return { ...row, createdAt: row.createdAt.toISOString() };
+  return {
+    ...row,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+    archivedAt: row.archivedAt?.toISOString() ?? null,
+  };
 }
 
 export async function createCase(client: PoolClient, input: Record<string, unknown>) {
@@ -30,17 +47,22 @@ export async function createCase(client: PoolClient, input: Record<string, unkno
 export async function listCases(client: PoolClient, input: Partial<CaseQuery>) {
   const page = input.page ?? 1;
   const pageSize = input.pageSize ?? 25;
-  const params = [input.search ?? '', input.status ?? null];
+  const params = [
+    input.search ?? '',
+    input.status ?? null,
+    input.archive ?? CaseArchiveFilter.Current,
+  ];
   const filter = `where ($1 = '' or strpos(lower(case_number), lower($1)) > 0
     or strpos(lower(title), lower($1)) > 0 or strpos(lower(client_name), lower($1)) > 0)
-    and ($2::text is null or status = $2)`;
+    and ($2::text is null or status = $2)
+    and ($3 = 'all' or ($3 = 'current' and archived_at is null) or ($3 = 'archived' and archived_at is not null))`;
   const count = await client.query(
     `select count(*)::int as total from caseflow.cases ${filter}`,
     params,
   );
   const result = await client.query<CaseRow>(
     `select ${caseColumns} from caseflow.cases ${filter}
-     order by created_at desc, id desc limit $3 offset $4`,
+     order by created_at desc, id desc limit $4 offset $5`,
     [...params, pageSize, (page - 1) * pageSize],
   );
 
@@ -85,4 +107,27 @@ export async function setCaseAssignment(
   ]);
 
   return { success: true };
+}
+
+export async function updateCase(client: PoolClient, input: Record<string, unknown>) {
+  const { id, expectedVersion, ...patch } = input;
+  const result = await client.query<CaseRow>(
+    `select ${caseColumns} from caseflow.update_case($1, $2, $3::jsonb)`,
+    [id, expectedVersion, JSON.stringify(patch)],
+  );
+
+  return serializeCase(result.rows[0]!);
+}
+
+export async function setCaseArchived(
+  client: PoolClient,
+  input: Record<string, unknown>,
+  archived: boolean,
+) {
+  const result = await client.query<CaseRow>(
+    `select ${caseColumns} from caseflow.set_case_archived($1, $2, $3)`,
+    [input.id, input.expectedVersion, archived],
+  );
+
+  return serializeCase(result.rows[0]!);
 }

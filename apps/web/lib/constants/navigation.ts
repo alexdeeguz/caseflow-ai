@@ -15,10 +15,13 @@ export const tabLabels: Readonly<Record<WorkspaceTab, string>> = {
 };
 
 export const CaseView = { New: 'new' } as const;
+export const CaseMode = { Edit: 'edit' } as const;
 
 export const WorkspaceParam = {
   Tab: 'tab',
   Case: 'case',
+  Mode: 'mode',
+  Archive: 'archive',
   Search: 'search',
   Status: 'status',
   Page: 'page',

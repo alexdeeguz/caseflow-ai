@@ -7,6 +7,7 @@ import { InteractionRequiredAuthError, type AccountInfo } from '@azure/msal-brow
 import { getAuthClient } from '../lib/auth';
 import { getPublicConfig } from '../lib/config';
 import { apiRequest, ApiError, type Parser } from '../lib/api';
+import { isAccessRejected } from '../lib/auth-errors';
 
 const permissionsChangedEvent = 'caseflow:permissions';
 
@@ -119,7 +120,9 @@ export function useAuthentication() {
           error instanceof Error &&
           error.name !== 'AbortError'
         ) {
-          setIdentity(null);
+          if (isAccessRejected(error)) {
+            setIdentity(null);
+          }
           setError(error.message);
         }
       },

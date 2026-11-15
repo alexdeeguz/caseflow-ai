@@ -12,6 +12,16 @@ import {
 import { preloadResource } from '../lib/resources';
 import { locationResource } from '../components/workspace/navigation';
 
+interface NavigationOptions {
+  replace?: boolean;
+  debounceMs?: number;
+}
+
+export type WorkspaceNavigate = (
+  location: WorkspaceLocation,
+  options?: NavigationOptions,
+) => Promise<void>;
+
 export function useWorkspaceNavigation(request: AuthRequest, refreshProfile: () => Promise<void>) {
   const params = useSearchParams();
   const serialized = params.toString();
@@ -42,7 +52,10 @@ export function useWorkspaceNavigation(request: AuthRequest, refreshProfile: () 
   }, [serialized]);
 
   const navigate = useCallback(
-    async (next: WorkspaceLocation, replace = false) => {
+    async (
+      next: WorkspaceLocation,
+      { replace = false, debounceMs = 0 }: NavigationOptions = {},
+    ) => {
       const current = ++lifecycle.current.sequence;
 
       if (workspaceHref(next) === workspaceHref(location)) {
@@ -51,6 +64,13 @@ export function useWorkspaceNavigation(request: AuthRequest, refreshProfile: () 
       }
 
       setPending({ from: serialized, destination: next });
+      if (debounceMs > 0) {
+        await new Promise<void>((resolve) => window.setTimeout(resolve, debounceMs));
+        if (lifecycle.current.sequence !== current) {
+          return;
+        }
+      }
+
       const resource = locationResource(next);
 
       await Promise.all([
@@ -60,7 +80,6 @@ export function useWorkspaceNavigation(request: AuthRequest, refreshProfile: () 
 
       if (lifecycle.current.sequence === current) {
         router[replace ? 'replace' : 'push'](workspaceHref(next), { scroll: false });
-        setPending(null);
       }
     },
     [client, location, refreshProfile, request, router, serialized],

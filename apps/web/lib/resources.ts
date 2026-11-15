@@ -1,6 +1,6 @@
 import { QueryClient, queryOptions } from '@tanstack/react-query';
 import type { AuthRequest } from '../hooks/use-authentication';
-import type { Parser } from './api';
+import { ApiError, type Parser } from './api';
 
 export interface Resource<T> {
   path: string;
@@ -47,13 +47,19 @@ export function resourceState<T>({ data, error }: { data: T | undefined; error: 
 
 export function withResourceInvalidation(client: QueryClient, request: AuthRequest): AuthRequest {
   return async <T>(path: string, schema: Parser<T>, options: RequestInit = {}) => {
-    const result = await request(path, schema, options);
     const method = (options.method ?? 'GET').toUpperCase();
-
-    if (method !== 'GET' && method !== 'HEAD') {
-      await client.invalidateQueries();
+    const mutation = method !== 'GET' && method !== 'HEAD';
+    try {
+      const result = await request(path, schema, options);
+      if (mutation) {
+        await client.invalidateQueries();
+      }
+      return result;
+    } catch (error) {
+      if (mutation && error instanceof ApiError && [401, 403, 404].includes(error.status)) {
+        await client.invalidateQueries();
+      }
+      throw error;
     }
-
-    return result;
   };
 }

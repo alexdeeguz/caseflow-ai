@@ -2,7 +2,14 @@ import { ErrorCode, Role, type Audit, type User } from '@caseflow/schemas';
 import type { PoolClient } from 'pg';
 import { AppError } from '../errors.js';
 import { Operation, operationRequiresAdmin } from './operations.js';
-import { createCase, getCase, listCases, setCaseAssignment } from './cases.js';
+import {
+  createCase,
+  getCase,
+  listCases,
+  setCaseAssignment,
+  updateCase,
+  setCaseArchived,
+} from './cases.js';
 
 export const userColumns = 'id, display_name as "displayName", role, active';
 
@@ -71,6 +78,13 @@ export async function executeOperation(
 
     case Operation.CreateCase:
       return createCase(client, input);
+
+    case Operation.UpdateCase:
+      return updateCase(client, input);
+
+    case Operation.ArchiveCase:
+    case Operation.RestoreCase:
+      return setCaseArchived(client, input, operation === Operation.ArchiveCase);
 
     case Operation.ListCases:
       return listCases(client, input);

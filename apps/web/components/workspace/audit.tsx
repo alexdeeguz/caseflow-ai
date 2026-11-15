@@ -11,6 +11,9 @@ import { auditListResource } from '../../lib/workspace-resources';
 
 const labels: Readonly<Record<string, string>> = {
   [AuditAction.CaseCreated]: 'Case created',
+  [AuditAction.CaseUpdated]: 'Case updated',
+  [AuditAction.CaseArchived]: 'Case archived',
+  [AuditAction.CaseRestored]: 'Case restored',
   [AuditAction.ProfileUpdated]: 'Profile updated',
   [AuditAction.UserRoleChanged]: 'Role changed',
   [AuditAction.UserAccessChanged]: 'Account access changed',

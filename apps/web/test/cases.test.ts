@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { CaseStatus, caseCreateSchema, caseSchema } from '@caseflow/schemas';
+import { CaseArchiveFilter, CaseStatus, caseCreateSchema, caseSchema } from '@caseflow/schemas';
 import { parseWorkspaceLocation, workspaceHref } from '../lib/workspace-location';
 import { WorkspaceTab, CaseView } from '../lib/constants/navigation';
 import { caseListResource } from '../lib/workspace-resources';
@@ -15,6 +15,8 @@ test('case links preserve list context without accepting arbitrary destinations'
     search: 'A & B / 100%',
     status: CaseStatus.Active,
     page: 3,
+    archive: CaseArchiveFilter.Current,
+    mode: undefined,
   };
   const href = workspaceHref(location);
   assert.ok(href.startsWith('/?'));
@@ -39,6 +41,7 @@ test('leaving Cases clears the selected case but retains list filters', () => {
     search: 'client',
     status: CaseStatus.Closed,
     page: 2,
+    archive: CaseArchiveFilter.Current,
   };
   const params = new URL(workspaceHref(location), 'http://localhost').searchParams;
   assert.equal(params.get('case'), null);
@@ -52,6 +55,17 @@ test('case resources encode search terms and isolate filtered cache keys', () =>
   assert.equal(query.get('search'), 'A&B');
   assert.equal(query.get('status'), CaseStatus.Intake);
   assert.notEqual(resource.path, caseListResource().path);
+});
+
+test('live search preserves spaces while typing and normalizes the API query', () => {
+  const location = parseWorkspaceLocation(new URLSearchParams('tab=cases&search=Seaside+'));
+  assert.equal(location.search, 'Seaside ');
+  assert.equal(
+    parseWorkspaceLocation(new URL(workspaceHref(location), 'http://localhost').searchParams)
+      .search,
+    'Seaside ',
+  );
+  assert.equal(caseListResource(location).path, caseListResource({ search: 'Seaside' }).path);
 });
 
 test('calendar dates remain the same across local time zones', () => {

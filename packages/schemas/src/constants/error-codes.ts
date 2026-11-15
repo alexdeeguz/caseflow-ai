@@ -4,6 +4,8 @@ export const ErrorCode = {
   Forbidden: 'FORBIDDEN',
   NotFound: 'NOT_FOUND',
   InvalidInput: 'INVALID_INPUT',
+  CaseConflict: 'CASE_CONFLICT',
+  CaseArchived: 'CASE_ARCHIVED',
   InsufficientScope: 'INSUFFICIENT_SCOPE',
   ServiceUnavailable: 'SERVICE_UNAVAILABLE',
   InternalError: 'INTERNAL_ERROR',

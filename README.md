@@ -1,6 +1,6 @@
 # CaseFlow AI
 
-TypeScript monorepo with Microsoft Entra sign-in, persistent profiles, role-based permissions, case creation and browsing, Staff assignments, and audit history. Case editing, archiving, and document processing are not implemented.
+TypeScript monorepo with Microsoft Entra sign-in, persistent profiles, role-based permissions, case creation, editing, reversible archiving, Staff assignments, and audit history. Document processing is not implemented.
 
 ## Structure
 
@@ -8,7 +8,7 @@ TypeScript monorepo with Microsoft Entra sign-in, persistent profiles, role-base
 - `apps/api`: Fastify API with database-enforced user and case permissions.
 - `packages/schemas`: shared strict Zod request/response contracts and TypeScript types.
 
-Shared domain values live in `packages/schemas/src/constants` (roles, case statuses and limits, error codes,
+Shared domain values live in `packages/schemas/src/constants` (roles, case statuses, archive filters and limits, error codes,
 and audit actions). Request/response schemas and inferred types live in
 `packages/schemas/src/contracts`, grouped by feature. Import both through
 `@caseflow/schemas`; the package entry point only re-exports its public API.
@@ -19,8 +19,8 @@ operation dispatch and shared queries in `queries.ts`, case queries in `cases.ts
 `connection-config.ts`, and safe database-error translation in `errors.ts`. Application errors are defined separately in `apps/api/src/errors.ts`.
 
 Frontend workspace components live in `apps/web/components/workspace`; case list,
-creation form, status badge, detail, and assignment-picker components are grouped under `cases/`. Reusable
-controls and loading/pagination components live in `components/ui`. Constants used
+shared create/edit form, versioned drafts, status badge, detail, and assignment-picker components are grouped under `cases/`. Reusable
+controls, accessible confirmation dialogs, toast notifications, and loading/pagination components live in `components/ui`. In-memory edit drafts are owned by the current workspace through `lib/case-drafts.ts`. Constants used
 by one component stay with that component. Shared workspace navigation constants live in
 `lib/constants/navigation.ts`; URL parsing/serialization lives in `lib/workspace-location.ts`.
 
@@ -120,6 +120,8 @@ or assignments. Migration and seed commands never reset the existing database.
 | Edit own display name                   | Yes                   | Yes                   | Yes                   |
 | View cases                              | Assigned only         | All                   | All                   |
 | Create cases                            | No                    | Yes                   | Yes                   |
+| Edit details/status or archive/restore  | No                    | Yes                   | Yes                   |
+| View archived cases                     | Assigned only         | All                   | All                   |
 | Assign/remove Staff                     | No                    | Yes                   | Yes                   |
 | Enable/disable Staff                    | No                    | Yes                   | Yes                   |
 | Promote/demote or enable/disable Admins | No                    | No                    | Yes                   |
@@ -156,7 +158,7 @@ Admin and Super Admin users can choose **Create case** in the Cases workspace.
 The form requires a case title (up to 200 characters) and fictional client name
 (up to 100). Incident date and summary (up to 2,000 characters) are optional.
 Status defaults to Intake; Active and Closed are also available at creation.
-Editing existing case information or changing status is not yet supported.
+Admin and Super Admin users can edit all five fields and move freely between the three statuses.
 
 The server generates the UUID, case number, creation time, and creator identity.
 Case numbers use a database sequence, such as `CF-000001`; gaps are expected after
@@ -164,12 +166,15 @@ rollbacks or repeated seed runs. New cases have no Staff assignments. After savi
 the case details screen provides the existing assignment controls.
 
 The case list supports case-insensitive literal substring search across case number,
-title, and client name, plus a status filter. Results and totals obey case permissions
+title, and client name, plus status and Current / Archived / All filters (Current by default). Results and totals obey case permissions
 and are ordered newest first, with UUID as a stable tie-breaker. Incident dates are
 calendar dates, so they do not shift with the viewer's time zone.
 
-Workspace URLs retain the selected tab, case, search, status, and page, allowing
-bookmarks, refresh, and browser Back/Forward. Form drafts are not stored in URLs.
+Case-list filters apply immediately; search updates after a 300 ms typing pause.
+Changing filters resets pagination, and automatic updates replace the current URL entry.
+
+Workspace URLs retain the selected tab, case, search, status, archive filter, and page, allowing
+bookmarks, refresh, and browser Back/Forward. Add `mode=edit` to a case URL to open its edit form. Form drafts are not stored in URLs.
 The desktop list uses a table; narrow screens use case cards.
 
 For an existing local installation, run `npm run db:migrate` before starting the
@@ -178,13 +183,41 @@ and audit events, and fills the seeded cases with fictional client metadata.
 Legacy cases have no recorded creator; newly created cases always do. No reset or
 credential rotation is required.
 
+### Editing, archiving, and restoring cases
+
+Choose **Edit case** on current case details. IDs, case numbers, creators, and creation
+times are immutable. Unsaved edits remain in memory while navigating within the same
+user/role workspace. Background refreshes retain dirty fields. Saving or explicitly
+discarding clears the draft; sign-out or loss of access also clears protected drafts.
+Refreshing or closing a page with unsaved edits triggers the browser's leave-page warning;
+drafts do not survive a reload and are never written to browser storage.
+
+Concurrent mutations use an `expectedVersion` check after locking the case row and
+rechecking the actor under the permission lock. A conflict retains the edit draft and
+requires an explicit, confirmed reload of the latest saved case. It never merges or
+retries an outdated edit automatically. No-op requests leave the version, timestamp,
+and audit history unchanged.
+
+**Archive case** opens an in-app confirmation modal naming the case. Archiving preserves
+its Intake/Active/Closed status, data, assignments, and history. Archived case details
+are read-only until **Restore case** is used. Assigned Staff can still read archived
+cases, and administrators can manage assignments while archived. Saved detail links
+continue to work regardless of the list filter. There is no permanent deletion.
+
+Successful case, profile, role, access, and assignment changes use shared toast
+notifications. Toasts dismiss automatically, pause while hovered or focused, and have
+a keyboard-accessible dismiss button. Errors remain beside the relevant controls.
+Confirmation dialogs contain keyboard focus, support Escape, and return focus to the
+trigger when closed. Existing installations only need `npm run db:migrate`: new case
+metadata starts at version 1 with `updatedAt` equal to the original creation time.
+
 ### API contracts and verification
 
 Route definitions are grouped by feature under `apps/api/src/routes`:
 
 - `profile.ts`: current-user profile retrieval and updates.
 - `users.ts`: administrative user listing, role changes, and account access.
-- `cases.ts`: case creation, searchable listing, details, and Staff assignments.
+- `cases.ts`: case creation, editing, archive/restore, searchable listing, details, and Staff assignments.
 - `audit.ts`: case, permission, and profile audit history.
 - `protected-route.ts`: shared bearer-token verification and request/response validation.
 
@@ -195,24 +228,36 @@ All endpoints require a Microsoft bearer access token. Shared contracts live in
 `packages/schemas`; root scripts build that package before consumers, and root
 `npm run dev` watches it. If running an app individually, build schemas first.
 
-| Endpoint                                             | Purpose                                       |
-| ---------------------------------------------------- | --------------------------------------------- |
-| `GET /me`                                            | Provision once and return the current profile |
-| `PATCH /me`                                          | Change own display name only                  |
-| `POST /cases`                                        | Admin/Super Admin creates a case; returns 201 |
-| `GET /cases`, `GET /cases/:id`                       | Search accessible cases and read details      |
-| `GET /admin/users`                                   | Search/paginate users; optional role filter   |
-| `PATCH /admin/users/:id/role`                        | Super Admin changes Staff/Admin role          |
-| `PATCH /admin/users/:id/access`                      | Enable/disable permitted target               |
-| `PUT`, `DELETE /admin/cases/:id/assignments/:userId` | Assign/remove Staff                           |
-| `GET /admin/audit`                                   | Paginated audit history                       |
+| Endpoint                                             | Purpose                                                           |
+| ---------------------------------------------------- | ----------------------------------------------------------------- |
+| `GET /me`                                            | Provision once and return the current profile                     |
+| `PATCH /me`                                          | Change own display name only                                      |
+| `POST /cases`                                        | Admin/Super Admin creates a case; returns 201                     |
+| `GET /cases`, `GET /cases/:id`                       | Search accessible cases and read details                          |
+| `PATCH /cases/:id`                                   | Edit case fields with required `expectedVersion`; returns 200     |
+| `POST /cases/:id/archive`, `POST /cases/:id/restore` | Change archive state with required `expectedVersion`; returns 200 |
+| `GET /admin/users`                                   | Search/paginate users; optional role filter                       |
+| `PATCH /admin/users/:id/role`                        | Super Admin changes Staff/Admin role                              |
+| `PATCH /admin/users/:id/access`                      | Enable/disable permitted target                                   |
+| `PUT`, `DELETE /admin/cases/:id/assignments/:userId` | Assign/remove Staff                                               |
+| `GET /admin/audit`                                   | Paginated audit history                                           |
 
 Lists accept `page` (default 1) and `pageSize` (default 25, maximum 100).
 `GET /cases` also accepts `search` (up to 200 characters) and optional `status`
-(`intake`, `active`, or `closed`). `POST /cases` accepts only `title`, `clientName`,
+(`intake`, `active`, or `closed`), plus `archive=current|archived|all`. `POST /cases` accepts only `title`, `clientName`,
 `incidentDate` (`YYYY-MM-DD` or null), `status`, and `summary`; the last three are
 optional. Creation commits with a `case.created` audit event and rechecks current
 admin authorization inside the permission transaction lock.
+`PATCH /cases/:id` accepts the same editable fields without creation defaults, plus
+required positive integer `expectedVersion`. Omitted fields stay unchanged; null clears
+`incidentDate`, and an empty string clears `summary`. Unknown and server-controlled
+fields are rejected. Archive/restore bodies accept only `expectedVersion`. Case responses
+include `version`, `updatedAt`, `archivedAt`, and `archivedBy`; archive metadata is null
+for current cases. Changed writes atomically record `case.updated`, `case.archived`,
+or `case.restored` with the actor and before/after values. Stale requests return
+`409 CASE_CONFLICT`; edits against an archived case at its current version return
+`409 CASE_ARCHIVED`.
+
 Errors contain stable `code` and safe `error` text. Disabled accounts return
 `403 ACCOUNT_DISABLED`; ordinary permission denials return `403 FORBIDDEN`;
 inaccessible cases return 404; database outages fail closed with 503.
@@ -229,7 +274,7 @@ npm run build
 Integration tests require Docker plus the local operator/runtime environment files.
 They create and drop a uniquely named disposable database, apply migrations and
 seeds there, and exercise real restricted-login permissions. They never reset the
-working database and do not silently skip when the database is unavailable.
+working database and do not silently skip when the database is unavailable. Coverage includes partial edits, archive access/filtering, retained assignments, concurrent writes, demotion/disable races, audit rollback, migration preservation, and direct runtime-role restrictions.
 
 ## Authentication
 

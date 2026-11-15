@@ -5,12 +5,14 @@ import { Role, successSchema, type User } from '@caseflow/schemas';
 
 import type { AuthRequest } from '../../../hooks/use-authentication';
 import { useResource } from '../../../hooks/use-resource';
+import { useToast } from '../../ui/toast-provider';
 import { Button } from '../../ui/button';
 import { StatusMessage } from '../../ui/status-message';
 import { LoadState } from '../../ui/load-state';
 import { RoleBadge } from '../role-badge';
 import { StaffPicker } from './staff-picker';
 import { caseDetailResource } from '../../../lib/workspace-resources';
+import { CaseActions } from './case-actions';
 import { CaseStatusBadge } from './case-status-badge';
 import { formatIncidentDate } from '../../../lib/case-dates';
 import styles from './cases.module.css';
@@ -20,12 +22,15 @@ export function CaseDetail({
   user,
   request,
   onBack,
+  onEdit,
 }: {
   id: string;
   user: User;
   request: AuthRequest;
   onBack: () => void;
+  onEdit: () => void;
 }) {
+  const notify = useToast();
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const { data, error: loadError } = useResource(request, caseDetailResource(id));
@@ -38,6 +43,7 @@ export function CaseDetail({
       await request(`/admin/cases/${id}/assignments/${userId}`, successSchema, {
         method: assigned ? 'PUT' : 'DELETE',
       });
+      notify(assigned ? 'Staff assigned to case.' : 'Assignment removed.');
     } catch (error) {
       setError((error as Error).message);
     } finally {
@@ -61,6 +67,18 @@ export function CaseDetail({
               <CaseStatusBadge status={data.case.status} />
             </div>
           </header>
+          {data.case.archivedAt && (
+            <StatusMessage>
+              Archived on{' '}
+              <time dateTime={data.case.archivedAt}>
+                {new Date(data.case.archivedAt).toLocaleString()}
+              </time>
+              . Case details are read-only until restored. Data and assignments are retained.
+            </StatusMessage>
+          )}
+          {user.role !== Role.Staff && (
+            <CaseActions record={data.case} request={request} onEdit={onEdit} />
+          )}
           <dl className={styles.metadata}>
             <div>
               <dt>Client</dt>
@@ -75,6 +93,14 @@ export function CaseDetail({
               <dd>
                 <time dateTime={data.case.createdAt}>
                   {new Date(data.case.createdAt).toLocaleString()}
+                </time>
+              </dd>
+            </div>
+            <div>
+              <dt>Last updated</dt>
+              <dd>
+                <time dateTime={data.case.updatedAt}>
+                  {new Date(data.case.updatedAt).toLocaleString()}
                 </time>
               </dd>
             </div>

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { afterEach, mock, test } from 'node:test';
 import { apiRequest, ApiError, fetchIdentity } from '../lib/api';
+import { isAccessRejected } from '../lib/auth-errors';
 import { validatePublicConfig } from '../lib/config';
 
 const config = {
@@ -135,4 +136,14 @@ test('preserves cancellation instead of reporting it as a network failure', asyn
     apiRequest('test-token', '/me', { parse: (value) => value }, { signal: controller.signal }),
     (error: Error) => error.name === 'AbortError',
   );
+});
+
+test('only access rejection clears an existing workspace during profile refresh', () => {
+  for (const status of [400, 401, 403, 404, 409, 500, 503]) {
+    assert.equal(
+      isAccessRejected(new ApiError(status, 'TEST', 'Failed')),
+      status === 401 || status === 403,
+    );
+  }
+  assert.equal(isAccessRejected(new Error('Connection interrupted')), false);
 });

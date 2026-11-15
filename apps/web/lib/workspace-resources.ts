@@ -1,4 +1,5 @@
 import {
+  CaseArchiveFilter,
   auditPageSchema,
   caseDetailSchema,
   casePageSchema,
@@ -7,8 +8,13 @@ import {
   type CaseQuery,
 } from '@caseflow/schemas';
 
-export function caseListResource({ page = 1, search = '', status }: Partial<CaseQuery> = {}) {
-  const query = new URLSearchParams({ page: String(page), search });
+export function caseListResource({
+  page = 1,
+  search = '',
+  status,
+  archive = CaseArchiveFilter.Current,
+}: Partial<CaseQuery> = {}) {
+  const query = new URLSearchParams({ page: String(page), search: search.trim(), archive });
 
   if (status) {
     query.set('status', status);

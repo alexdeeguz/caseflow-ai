@@ -16,7 +16,10 @@ import { WorkspaceNavigation } from './workspace-navigation';
 import { SignOutIcon } from './workspace-icons';
 import { WorkspaceTab, tabLabels } from './navigation';
 import { useWorkspaceNavigation } from '../../hooks/use-workspace-navigation';
+import { ToastProvider } from '../ui/toast-provider';
 import { StatusMessage } from '../ui/status-message';
+import { CaseDraftProvider } from './cases/case-draft-provider';
+import { createCaseDraftStore, withDraftAccessChecks } from '../../lib/case-drafts';
 import styles from './workspace.module.css';
 
 interface WorkspaceProps {
@@ -28,9 +31,10 @@ interface WorkspaceProps {
 
 export function Workspace(props: WorkspaceProps) {
   const [client] = useState(createResourceClient);
+  const [drafts] = useState(createCaseDraftStore);
   const request = useMemo(
-    () => withResourceInvalidation(client, props.request),
-    [client, props.request],
+    () => withResourceInvalidation(client, withDraftAccessChecks(props.request, drafts)),
+    [client, props.request, drafts],
   );
 
   // The parent remounts this boundary when the authenticated user or role changes.
@@ -38,7 +42,18 @@ export function Workspace(props: WorkspaceProps) {
 
   return (
     <QueryClientProvider client={client}>
-      <WorkspaceContent {...props} request={request} />
+      <ToastProvider>
+        <CaseDraftProvider store={drafts}>
+          <WorkspaceContent
+            {...props}
+            request={request}
+            signOut={() => {
+              drafts.clear();
+              return props.signOut();
+            }}
+          />
+        </CaseDraftProvider>
+      </ToastProvider>
     </QueryClientProvider>
   );
 }
@@ -48,7 +63,8 @@ function WorkspaceContent({ user, request, signOut, refreshProfile }: WorkspaceP
   const tab = location.tab;
   const pendingTab = pending?.tab ?? null;
 
-  const selectTab = (nextTab: WorkspaceTab) => navigate({ ...location, tab: nextTab, case: null });
+  const selectTab = (nextTab: WorkspaceTab) =>
+    navigate({ ...location, tab: nextTab, case: null, mode: undefined });
 
   return (
     <WorkspaceFrame
@@ -81,7 +97,13 @@ function WorkspaceContent({ user, request, signOut, refreshProfile }: WorkspaceP
         {pendingTab ? `Opening ${tabLabels[pendingTab]}…` : ''}
       </span>
       {tab === WorkspaceTab.Cases && (
-        <Cases request={request} user={user} location={location} navigate={navigate} />
+        <Cases
+          request={request}
+          user={user}
+          location={location}
+          navigate={navigate}
+          pendingLocation={pending?.tab === WorkspaceTab.Cases ? pending : null}
+        />
       )}
       {user.role === Role.Staff && (tab === WorkspaceTab.Users || tab === WorkspaceTab.Audit) && (
         <StatusMessage tone="error">You do not have permission to view this page.</StatusMessage>

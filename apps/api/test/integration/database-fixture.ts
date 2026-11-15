@@ -4,7 +4,10 @@ import { readFile, readdir } from 'node:fs/promises';
 import { Pool } from 'pg';
 import { createDatabase } from '../../src/database/index.js';
 
-export async function createTestDatabase(beforeUpgrade?: (owner: Pool) => Promise<void>) {
+export async function createTestDatabase(
+  beforeUpgrade?: (owner: Pool) => Promise<void>,
+  afterMigration = 'users_permissions.sql',
+) {
   const operatorUrl = new URL(process.env.OPERATOR_DATABASE_URL ?? '');
   const runtimeUrl = new URL(process.env.DATABASE_URL ?? '');
 
@@ -35,9 +38,9 @@ export async function createTestDatabase(beforeUpgrade?: (owner: Pool) => Promis
     const directory = new URL('../../../../supabase/migrations/', import.meta.url);
     const migrations = (await readdir(directory)).filter((file) => file.endsWith('.sql')).sort();
 
-    for (const [index, file] of migrations.entries()) {
+    for (const file of migrations) {
       await owner.query(await readFile(new URL(file, directory), 'utf8'));
-      if (index === 0) {
+      if (file.endsWith(afterMigration)) {
         await beforeUpgrade?.(owner);
       }
     }

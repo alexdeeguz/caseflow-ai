@@ -21,6 +21,14 @@ const applicationErrors: Partial<Record<ErrorCode, { status: number; message: st
     message: 'Your account is disabled. Contact an administrator.',
   },
   [ErrorCode.Forbidden]: { status: 403, message: 'You do not have permission for this action.' },
+  [ErrorCode.CaseConflict]: {
+    status: 409,
+    message: 'This case changed. Reload the latest saved case before trying again.',
+  },
+  [ErrorCode.CaseArchived]: {
+    status: 409,
+    message: 'Restore this archived case before editing it.',
+  },
   [ErrorCode.NotFound]: { status: 404, message: 'Not found.' },
   [ErrorCode.InvalidInput]: { status: 400, message: 'Check the supplied values.' },
 };
