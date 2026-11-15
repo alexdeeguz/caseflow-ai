@@ -224,6 +224,12 @@ The API checks RS256 signatures, tenant/issuer consistency, signing-key issuer,
 audience, expiry/not-before, v2 format, allowed client and delegated scope before
 accessing application data. Every request reloads current application authorization.
 
+The frontend waits for session restoration before choosing the sign-in or workspace
+screen. Workspace queries use an in-memory React Query client scoped to the current
+user and role. Navigation revalidates the destination before switching sections;
+mutations invalidate cached resources. Request failures hide cached results, and
+leaving the workspace clears its cache and cancels pending requests.
+
 Tokens are managed by MSAL in session storage, sent only to the configured API,
 and never displayed or deliberately logged. Sign-out clears the local MSAL session
 and redirects to Microsoft; it does not revoke already-issued bearer tokens.

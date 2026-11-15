@@ -29,6 +29,15 @@ export function resourceOptions<T>(request: AuthRequest, resource: Resource<T>) 
   });
 }
 
+export function preloadResource<T>(
+  client: QueryClient,
+  request: AuthRequest,
+  resource: Resource<T>,
+): Promise<void> {
+  // Navigation always revalidates, even if the section has recently been visited.
+  return client.prefetchQuery({ ...resourceOptions(request, resource), staleTime: 0 });
+}
+
 export function resourceState<T>({ data, error }: { data: T | undefined; error: Error | null }) {
   return {
     data: error ? null : (data ?? null),

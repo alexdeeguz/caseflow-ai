@@ -1,11 +1,15 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { QueryClientProvider } from '@tanstack/react-query';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import { Role, type User } from '@caseflow/schemas';
 
 import type { AuthRequest } from '../../hooks/use-authentication';
-import { createResourceClient, withResourceInvalidation } from '../../lib/resources';
+import {
+  createResourceClient,
+  preloadResource,
+  withResourceInvalidation,
+} from '../../lib/resources';
 import { Button } from '../ui/button';
 import { RoleBadge } from './role-badge';
 import { Profile } from './profile';
@@ -13,7 +17,7 @@ import { Cases } from './cases/cases';
 import { Users } from './users';
 import { AuditHistory } from './audit';
 import { WorkspaceFrame } from './workspace-frame';
-import { WorkspaceTab, tabLabels } from './navigation';
+import { WorkspaceTab, tabLabels, tabResource } from './navigation';
 import styles from './workspace.module.css';
 
 interface WorkspaceProps {
@@ -41,11 +45,32 @@ export function Workspace(props: WorkspaceProps) {
 }
 
 function WorkspaceContent({ user, request, signOut, refreshProfile }: WorkspaceProps) {
+  const client = useQueryClient();
   const [tab, setTab] = useState<WorkspaceTab>(WorkspaceTab.Cases);
+  const [pendingTab, setPendingTab] = useState<WorkspaceTab | null>(null);
+  const navigation = useRef(0);
 
   async function selectTab(nextTab: WorkspaceTab) {
-    setTab(nextTab);
-    await refreshProfile();
+    const sequence = ++navigation.current;
+
+    if (nextTab === tab) {
+      setPendingTab(null);
+      return;
+    }
+
+    setPendingTab(nextTab);
+
+    const resource = tabResource(nextTab);
+
+    await Promise.all([
+      refreshProfile(),
+      resource ? preloadResource(client, request, resource) : Promise.resolve(),
+    ]);
+
+    if (sequence === navigation.current) {
+      setTab(nextTab);
+      setPendingTab(null);
+    }
   }
 
   const tabs: WorkspaceTab[] =
@@ -55,6 +80,7 @@ function WorkspaceContent({ user, request, signOut, refreshProfile }: WorkspaceP
 
   return (
     <WorkspaceFrame
+      busy={pendingTab !== null}
       headerActions={
         <>
           <span>{user.displayName}</span>
@@ -68,11 +94,15 @@ function WorkspaceContent({ user, request, signOut, refreshProfile }: WorkspaceP
             <button
               key={item}
               aria-current={item === tab ? 'page' : undefined}
+              aria-busy={pendingTab === item}
               onClick={() => void selectTab(item)}
             >
               {tabLabels[item]}
             </button>
           ))}
+          <span role="status" className="sr-only">
+            {pendingTab ? `Opening ${tabLabels[pendingTab]}…` : ''}
+          </span>
         </nav>
       }
     >

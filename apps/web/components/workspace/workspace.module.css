@@ -142,3 +142,29 @@
   outline: 3px solid var(--brand-navy);
   outline-offset: 3px;
 }
+
+.nav button[aria-busy='true'] {
+  background: var(--brand-cream);
+  cursor: progress;
+}
+
+.loadingNavigation {
+  display: grid;
+  gap: 20px;
+  align-self: start;
+  padding: 14px 18px;
+}
+
+.skeleton {
+  height: 20px;
+  border-radius: 6px;
+  background: var(--brand-cream);
+}
+
+.loadingAccount {
+  height: 54px;
+  width: 240px;
+  max-width: 100%;
+  border-radius: var(--radius-control);
+  background: var(--brand-on-navy-line);
+}

@@ -6,10 +6,25 @@ import { StatusMessage } from '../ui/status-message';
 import { AuthShell } from './auth-shell';
 import { Workspace } from '../workspace/workspace';
 import { AuthPanel } from './auth-panel';
+import { SessionLoading } from './session-loading';
 
 export function SignInCard() {
-  const { ready, busy, account, identity, error, signIn, refreshProfile, signOut, request } =
-    useAuthentication();
+  const {
+    ready,
+    restoring,
+    busy,
+    account,
+    identity,
+    error,
+    signIn,
+    refreshProfile,
+    signOut,
+    request,
+  } = useAuthentication();
+
+  if (restoring) {
+    return <SessionLoading />;
+  }
 
   if (identity) {
     return (

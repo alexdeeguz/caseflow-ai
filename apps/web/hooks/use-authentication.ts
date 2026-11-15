@@ -104,6 +104,8 @@ export function useAuthentication() {
 
     const sequence = ++lifecycle.current.profileRequest;
 
+    setError(null);
+
     return request('/me', userSchema).then(
       (user) => {
         if (sequence === lifecycle.current.profileRequest) {
@@ -178,8 +180,11 @@ export function useAuthentication() {
     }
   }
 
+  const restoring = !error && (!ready || (account !== null && identity === null));
+
   return {
     ready,
+    restoring,
     busy,
     account,
     identity,
