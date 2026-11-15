@@ -5,9 +5,10 @@
 The extraction worker is implemented in `apps/document-processor`. It consumes
 processing jobs, publishes native PDF text, and starts asynchronous Textract OCR.
 The completion worker also collects Textract results and publishes OCR artifacts.
-Neither worker is deployed or connected to a queue yet. Reconciliation, processing
-UI and operational monitoring are separate work; the [processing API](document-processing.md#processing-api) exposes saved job state.
-Keep continuous dispatching disabled until those deployment prerequisites are ready.
+The hosted development deployment includes both consumers, scheduled reconciliation, processing
+UI, and operational monitoring. The [processing API](document-processing.md#processing-api) exposes
+saved job state. Follow [workflow verification](processing-verification.md) before activating a
+new deployment.
 
 ## Structure and local tooling
 
@@ -201,4 +202,4 @@ AWS permissions or resources are created by installing or testing this applicati
 
 See [Lambda configuration](lambda-configuration.md) for the SAM template, Secrets Manager,
 verified database TLS, container builds, IAM boundaries, and deployment/rollback steps.
-Queue consumption remains disabled until full workflow verification.
+New deployments leave queue consumption disabled until their workflow checks pass.

@@ -9,11 +9,12 @@ rule runtime_limits {
     Globals.Function.EphemeralStorage.Size == 512
     Globals.Function.VpcConfig !exists
     Globals.Function.Environment.Variables.PROCESSOR_DATABASE_URL !exists
-    Parameters.EnableQueueMappings.Default == 'false'
+    Parameters.EnableProcessingConsumer.Default == 'false'
+    Parameters.EnableCompletionConsumer.Default == 'false'
 }
 
 rule restricted_stack_ownership {
-    Resources.*.Type IN ['AWS::IAM::Role', 'AWS::Logs::LogGroup', 'AWS::Serverless::Function']
+    Resources.*.Type IN ['AWS::IAM::Role', 'AWS::Logs::LogGroup', 'AWS::Serverless::Function', 'AWS::Scheduler::Schedule', 'AWS::Scheduler::ScheduleGroup', 'AWS::CloudWatch::Alarm', 'AWS::CloudWatch::Dashboard']
 }
 
 rule private_function_logging {
@@ -28,4 +29,14 @@ rule private_function_logging {
         DeletionPolicy == 'Retain'
         UpdateReplacePolicy == 'Retain'
     }
+}
+
+
+rule bounded_reconciliation {
+    Parameters.EnableRecoverySchedule.Default == 'false'
+    Resources.RecoverySchedule.Properties.ScheduleExpression == 'rate(5 minutes)'
+    Resources.RecoverySchedule.Properties.FlexibleTimeWindow.Mode == 'OFF'
+    Resources.RecoveryFunction.Properties.ReservedConcurrentExecutions !exists
+    Resources.RecoveryFunction.Properties.EventInvokeConfig.MaximumRetryAttempts == 0
+    Resources.RecoveryFunction.Properties.Environment.Variables.PROCESSOR_DATABASE_SECRET_ARN !exists
 }

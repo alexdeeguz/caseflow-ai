@@ -151,3 +151,21 @@ def test_combined_artifacts_limit_is_enforced_before_upload(job, settings, monke
     with pytest.raises(DocumentError, match='limit_exceeded'):
         ArtifactWriter(storage).write(job, result.document, lambda: None, raw_ocr=b'x' * 399)
     storage.put.assert_not_called()
+
+
+def test_notification_source_version_must_match_saved_source(job, settings):
+    job, store, storage, results, collector = setup_collector(job, settings)
+    invalid = notification(
+        job,
+        DocumentLocation={
+            'S3Bucket': job.source_bucket,
+            'S3ObjectName': job.source_key,
+            'S3ObjectVersion': 'different-version',
+        },
+    )
+    with pytest.raises(RetryableError):
+        collector.collect(invalid, lambda: None)
+    results.collect.assert_not_called()
+    storage.put.assert_not_called()
+    store.complete.assert_not_called()
+    store.fail.assert_not_called()

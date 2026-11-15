@@ -1,8 +1,9 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: CaseFlow document extraction and Textract completion consumers.
+Description: CaseFlow document processing, bounded recovery, and operational monitoring.
 Metadata:
   Documentation: ../../docs/lambda-configuration.md
+  RecoveryDocumentation: ../../docs/processing-recovery.md
 
 Parameters:
   Environment:
@@ -11,45 +12,123 @@ Parameters:
     AllowedPattern: '[a-z][a-z0-9-]{0,31}'
   ProcessingQueueArn:
     Type: String
-    AllowedPattern: 'arn:aws:sqs:us-east-2:[0-9]{12}:[A-Za-z0-9_-]+'
+    AllowedPattern: arn:aws:sqs:us-east-2:[0-9]{12}:[A-Za-z0-9_-]+
   CompletionQueueArn:
     Type: String
-    AllowedPattern: 'arn:aws:sqs:us-east-2:[0-9]{12}:[A-Za-z0-9_-]+'
+    AllowedPattern: arn:aws:sqs:us-east-2:[0-9]{12}:[A-Za-z0-9_-]+
   DocumentBucketName:
     Type: String
     AllowedPattern: '[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]'
   TextractTopicArn:
     Type: String
-    AllowedPattern: 'arn:aws:sns:us-east-2:[0-9]{12}:AmazonTextract-[A-Za-z0-9_-]+'
+    AllowedPattern: arn:aws:sns:us-east-2:[0-9]{12}:AmazonTextract-[A-Za-z0-9_-]+
   TextractNotificationRoleArn:
     Type: String
-    AllowedPattern: 'arn:aws:iam::[0-9]{12}:role/[A-Za-z0-9_+=,.@/-]+'
+    AllowedPattern: arn:aws:iam::[0-9]{12}:role/[A-Za-z0-9_+=,.@/-]+
   ProcessorDatabaseSecretArn:
     Type: String
     Description: Existing AWSCURRENT JSON secret encrypted with aws/secretsmanager.
-    AllowedPattern: 'arn:aws:secretsmanager:us-east-2:[0-9]{12}:secret:[A-Za-z0-9/_+=.@-]+-[A-Za-z0-9]{6}'
-  EnableQueueMappings:
+    AllowedPattern: arn:aws:secretsmanager:us-east-2:[0-9]{12}:secret:[A-Za-z0-9/_+=.@-]+-[A-Za-z0-9]{6}
+  EnableProcessingConsumer:
     Type: String
     Default: 'false'
     AllowedValues: ['false', 'true']
-    Description: Keep false until workflow verification and recovery are complete.
+    Description: Enable only after the completion consumer has been verified.
+  EnableCompletionConsumer:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['false', 'true']
+    Description: Enable first during controlled workflow verification.
+  RecoveryDatabaseSecretArn:
+    Type: String
+    Description: Existing restricted recovery-login secret; separate from processor credentials.
+    AllowedPattern: arn:aws:secretsmanager:us-east-2:[0-9]{12}:secret:[A-Za-z0-9/_+=.@-]+-[A-Za-z0-9]{6}
+  ProcessingDlqArn:
+    Type: String
+    AllowedPattern: arn:aws:sqs:us-east-2:[0-9]{12}:[A-Za-z0-9_-]+
+  CompletionDlqArn:
+    Type: String
+    AllowedPattern: arn:aws:sqs:us-east-2:[0-9]{12}:[A-Za-z0-9_-]+
+  EnableRecoverySchedule:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['false', 'true']
+    Description: Enable only after migration, credentials, and controlled workflow verification.
+  AlarmTopicArn:
+    Type: String
+    Default: ''
+    AllowedPattern: ^$|arn:aws:sns:us-east-2:[0-9]{12}:[A-Za-z0-9_-]+
+    Description:
+      Existing operational alert topic with confirmed subscribers; do not use the Textract
+      completion topic.
 
 Rules:
   OhioOnly:
     Assertions:
       - Assert:
-          Fn::Equals: [{ Ref: 'AWS::Region' }, us-east-2]
+          Fn::Equals:
+            - { Ref: 'AWS::Region' }
+            - us-east-2
         AssertDescription: Deploy in the selected Ohio Region.
   SeparateQueues:
     Assertions:
       - Assert:
           Fn::Not:
-            - Fn::Equals: [{ Ref: ProcessingQueueArn }, { Ref: CompletionQueueArn }]
+            - Fn::Equals:
+                - { Ref: ProcessingQueueArn }
+                - { Ref: CompletionQueueArn }
         AssertDescription: Processing and completion require separate queues.
+  SeparateSecrets:
+    Assertions:
+      - Assert:
+          Fn::Not:
+            - Fn::Equals:
+                - { Ref: ProcessorDatabaseSecretArn }
+                - { Ref: RecoveryDatabaseSecretArn }
+        AssertDescription: Recovery uses separate database credentials.
+  SeparateAlarmTopic:
+    Assertions:
+      - Assert:
+          Fn::Not:
+            - Fn::Equals:
+                - { Ref: AlarmTopicArn }
+                - { Ref: TextractTopicArn }
+        AssertDescription: Operational alarms must not enter the Textract completion queue.
+
+  CompletionBeforeProcessing:
+    Assertions:
+      - Assert:
+          Fn::Or:
+            - Fn::Equals:
+                - { Ref: EnableProcessingConsumer }
+                - 'false'
+            - Fn::Equals:
+                - { Ref: EnableCompletionConsumer }
+                - 'true'
+        AssertDescription: Enable completion before processing; stop processing before completion.
 
 Conditions:
-  ConsumeQueues:
-    Fn::Equals: [{ Ref: EnableQueueMappings }, 'true']
+  ConsumeProcessingQueue:
+    Fn::Equals:
+      - { Ref: EnableProcessingConsumer }
+      - 'true'
+  ConsumeCompletionQueue:
+    Fn::Equals:
+      - { Ref: EnableCompletionConsumer }
+      - 'true'
+  RecoverJobs:
+    Fn::Equals:
+      - { Ref: EnableRecoverySchedule }
+      - 'true'
+  HasAlarmTopic:
+    Fn::Not:
+      - Fn::Equals:
+          - { Ref: AlarmTopicArn }
+          - ''
+  MonitorRecovery:
+    Fn::And:
+      - { Condition: RecoverJobs }
+      - { Condition: HasAlarmTopic }
 
 Globals:
   Function:
@@ -61,7 +140,6 @@ Globals:
       Size: 512
     Environment:
       Variables:
-        PROCESSOR_DATABASE_SECRET_ARN: { Ref: ProcessorDatabaseSecretArn }
         PROCESSOR_QUEUE_ARN: { Ref: ProcessingQueueArn }
         PROCESSOR_STORAGE_BUCKET: { Ref: DocumentBucketName }
         PROCESSOR_STORAGE_ENVIRONMENT: { Ref: Environment }
@@ -78,14 +156,17 @@ Resources:
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
     Properties:
-      LogGroupName: { Fn::Sub: '/caseflow/${AWS::StackName}/processor' }
+      LogGroupName:
+        Fn::Sub: /caseflow/${AWS::StackName}/processor
       RetentionInDays: 30
+
   CompletionLogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
     Properties:
-      LogGroupName: { Fn::Sub: '/caseflow/${AWS::StackName}/completion' }
+      LogGroupName:
+        Fn::Sub: /caseflow/${AWS::StackName}/completion
       RetentionInDays: 30
 
   ProcessorRole:
@@ -104,12 +185,12 @@ Resources:
             Statement:
               - Sid: ReceiveProcessingJobs
                 Effect: Allow
-                Action: [sqs:ReceiveMessage, sqs:DeleteMessage, sqs:GetQueueAttributes]
+                Action: ['sqs:ReceiveMessage', 'sqs:DeleteMessage', 'sqs:GetQueueAttributes']
                 Resource: { Ref: ProcessingQueueArn }
               - Sid: WriteOwnLogs
                 Effect: Allow
-                Action: [logs:CreateLogStream, logs:PutLogEvents]
-                Resource: { Fn::GetAtt: [ProcessorLogGroup, Arn] }
+                Action: ['logs:CreateLogStream', 'logs:PutLogEvents']
+                Resource: { 'Fn::GetAtt': [ProcessorLogGroup, Arn] }
               - Sid: ReadDatabaseSecret
                 Effect: Allow
                 Action: secretsmanager:GetSecretValue
@@ -118,17 +199,17 @@ Resources:
                 Effect: Allow
                 Action: s3:GetObjectVersion
                 Resource:
-                  Fn::Sub: 'arn:${AWS::Partition}:s3:::${DocumentBucketName}/${Environment}/cases/*/documents/*/original/*'
+                  Fn::Sub: arn:${AWS::Partition}:s3:::${DocumentBucketName}/${Environment}/cases/*/documents/*/original/*
               - Sid: VerifyArtifactVersions
                 Effect: Allow
                 Action: s3:GetObjectVersion
                 Resource:
-                  Fn::Sub: 'arn:${AWS::Partition}:s3:::${DocumentBucketName}/${Environment}/cases/*/documents/*/processed/*'
+                  Fn::Sub: arn:${AWS::Partition}:s3:::${DocumentBucketName}/${Environment}/cases/*/documents/*/processed/*
               - Sid: WriteEncryptedArtifacts
                 Effect: Allow
                 Action: s3:PutObject
                 Resource:
-                  Fn::Sub: 'arn:${AWS::Partition}:s3:::${DocumentBucketName}/${Environment}/cases/*/documents/*/processed/*'
+                  Fn::Sub: arn:${AWS::Partition}:s3:::${DocumentBucketName}/${Environment}/cases/*/documents/*/processed/*
                 Condition:
                   StringEquals:
                     s3:x-amz-server-side-encryption: AES256
@@ -163,12 +244,12 @@ Resources:
             Statement:
               - Sid: ReceiveCompletionNotifications
                 Effect: Allow
-                Action: [sqs:ReceiveMessage, sqs:DeleteMessage, sqs:GetQueueAttributes]
+                Action: ['sqs:ReceiveMessage', 'sqs:DeleteMessage', 'sqs:GetQueueAttributes']
                 Resource: { Ref: CompletionQueueArn }
               - Sid: WriteOwnLogs
                 Effect: Allow
-                Action: [logs:CreateLogStream, logs:PutLogEvents]
-                Resource: { Fn::GetAtt: [CompletionLogGroup, Arn] }
+                Action: ['logs:CreateLogStream', 'logs:PutLogEvents']
+                Resource: { 'Fn::GetAtt': [CompletionLogGroup, Arn] }
               - Sid: ReadDatabaseSecret
                 Effect: Allow
                 Action: secretsmanager:GetSecretValue
@@ -177,12 +258,12 @@ Resources:
                 Effect: Allow
                 Action: s3:GetObjectVersion
                 Resource:
-                  Fn::Sub: 'arn:${AWS::Partition}:s3:::${DocumentBucketName}/${Environment}/cases/*/documents/*/processed/*'
+                  Fn::Sub: arn:${AWS::Partition}:s3:::${DocumentBucketName}/${Environment}/cases/*/documents/*/processed/*
               - Sid: WriteEncryptedArtifacts
                 Effect: Allow
                 Action: s3:PutObject
                 Resource:
-                  Fn::Sub: 'arn:${AWS::Partition}:s3:::${DocumentBucketName}/${Environment}/cases/*/documents/*/processed/*'
+                  Fn::Sub: arn:${AWS::Partition}:s3:::${DocumentBucketName}/${Environment}/cases/*/documents/*/processed/*
                 Condition:
                   StringEquals:
                     s3:x-amz-server-side-encryption: AES256
@@ -201,7 +282,7 @@ Resources:
     Properties:
       CodeUri: ../../apps/document-processor
       Handler: caseflow_processor.handlers.processing.handler
-      Role: { Fn::GetAtt: [ProcessorRole, Arn] }
+      Role: { 'Fn::GetAtt': [ProcessorRole, Arn] }
       LoggingConfig:
         LogFormat: JSON
         ApplicationLogLevel: INFO
@@ -212,12 +293,15 @@ Resources:
           Type: SQS
           Properties:
             Queue: { Ref: ProcessingQueueArn }
-            Enabled: { Fn::If: [ConsumeQueues, true, false] }
+            Enabled: { 'Fn::If': [ConsumeProcessingQueue, true, false] }
             BatchSize: 1
             MaximumBatchingWindowInSeconds: 0
             ScalingConfig:
               MaximumConcurrency: 2
             FunctionResponseTypes: [ReportBatchItemFailures]
+      Environment:
+        Variables:
+          PROCESSOR_DATABASE_SECRET_ARN: { Ref: ProcessorDatabaseSecretArn }
 
   CompletionFunction:
     Type: AWS::Serverless::Function
@@ -226,10 +310,11 @@ Resources:
     Properties:
       CodeUri: ../../apps/document-processor
       Handler: caseflow_processor.handlers.completion.handler
-      Role: { Fn::GetAtt: [CompletionRole, Arn] }
+      Role: { 'Fn::GetAtt': [CompletionRole, Arn] }
       Environment:
         Variables:
           TEXTRACT_COMPLETION_QUEUE_ARN: { Ref: CompletionQueueArn }
+          PROCESSOR_DATABASE_SECRET_ARN: { Ref: ProcessorDatabaseSecretArn }
       LoggingConfig:
         LogFormat: JSON
         ApplicationLogLevel: INFO
@@ -240,12 +325,779 @@ Resources:
           Type: SQS
           Properties:
             Queue: { Ref: CompletionQueueArn }
-            Enabled: { Fn::If: [ConsumeQueues, true, false] }
+            Enabled: { 'Fn::If': [ConsumeCompletionQueue, true, false] }
             BatchSize: 1
             MaximumBatchingWindowInSeconds: 0
             ScalingConfig:
               MaximumConcurrency: 2
             FunctionResponseTypes: [ReportBatchItemFailures]
+
+  RecoveryLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      LogGroupName:
+        Fn::Sub: /caseflow/${AWS::StackName}/recovery
+      RetentionInDays: 30
+
+  RecoveryRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: { Service: lambda.amazonaws.com }
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: RecoveryRuntime
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: WriteOwnLogs
+                Effect: Allow
+                Action: ['logs:CreateLogStream', 'logs:PutLogEvents']
+                Resource: { 'Fn::GetAtt': [RecoveryLogGroup, Arn] }
+              - Sid: ReadDatabaseSecret
+                Effect: Allow
+                Action: secretsmanager:GetSecretValue
+                Resource: { Ref: RecoveryDatabaseSecretArn }
+              - Sid: VerifyArtifactVersions
+                Effect: Allow
+                Action: s3:GetObjectVersion
+                Resource:
+                  Fn::Sub: arn:${AWS::Partition}:s3:::${DocumentBucketName}/${Environment}/cases/*/documents/*/processed/*
+              - Sid: WriteEncryptedArtifacts
+                Effect: Allow
+                Action: s3:PutObject
+                Resource:
+                  Fn::Sub: arn:${AWS::Partition}:s3:::${DocumentBucketName}/${Environment}/cases/*/documents/*/processed/*
+                Condition:
+                  StringEquals:
+                    s3:x-amz-server-side-encryption: AES256
+              - Sid: CollectOcr
+                Effect: Allow
+                Action: textract:GetDocumentTextDetection
+                Resource: '*'
+                Condition:
+                  StringEquals:
+                    aws:RequestedRegion: { Ref: 'AWS::Region' }
+    Metadata:
+      Purpose:
+        Collect saved OCR results and reconcile database state; no Textract starts, queue sends,
+        or object deletes.
+
+  RecoveryFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: makefile
+      Purpose: Use shared concurrency; database locks and fenced leases coordinate overlapping recovery.
+    Properties:
+      CodeUri: ../../apps/document-processor
+      Handler: caseflow_processor.handlers.recovery.handler
+      Role: { 'Fn::GetAtt': [RecoveryRole, Arn] }
+      Environment:
+        Variables:
+          RECOVERY_DATABASE_SECRET_ARN: { Ref: RecoveryDatabaseSecretArn }
+      LoggingConfig:
+        LogFormat: JSON
+        ApplicationLogLevel: INFO
+        SystemLogLevel: WARN
+        LogGroup: { Ref: RecoveryLogGroup }
+      EventInvokeConfig:
+        MaximumEventAgeInSeconds: 120
+        MaximumRetryAttempts: 0
+
+  RecoveryScheduleGroup:
+    Type: AWS::Scheduler::ScheduleGroup
+
+  RecoveryScheduleRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: { Service: scheduler.amazonaws.com }
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                aws:SourceAccount: { Ref: 'AWS::AccountId' }
+              ArnEquals:
+                aws:SourceArn: { 'Fn::GetAtt': [RecoveryScheduleGroup, Arn] }
+      Policies:
+        - PolicyName: InvokeRecovery
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: lambda:InvokeFunction
+                Resource: { 'Fn::GetAtt': [RecoveryFunction, Arn] }
+
+  RecoverySchedule:
+    Type: AWS::Scheduler::Schedule
+    Metadata:
+      Purpose: Five-minute bounded reconciliation. Keep disabled until live verification.
+    Properties:
+      GroupName: { Ref: RecoveryScheduleGroup }
+      ScheduleExpression: rate(5 minutes)
+      FlexibleTimeWindow:
+        Mode: 'OFF'
+      State: { 'Fn::If': [RecoverJobs, ENABLED, DISABLED] }
+      Target:
+        Arn: { 'Fn::GetAtt': [RecoveryFunction, Arn] }
+        RoleArn: { 'Fn::GetAtt': [RecoveryScheduleRole, Arn] }
+        Input: '{"schemaVersion":1,"task":"reconcile"}'
+        RetryPolicy:
+          MaximumEventAgeInSeconds: 60
+          MaximumRetryAttempts: 0
+
+  ProcessingDlqMessages:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: ProcessingDlqMessages; see docs/processing-recovery.md.
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions:
+        - Name: QueueName
+          Value:
+            Fn::Select:
+              - 5
+              - Fn::Split:
+                  - ':'
+                  - { Ref: ProcessingDlqArn }
+      Statistic: Maximum
+      Period: 300
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      ActionsEnabled: { 'Fn::If': [HasAlarmTopic, true, false] }
+      AlarmActions: { 'Fn::If': [HasAlarmTopic, [{ Ref: AlarmTopicArn }], { Ref: 'AWS::NoValue' }] }
+      OKActions: { 'Fn::If': [HasAlarmTopic, [{ Ref: AlarmTopicArn }], { Ref: 'AWS::NoValue' }] }
+
+  CompletionDlqMessages:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: CompletionDlqMessages; see docs/processing-recovery.md.
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions:
+        - Name: QueueName
+          Value:
+            Fn::Select:
+              - 5
+              - Fn::Split:
+                  - ':'
+                  - { Ref: CompletionDlqArn }
+      Statistic: Maximum
+      Period: 300
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      ActionsEnabled: { 'Fn::If': [HasAlarmTopic, true, false] }
+      AlarmActions: { 'Fn::If': [HasAlarmTopic, [{ Ref: AlarmTopicArn }], { Ref: 'AWS::NoValue' }] }
+      OKActions: { 'Fn::If': [HasAlarmTopic, [{ Ref: AlarmTopicArn }], { Ref: 'AWS::NoValue' }] }
+
+  ProcessingQueueAge:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: ProcessingQueueAge; see docs/processing-recovery.md.
+      Namespace: AWS/SQS
+      MetricName: ApproximateAgeOfOldestMessage
+      Dimensions:
+        - Name: QueueName
+          Value:
+            Fn::Select:
+              - 5
+              - Fn::Split:
+                  - ':'
+                  - { Ref: ProcessingQueueArn }
+      Statistic: Maximum
+      Period: 300
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: 900
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      ActionsEnabled: { 'Fn::If': [HasAlarmTopic, true, false] }
+      AlarmActions: { 'Fn::If': [HasAlarmTopic, [{ Ref: AlarmTopicArn }], { Ref: 'AWS::NoValue' }] }
+      OKActions: { 'Fn::If': [HasAlarmTopic, [{ Ref: AlarmTopicArn }], { Ref: 'AWS::NoValue' }] }
+
+  CompletionQueueAge:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: CompletionQueueAge; see docs/processing-recovery.md.
+      Namespace: AWS/SQS
+      MetricName: ApproximateAgeOfOldestMessage
+      Dimensions:
+        - Name: QueueName
+          Value:
+            Fn::Select:
+              - 5
+              - Fn::Split:
+                  - ':'
+                  - { Ref: CompletionQueueArn }
+      Statistic: Maximum
+      Period: 300
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: 900
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      ActionsEnabled: { 'Fn::If': [HasAlarmTopic, true, false] }
+      AlarmActions: { 'Fn::If': [HasAlarmTopic, [{ Ref: AlarmTopicArn }], { Ref: 'AWS::NoValue' }] }
+      OKActions: { 'Fn::If': [HasAlarmTopic, [{ Ref: AlarmTopicArn }], { Ref: 'AWS::NoValue' }] }
+
+  ProcessorErrors:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: ProcessorErrors; see docs/processing-recovery.md.
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Dimensions:
+        - Name: FunctionName
+          Value: { Ref: ProcessorFunction }
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      ActionsEnabled: { 'Fn::If': [HasAlarmTopic, true, false] }
+      AlarmActions: { 'Fn::If': [HasAlarmTopic, [{ Ref: AlarmTopicArn }], { Ref: 'AWS::NoValue' }] }
+      OKActions: { 'Fn::If': [HasAlarmTopic, [{ Ref: AlarmTopicArn }], { Ref: 'AWS::NoValue' }] }
+
+  ProcessorThrottles:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: ProcessorThrottles; see docs/processing-recovery.md.
+      Namespace: AWS/Lambda
+      MetricName: Throttles
+      Dimensions:
+        - Name: FunctionName
+          Value: { Ref: ProcessorFunction }
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      ActionsEnabled: { 'Fn::If': [HasAlarmTopic, true, false] }
+      AlarmActions: { 'Fn::If': [HasAlarmTopic, [{ Ref: AlarmTopicArn }], { Ref: 'AWS::NoValue' }] }
+      OKActions: { 'Fn::If': [HasAlarmTopic, [{ Ref: AlarmTopicArn }], { Ref: 'AWS::NoValue' }] }
+
+  CompletionErrors:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: CompletionErrors; see docs/processing-recovery.md.
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Dimensions:
+        - Name: FunctionName
+          Value: { Ref: CompletionFunction }
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      ActionsEnabled: { 'Fn::If': [HasAlarmTopic, true, false] }
+      AlarmActions: { 'Fn::If': [HasAlarmTopic, [{ Ref: AlarmTopicArn }], { Ref: 'AWS::NoValue' }] }
+      OKActions: { 'Fn::If': [HasAlarmTopic, [{ Ref: AlarmTopicArn }], { Ref: 'AWS::NoValue' }] }
+
+  CompletionThrottles:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: CompletionThrottles; see docs/processing-recovery.md.
+      Namespace: AWS/Lambda
+      MetricName: Throttles
+      Dimensions:
+        - Name: FunctionName
+          Value: { Ref: CompletionFunction }
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      ActionsEnabled: { 'Fn::If': [HasAlarmTopic, true, false] }
+      AlarmActions: { 'Fn::If': [HasAlarmTopic, [{ Ref: AlarmTopicArn }], { Ref: 'AWS::NoValue' }] }
+      OKActions: { 'Fn::If': [HasAlarmTopic, [{ Ref: AlarmTopicArn }], { Ref: 'AWS::NoValue' }] }
+
+  RecoveryErrors:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: RecoveryErrors; see docs/processing-recovery.md.
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Dimensions:
+        - Name: FunctionName
+          Value: { Ref: RecoveryFunction }
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      ActionsEnabled: { 'Fn::If': [HasAlarmTopic, true, false] }
+      AlarmActions: { 'Fn::If': [HasAlarmTopic, [{ Ref: AlarmTopicArn }], { Ref: 'AWS::NoValue' }] }
+      OKActions: { 'Fn::If': [HasAlarmTopic, [{ Ref: AlarmTopicArn }], { Ref: 'AWS::NoValue' }] }
+
+  RecoveryThrottles:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: RecoveryThrottles; see docs/processing-recovery.md.
+      Namespace: AWS/Lambda
+      MetricName: Throttles
+      Dimensions:
+        - Name: FunctionName
+          Value: { Ref: RecoveryFunction }
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      ActionsEnabled: { 'Fn::If': [HasAlarmTopic, true, false] }
+      AlarmActions: { 'Fn::If': [HasAlarmTopic, [{ Ref: AlarmTopicArn }], { Ref: 'AWS::NoValue' }] }
+      OKActions: { 'Fn::If': [HasAlarmTopic, [{ Ref: AlarmTopicArn }], { Ref: 'AWS::NoValue' }] }
+
+  ExpiredWorkerLeases:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: ExpiredWorkerLeases; see docs/processing-recovery.md.
+      Namespace: CaseFlow/Processing
+      MetricName: ExpiredLeases
+      Dimensions:
+        - Name: Environment
+          Value: { Ref: Environment }
+      Statistic: Maximum
+      Period: 300
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      ActionsEnabled: { 'Fn::If': [HasAlarmTopic, true, false] }
+      AlarmActions: { 'Fn::If': [HasAlarmTopic, [{ Ref: AlarmTopicArn }], { Ref: 'AWS::NoValue' }] }
+      OKActions: { 'Fn::If': [HasAlarmTopic, [{ Ref: AlarmTopicArn }], { Ref: 'AWS::NoValue' }] }
+
+  DispatchBacklogAge:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: DispatchBacklogAge; see docs/processing-recovery.md.
+      Namespace: CaseFlow/Processing
+      MetricName: DispatchOldestSeconds
+      Dimensions:
+        - Name: Environment
+          Value: { Ref: Environment }
+      Statistic: Maximum
+      Period: 300
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: 900
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      ActionsEnabled: { 'Fn::If': [HasAlarmTopic, true, false] }
+      AlarmActions: { 'Fn::If': [HasAlarmTopic, [{ Ref: AlarmTopicArn }], { Ref: 'AWS::NoValue' }] }
+      OKActions: { 'Fn::If': [HasAlarmTopic, [{ Ref: AlarmTopicArn }], { Ref: 'AWS::NoValue' }] }
+
+  RecoveryFailures:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: RecoveryFailures; see docs/processing-recovery.md.
+      Namespace: CaseFlow/Processing
+      MetricName: RecoveryErrors
+      Dimensions:
+        - Name: Environment
+          Value: { Ref: Environment }
+      Statistic: Maximum
+      Period: 300
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      ActionsEnabled: { 'Fn::If': [HasAlarmTopic, true, false] }
+      AlarmActions: { 'Fn::If': [HasAlarmTopic, [{ Ref: AlarmTopicArn }], { Ref: 'AWS::NoValue' }] }
+      OKActions: { 'Fn::If': [HasAlarmTopic, [{ Ref: AlarmTopicArn }], { Ref: 'AWS::NoValue' }] }
+
+  RecoveryExhausted:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: RecoveryExhausted; see docs/processing-recovery.md.
+      Namespace: CaseFlow/Processing
+      MetricName: OperatorIntervention
+      Dimensions:
+        - Name: Environment
+          Value: { Ref: Environment }
+      Statistic: Maximum
+      Period: 300
+      EvaluationPeriods: 1
+      DatapointsToAlarm: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      ActionsEnabled: { 'Fn::If': [HasAlarmTopic, true, false] }
+      AlarmActions: { 'Fn::If': [HasAlarmTopic, [{ Ref: AlarmTopicArn }], { Ref: 'AWS::NoValue' }] }
+      OKActions: { 'Fn::If': [HasAlarmTopic, [{ Ref: AlarmTopicArn }], { Ref: 'AWS::NoValue' }] }
+
+  MissingReconciliation:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: MissingReconciliation; see docs/processing-recovery.md.
+      Namespace: CaseFlow/Processing
+      MetricName: ReconciliationRuns
+      Dimensions:
+        - Name: Environment
+          Value: { Ref: Environment }
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 3
+      DatapointsToAlarm: 3
+      Threshold: 1
+      ComparisonOperator: LessThanThreshold
+      TreatMissingData: breaching
+      ActionsEnabled: { 'Fn::If': [MonitorRecovery, true, false] }
+      AlarmActions: { 'Fn::If': [HasAlarmTopic, [{ Ref: AlarmTopicArn }], { Ref: 'AWS::NoValue' }] }
+      OKActions: { 'Fn::If': [HasAlarmTopic, [{ Ref: AlarmTopicArn }], { Ref: 'AWS::NoValue' }] }
+
+  ProcessingDashboard:
+    Type: AWS::CloudWatch::Dashboard
+    Properties:
+      DashboardBody:
+        Fn::Sub:
+          - |
+            {
+              "widgets": [
+                {
+                  "type": "metric",
+                  "x": 0,
+                  "y": 0,
+                  "width": 24,
+                  "height": 6,
+                  "properties": {
+                    "region": "${AWS::Region}",
+                    "title": "Completed jobs (rolling 24h)",
+                    "metrics": [
+                      [
+                        "CaseFlow/Processing",
+                        "ReadyLast24Hours",
+                        "Environment",
+                        "${Environment}"
+                      ],
+                      [
+                        "CaseFlow/Processing",
+                        "FailedLast24Hours",
+                        "Environment",
+                        "${Environment}"
+                      ]
+                    ],
+                    "period": 300,
+                    "stat": "Maximum"
+                  }
+                },
+                {
+                  "type": "metric",
+                  "x": 0,
+                  "y": 6,
+                  "width": 24,
+                  "height": 6,
+                  "properties": {
+                    "region": "${AWS::Region}",
+                    "title": "Processing latency (seconds) and attempts (rolling 24h)",
+                    "metrics": [
+                      [
+                        "CaseFlow/Processing",
+                        "MeanLatencySeconds",
+                        "Environment",
+                        "${Environment}"
+                      ],
+                      [
+                        "CaseFlow/Processing",
+                        "AttemptsLast24Hours",
+                        "Environment",
+                        "${Environment}"
+                      ]
+                    ],
+                    "period": 300,
+                    "stat": "Maximum"
+                  }
+                },
+                {
+                  "type": "metric",
+                  "x": 0,
+                  "y": 12,
+                  "width": 24,
+                  "height": 6,
+                  "properties": {
+                    "region": "${AWS::Region}",
+                    "title": "Recovery and dispatch health",
+                    "metrics": [
+                      [
+                        "CaseFlow/Processing",
+                        "ExpiredLeases",
+                        "Environment",
+                        "${Environment}"
+                      ],
+                      [
+                        "CaseFlow/Processing",
+                        "DispatchBacklog",
+                        "Environment",
+                        "${Environment}"
+                      ],
+                      [
+                        "CaseFlow/Processing",
+                        "DispatchOldestSeconds",
+                        "Environment",
+                        "${Environment}"
+                      ],
+                      [
+                        "CaseFlow/Processing",
+                        "RecoveryErrors",
+                        "Environment",
+                        "${Environment}"
+                      ],
+                      [
+                        "CaseFlow/Processing",
+                        "OperatorIntervention",
+                        "Environment",
+                        "${Environment}"
+                      ],
+                      [
+                        "CaseFlow/Processing",
+                        "ReconciliationRuns",
+                        "Environment",
+                        "${Environment}"
+                      ]
+                    ],
+                    "period": 300,
+                    "stat": "Maximum"
+                  }
+                },
+                {
+                  "type": "metric",
+                  "x": 0,
+                  "y": 18,
+                  "width": 24,
+                  "height": 6,
+                  "properties": {
+                    "region": "${AWS::Region}",
+                    "title": "OCR allowance (UTC day, shared by database)",
+                    "metrics": [
+                      [
+                        "CaseFlow/Processing",
+                        "OcrPagesReserved",
+                        "Environment",
+                        "${Environment}"
+                      ],
+                      [
+                        "CaseFlow/Processing",
+                        "OcrPageAllowance",
+                        "Environment",
+                        "${Environment}"
+                      ]
+                    ],
+                    "period": 300,
+                    "stat": "Maximum"
+                  }
+                },
+                {
+                  "type": "metric",
+                  "x": 0,
+                  "y": 24,
+                  "width": 24,
+                  "height": 6,
+                  "properties": {
+                    "region": "${AWS::Region}",
+                    "title": "ProcessingQueueArn",
+                    "metrics": [
+                      [
+                        "AWS/SQS",
+                        "ApproximateNumberOfMessagesVisible",
+                        "QueueName",
+                        "${ProcessingQueueArnName}"
+                      ],
+                      [
+                        "AWS/SQS",
+                        "ApproximateAgeOfOldestMessage",
+                        "QueueName",
+                        "${ProcessingQueueArnName}"
+                      ]
+                    ],
+                    "period": 300,
+                    "stat": "Maximum"
+                  }
+                },
+                {
+                  "type": "metric",
+                  "x": 0,
+                  "y": 30,
+                  "width": 24,
+                  "height": 6,
+                  "properties": {
+                    "region": "${AWS::Region}",
+                    "title": "CompletionQueueArn",
+                    "metrics": [
+                      [
+                        "AWS/SQS",
+                        "ApproximateNumberOfMessagesVisible",
+                        "QueueName",
+                        "${CompletionQueueArnName}"
+                      ],
+                      [
+                        "AWS/SQS",
+                        "ApproximateAgeOfOldestMessage",
+                        "QueueName",
+                        "${CompletionQueueArnName}"
+                      ]
+                    ],
+                    "period": 300,
+                    "stat": "Maximum"
+                  }
+                },
+                {
+                  "type": "metric",
+                  "x": 0,
+                  "y": 36,
+                  "width": 24,
+                  "height": 6,
+                  "properties": {
+                    "region": "${AWS::Region}",
+                    "title": "ProcessingDlqArn",
+                    "metrics": [
+                      [
+                        "AWS/SQS",
+                        "ApproximateNumberOfMessagesVisible",
+                        "QueueName",
+                        "${ProcessingDlqArnName}"
+                      ],
+                      [
+                        "AWS/SQS",
+                        "ApproximateAgeOfOldestMessage",
+                        "QueueName",
+                        "${ProcessingDlqArnName}"
+                      ]
+                    ],
+                    "period": 300,
+                    "stat": "Maximum"
+                  }
+                },
+                {
+                  "type": "metric",
+                  "x": 0,
+                  "y": 42,
+                  "width": 24,
+                  "height": 6,
+                  "properties": {
+                    "region": "${AWS::Region}",
+                    "title": "CompletionDlqArn",
+                    "metrics": [
+                      [
+                        "AWS/SQS",
+                        "ApproximateNumberOfMessagesVisible",
+                        "QueueName",
+                        "${CompletionDlqArnName}"
+                      ],
+                      [
+                        "AWS/SQS",
+                        "ApproximateAgeOfOldestMessage",
+                        "QueueName",
+                        "${CompletionDlqArnName}"
+                      ]
+                    ],
+                    "period": 300,
+                    "stat": "Maximum"
+                  }
+                },
+                {
+                  "type": "metric",
+                  "x": 0,
+                  "y": 48,
+                  "width": 24,
+                  "height": 6,
+                  "properties": {
+                    "region": "${AWS::Region}",
+                    "title": "Lambda errors and throttles",
+                    "metrics": [
+                      [
+                        "AWS/Lambda",
+                        "Errors",
+                        "FunctionName",
+                        "${ProcessorFunction}"
+                      ],
+                      [
+                        "AWS/Lambda",
+                        "Throttles",
+                        "FunctionName",
+                        "${ProcessorFunction}"
+                      ],
+                      [
+                        "AWS/Lambda",
+                        "Errors",
+                        "FunctionName",
+                        "${CompletionFunction}"
+                      ],
+                      [
+                        "AWS/Lambda",
+                        "Throttles",
+                        "FunctionName",
+                        "${CompletionFunction}"
+                      ],
+                      [
+                        "AWS/Lambda",
+                        "Errors",
+                        "FunctionName",
+                        "${RecoveryFunction}"
+                      ],
+                      [
+                        "AWS/Lambda",
+                        "Throttles",
+                        "FunctionName",
+                        "${RecoveryFunction}"
+                      ]
+                    ],
+                    "period": 300,
+                    "stat": "Sum"
+                  }
+                }
+              ]
+            }
+          - ProcessingQueueArnName:
+              Fn::Select:
+                - 5
+                - Fn::Split:
+                    - ':'
+                    - { Ref: ProcessingQueueArn }
+            CompletionQueueArnName:
+              Fn::Select:
+                - 5
+                - Fn::Split:
+                    - ':'
+                    - { Ref: CompletionQueueArn }
+            ProcessingDlqArnName:
+              Fn::Select:
+                - 5
+                - Fn::Split:
+                    - ':'
+                    - { Ref: ProcessingDlqArn }
+            CompletionDlqArnName:
+              Fn::Select:
+                - 5
+                - Fn::Split:
+                    - ':'
+                    - { Ref: CompletionDlqArn }
 
 Outputs:
   ProcessorFunctionName:
@@ -253,10 +1105,20 @@ Outputs:
   CompletionFunctionName:
     Value: { Ref: CompletionFunction }
   ProcessorRoleArn:
-    Value: { Fn::GetAtt: [ProcessorRole, Arn] }
+    Value: { 'Fn::GetAtt': [ProcessorRole, Arn] }
   CompletionRoleArn:
-    Value: { Fn::GetAtt: [CompletionRole, Arn] }
+    Value: { 'Fn::GetAtt': [CompletionRole, Arn] }
   ProcessorLogs:
     Value: { Ref: ProcessorLogGroup }
   CompletionLogs:
     Value: { Ref: CompletionLogGroup }
+  RecoveryFunction:
+    Value: { Ref: RecoveryFunction }
+  RecoveryRole:
+    Value: { Ref: RecoveryRole }
+  RecoveryLogGroup:
+    Value: { Ref: RecoveryLogGroup }
+  RecoverySchedule:
+    Value: { Ref: RecoverySchedule }
+  ProcessingDashboard:
+    Value: { Ref: ProcessingDashboard }

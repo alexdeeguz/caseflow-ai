@@ -19,6 +19,21 @@ class S3Storage:
     def __init__(self, client: S3Client) -> None:
         self._client = client
 
+    def verify_source(self, job: ClaimedJob) -> None:
+        saved = self._client.head_object(
+            Bucket=job.source_bucket,
+            Key=job.source_key,
+            VersionId=job.source_version_id,
+            ChecksumMode='ENABLED',
+        )
+        if (
+            saved.get('VersionId') != job.source_version_id
+            or saved.get('ContentLength') != job.size_bytes
+            or saved.get('ContentType') != job.content_type.value
+            or saved.get('ChecksumSHA256') != job.source_checksum_sha256
+        ):
+            raise RetryableError('Original version verification failed')
+
     def download(self, job: ClaimedJob, path: Path, deadline: Checkpoint) -> None:
         response = self._client.get_object(
             Bucket=job.source_bucket,

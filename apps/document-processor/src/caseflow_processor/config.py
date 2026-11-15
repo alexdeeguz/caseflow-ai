@@ -2,7 +2,7 @@ import os
 import re
 from collections.abc import Mapping
 from pathlib import Path
-from typing import Self
+from typing import ClassVar, Self
 
 from psycopg.conninfo import conninfo_to_dict
 from pydantic import BaseModel, ConfigDict, SecretStr, model_validator
@@ -12,6 +12,8 @@ from .constants import REGION
 
 class Settings(BaseModel):
     model_config = ConfigDict(extra='forbid', frozen=True, hide_input_in_errors=True)
+
+    database_login: ClassVar[str] = 'caseflow_processor_login'
 
     database_url: SecretStr
     queue_arn: str
@@ -56,7 +58,7 @@ class Settings(BaseModel):
         username = connection.get('user', '')
         host = connection.get('host', '')
 
-        if not re.fullmatch(r'caseflow_processor_login(?:\.[a-z0-9]{20})?', username):
+        if not re.fullmatch(rf'{self.database_login}(?:\.[a-z0-9]{{20}})?', username):
             raise ValueError('Dedicated processor credentials are required')
 
         if not connection.get('password'):
@@ -130,3 +132,7 @@ class CompletionSettings(Settings):
             **settings.model_dump(),
             completion_queue_arn=values['TEXTRACT_COMPLETION_QUEUE_ARN'],
         )
+
+
+class RecoverySettings(Settings):
+    database_login: ClassVar[str] = 'caseflow_recovery_login'

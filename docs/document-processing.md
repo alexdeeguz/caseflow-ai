@@ -2,7 +2,7 @@
 
 [Back to README](../README.md)
 
-The database foundation, API dispatcher, processor database interface, and public processing API are implemented. The Python extraction and Textract completion workers are implemented and tested locally; deployment and operational monitoring remain pending. The document library displays processing status and authorized start/retry controls. Keep continuous dispatching disabled until the consumer is ready.
+The database lifecycle, API dispatcher, processing endpoints, Python extraction and completion workers, bounded recovery, monitoring, and document-library controls are implemented. Native and OCR paths are verified in the active hosted development environment. See [workflow verification](processing-verification.md) for evidence, limitations, and the staged activation procedure for new deployments.
 
 - [Processing in the document library](#processing-in-the-document-library)
 - [Processing API](#processing-api)
@@ -150,8 +150,9 @@ deduplicates by job ID. Messages contain only a schema version and job ID, never
 client-provided storage locations or credentials.
 
 The database foundation does not create cloud resources or run OCR. The processing API
-exposes job state; processing controls in the document UI remain separate work. The [API dispatcher](#api-processing-dispatcher) sends queued jobs once enabled;
-Worker deployment and operational monitoring remain separate steps. Apply the migration
+exposes job state and the document library provides authorized start/retry controls. The
+[API dispatcher](#api-processing-dispatcher) sends queued jobs once enabled. Worker deployment
+and live verification are explicit setup steps. Apply the migration
 through the existing reviewed migration workflow; starting the API never applies it.
 Until dispatching is enabled, new jobs remain queued in PostgreSQL.
 
@@ -185,8 +186,9 @@ extracts native PDF text in a bounded subprocess, and starts OCR through saved,
 idempotent requests. [Python processor setup](python-processor.md) covers its
 configuration, limits, tests, and remaining activation prerequisites. The
 [Textract completion consumer](textract-completion.md) collects complete OCR results and
-publishes immutable artifacts. Deployment and reconciliation remain separate work;
-no worker is activated automatically.
+publishes immutable artifacts. The [reconciler](processing-recovery.md) recovers stalled delivery
+and lost notifications. Deployment and trigger activation are explicit operations; applying
+migrations or starting the API does not deploy workers.
 
 ## API processing dispatcher
 
@@ -312,4 +314,8 @@ adapter and never send messages to the live processing queue.
 
 See [Lambda configuration](lambda-configuration.md) for the SAM template, Secrets Manager,
 verified database TLS, container builds, IAM boundaries, and deployment/rollback steps.
-Queue consumption remains disabled until full workflow verification.
+New deployments leave queue consumption disabled until their workflow checks pass.
+
+## Recovery and monitoring
+
+See [recovery rules and operator procedures](processing-recovery.md). The scheduler is disabled by default. It resets tracked outbox records, inspects saved OCR jobs, and emits aggregate health metrics without enabling consumption or deploying resources.

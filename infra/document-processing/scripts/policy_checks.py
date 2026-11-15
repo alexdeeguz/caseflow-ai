@@ -18,6 +18,9 @@ PARAMETERS = {
     'ProcessorDatabaseSecretArn': (
         'arn:aws:secretsmanager:us-east-2:123456789012:secret:processor-abc123'
     ),
+    'RecoveryDatabaseSecretArn': (
+        'arn:aws:secretsmanager:us-east-2:123456789012:secret:recovery-abc123'
+    ),
     'TextractNotificationRoleArn': 'arn:aws:iam::123456789012:role/Notifications',
 }
 CONTEXT = {
@@ -40,7 +43,11 @@ def resolve(value):
         return re.sub(r'\$\{([^}]+)\}', lambda match: PARAMETERS[match[1]], value['Fn::Sub'])
     if 'Fn::GetAtt' in value:
         name, attribute = value['Fn::GetAtt']
-        assert attribute == 'Arn' and name in {'ProcessorLogGroup', 'CompletionLogGroup'}
+        assert attribute == 'Arn' and name in {
+            'ProcessorLogGroup',
+            'CompletionLogGroup',
+            'RecoveryLogGroup',
+        }
         return 'arn:aws:logs:us-east-2:123456789012:log-group:/caseflow/test/' + name + ':*'
     return {key: resolve(item) for key, item in value.items()}
 
@@ -166,5 +173,41 @@ CASES = [
         'arn:aws:logs:us-east-2:123456789012:log-group:/caseflow/test/CompletionLogGroup:log-stream:stream',
         False,
         {},
+    ),
+]
+
+
+CASES += [
+    ('RecoveryRole', 'textract:GetDocumentTextDetection', '*', True, {}),
+    ('RecoveryRole', 'textract:StartDocumentTextDetection', '*', False, {}),
+    ('RecoveryRole', 'sqs:SendMessage', PARAMETERS['ProcessingQueueArn'], False, {}),
+    ('RecoveryRole', 'sqs:ReceiveMessage', PARAMETERS['CompletionQueueArn'], False, {}),
+    ('RecoveryRole', 'sqs:PurgeQueue', PARAMETERS['ProcessingQueueArn'], False, {}),
+    ('RecoveryRole', 'iam:PassRole', PARAMETERS['TextractNotificationRoleArn'], False, {}),
+    (
+        'RecoveryRole',
+        'secretsmanager:GetSecretValue',
+        PARAMETERS['RecoveryDatabaseSecretArn'],
+        True,
+        {},
+    ),
+    (
+        'RecoveryRole',
+        'secretsmanager:GetSecretValue',
+        PARAMETERS['ProcessorDatabaseSecretArn'],
+        False,
+        {},
+    ),
+    ('RecoveryRole', 's3:PutObject', ARTIFACT, True, {}),
+    ('RecoveryRole', 's3:GetObjectVersion', ARTIFACT, True, {}),
+    ('RecoveryRole', 's3:DeleteObjectVersion', ARTIFACT, False, {}),
+    ('RecoveryRole', 's3:PutObject', ORIGINAL, False, {}),
+    ('RecoveryRole', 's3:PutObject', ARTIFACT.replace('/dev/', '/prod/'), False, {}),
+    (
+        'RecoveryRole',
+        's3:PutObject',
+        ARTIFACT,
+        False,
+        {'s3:x-amz-server-side-encryption': 'aws:kms'},
     ),
 ]

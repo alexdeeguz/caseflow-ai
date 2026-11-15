@@ -101,3 +101,30 @@ def test_completion_configuration(settings, queue):
 def test_same_queue_is_rejected(settings):
     with pytest.raises(ValidationError):
         CompletionSettings(**settings.model_dump(), completion_queue_arn=settings.queue_arn)
+
+
+@pytest.mark.parametrize('include_version', [False, True])
+def test_versioned_and_unversioned_provider_notifications_are_accepted(job, include_version):
+    payload = notification(job).model_dump(by_alias=True)
+    if not include_version:
+        del payload['DocumentLocation']['S3ObjectVersion']
+    collector = Mock()
+    result = handle_batch(
+        event(job, body=json.dumps(payload)),
+        Mock(get_remaining_time_in_millis=lambda: 900000),
+        collector,
+        COMPLETION_QUEUE,
+    )
+    assert result == {'batchItemFailures': []}
+    parsed = collector.collect.call_args.args[0]
+    assert parsed.document_location.version_id == (
+        job.source_version_id if include_version else None
+    )
+
+
+@pytest.mark.parametrize('version', ['', 'null', 'bad\nversion', 123])
+def test_invalid_source_versions_are_rejected(job, version):
+    payload = notification(job).model_dump(by_alias=True)
+    payload['DocumentLocation']['S3ObjectVersion'] = version
+    with pytest.raises(ValidationError):
+        CompletionNotification.model_validate(payload)

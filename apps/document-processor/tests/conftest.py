@@ -92,6 +92,10 @@ def database(request):
             for migration in sorted(
                 (Path(__file__).resolve().parents[3] / 'supabase/migrations').glob('*.sql')
             ):
+                if getattr(request, 'param', None) == 'before_recovery' and migration.name.endswith(
+                    '_processing_recovery.sql'
+                ):
+                    break
                 owner.execute(migration.read_text(), prepare=False)
             owner.execute(
                 sql.SQL(

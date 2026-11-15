@@ -2,30 +2,34 @@
 
 [Back to README](../README.md)
 
-The [SAM template](../infra/document-processing/template.yaml) defines two consumers
-from the shared Python package. It creates only functions, execution roles, event-source
-mappings, and log groups. Existing queues, DLQs, document storage, SNS topic, notification
-role, and database secret remain externally managed. Neither deployment nor queue
+The [SAM template](../infra/document-processing/template.yaml) defines two consumers and a scheduled reconciler
+from the shared Python package. It creates functions, execution roles, event-source
+mappings, retained log groups, a disabled Scheduler schedule/group, alarms, and a dashboard. Existing queues, DLQs, document storage, SNS topic, notification
+role, and database secrets remain externally managed. Neither deployment nor queue
 consumption runs automatically from CI.
 
 ## Runtime configuration
 
-| Setting                    | Both functions                                                    |
-| -------------------------- | ----------------------------------------------------------------- |
-| Runtime / architecture     | Python 3.13 / x86-64                                              |
-| Memory / temporary storage | 1,024 MiB / 512 MiB                                               |
-| Function timeout           | 120 seconds                                                       |
-| SQS batch size / window    | 1 message / 0 seconds                                             |
-| Mapping concurrency        | At most 2 concurrent invocations per queue                        |
-| Batch response             | `ReportBatchItemFailures`                                         |
-| Queue mappings             | Disabled unless `EnableQueueMappings=true` is explicitly reviewed |
-| Queue visibility           | Existing queues must retain at least 720 seconds                  |
-| Log retention              | 30 days; log groups retained when the stack is deleted            |
-| Network                    | Public HTTPS services and verified PostgreSQL TLS; no VPC or NAT  |
+| Setting                    | Both functions                                                                                  |
+| -------------------------- | ----------------------------------------------------------------------------------------------- |
+| Runtime / architecture     | Python 3.13 / x86-64                                                                            |
+| Memory / temporary storage | 1,024 MiB / 512 MiB                                                                             |
+| Function timeout           | 120 seconds                                                                                     |
+| SQS batch size / window    | 1 message / 0 seconds                                                                           |
+| Mapping concurrency        | At most 2 concurrent invocations per queue                                                      |
+| Batch response             | `ReportBatchItemFailures`                                                                       |
+| Queue mappings             | Separate `EnableProcessingConsumer` / `EnableCompletionConsumer` flags; both default to `false` |
+| Queue visibility           | Existing queues must retain at least 720 seconds                                                |
+| Log retention              | 30 days; log groups retained when the stack is deleted                                          |
+| Network                    | Public HTTPS services and verified PostgreSQL TLS; no VPC or NAT                                |
 
 The queue visibility follows [Lambda's six-times-timeout guidance](https://docs.aws.amazon.com/lambda/latest/dg/services-sqs-configure.html).
-The two mappings can normally run four invocations combined. No reserved function concurrency
-is configured; the mapping limits apply to SQS consumption, not manual invocations.
+The two mappings can run four invocations combined. Recovery normally adds one scheduled invocation,
+but has no function-level concurrency cap. All three functions use shared Regional concurrency;
+no capacity is reserved. The mapping limits apply to SQS consumption, not manual invocations.
+Recovery uses short database locks, persisted next-check times, and fenced collection leases to
+coordinate overlapping deliveries. Shared-capacity contention can delay recovery; monitor throttles
+and the missing-reconciliation alarm.
 The 180-second database lease remains separate from queue visibility. Existing job ownership,
 cancellation, attempt limits, and OCR allowance checks still apply.
 
@@ -137,7 +141,7 @@ uv run --project infra/document-processing --locked python infra/document-proces
 
 Use the build wrapper rather than calling `sam build` directly on the source template. It
 exports hash-pinned runtime requirements from `apps/document-processor/uv.lock` into a temporary
-source directory, copies only the Python package and public certificate, and builds both
+source directory, copies only the Python package and public certificate, and builds all three
 functions using SAM's versioned Python 3.13 x86-64 Linux image. It excludes local environment
 files, tests, editor files, and development dependencies. SAM output is ignored under
 `.aws-sam/document-processing/`. Build tools have a separate lockfile and never enter Lambda.
@@ -146,7 +150,8 @@ Security validation uses checksum-verified CloudFormation Guard 3.2.1. Rules che
 limits, stack ownership, logging, and default-disabled consumption. Permission tests cover
 both allowed and denied queues, prefixes, secrets, logs, operations, and PassRole conditions.
 Package checks verify ELF architecture, size, imports, and bundled CA loading inside an offline,
-read-only Linux container. Builds need package/image network access, but no AWS deployment
+read-only Linux container, including the parser memory ceiling. Bundles are staged in a temporary
+directory so Docker Desktop does not need to mount the source checkout. Builds need package/image network access, but no AWS deployment
 credentials. CI performs these checks and does not run `deploy`, `sync`, or cloud login.
 
 After authenticating to the intended AWS project, an optional **read-only** IAM check is:
@@ -167,13 +172,17 @@ restricted processor credentials against migrated disposable databases.
 Before preparing a change set, verify:
 
 - AWS project identity and selected Region match the intended CaseFlow environment.
+- Check `aws lambda get-account-settings` for the actual Regional concurrency limit before deployment.
+  New projects can have lower limits than the documented default. This stack uses shared capacity
+  without reservations and fits a ten-invocation project for its normal scheduled/queue workload.
+  Account for other workloads and direct invocations; shared capacity is not guaranteed per function.
 - All ARN parameters belong to that project and Ohio. Processing/completion queue ARNs are
   distinct, standard queues with visibility at least 720 seconds, the intended DLQs and redrive
   policies, and SSE-SQS encryption. Neither parameter points to a DLQ.
 - Bucket settings, SNS subscription/raw delivery, and notification-role permissions are correct.
 - Hosted migrations and the restricted processor login are ready; the secret contains the
   matching credentials and can reach the transaction pooler with verified TLS.
-- Continuous API dispatching stays disabled, and `EnableQueueMappings=false`.
+- Continuous API dispatching stays disabled, and both consumer flags remain `false`.
 - A separate reviewed deployment-artifact bucket is available in Ohio. Do not use the document
   library's original/processed prefixes for Lambda deployment packages.
 
@@ -194,15 +203,24 @@ uv run --project infra/document-processing --locked sam deploy \
   TextractTopicArn=YOUR_TEXTRACT_TOPIC_ARN \
   TextractNotificationRoleArn=YOUR_NOTIFICATION_ROLE_ARN \
   ProcessorDatabaseSecretArn=YOUR_PROCESSOR_SECRET_ARN \
-  EnableQueueMappings=false
+  RecoveryDatabaseSecretArn=YOUR_RECOVERY_SECRET_ARN \
+  ProcessingDlqArn=YOUR_PROCESSING_DLQ_ARN \
+  CompletionDlqArn=YOUR_COMPLETION_DLQ_ARN \
+  AlarmTopicArn=YOUR_OPERATIONAL_ALERT_TOPIC_ARN \
+  EnableRecoverySchedule=false \
+  EnableProcessingConsumer=false \
+  EnableCompletionConsumer=false
 ```
 
 This command uploads code and creates a pending change set; it does not execute that change set.
-Review it in CloudFormation. Expect two Lambda functions, two roles, two log groups, and two
-**disabled** event-source mappings. There should be no replacement/creation of document buckets,
+Review it in CloudFormation. Expect three Lambda functions, four roles, three log groups, two
+**disabled** event-source mappings, a **disabled** recovery schedule/group, 15 alarms, and a dashboard. There should be no replacement/creation of document buckets,
 queues, SNS resources, database credentials, or hosted tables. Execute only the reviewed change
 set, then verify stack outputs, mapping state, runtime configuration, and resource permissions.
-Do not enable consumption until full workflow verification, recovery, and monitoring are ready.
+Enable the completion consumer first for controlled verification, then the processing consumer.
+The template rejects processing enabled with completion disabled. Keep recovery and continuous
+dispatching disabled until their controlled checks pass; follow the
+[workflow verification sequence](processing-verification.md).
 Deploying disabled functions does not itself prove a successful secret/database connection;
 that needs a controlled, reviewed runtime verification before consumption is enabled.
 
@@ -214,15 +232,18 @@ not contain full events, filenames, extracted text, URLs, credentials, lease tok
 provider exception messages. A delivery acknowledgment does not necessarily mean Ready: an
 OCR-start message is acknowledged only after its waiting state is persisted.
 
-For a bad release, disable both mappings first and pause continuous dispatching. Allow up to
+For a bad release, disable the recovery schedule and both mappings first and pause continuous dispatching. Allow up to
 120 seconds for in-flight invocations to finish. Prepare a reviewed change set from the previous
-known-good source revision and lockfile, with `EnableQueueMappings=false`, and deploy its built
+known-good source revision and lockfile, with both consumer flags set to `false`, and deploy its built
 packages. Do not purge queues, reset the database, or delete document/artifact versions.
 Existing job leases, stable Textract tokens, and fenced publication support safe retries after
 the service is restored. Database changes need a separately reviewed additive compatibility fix.
 
-Deleting this stack removes its functions, roles, and mappings but retains log groups for review;
+Deleting this stack removes its functions, roles, mappings, schedule/group, alarms, and dashboard
+but retains log groups for review;
 log events still expire after 30 days. Externally managed queues, secrets, SNS, S3, and the hosted
 database remain. Reusing a deleted stack name can conflict with retained log-group names; retain
 and import those groups deliberately or choose a new stack name. Do not delete resources simply
 to make a redeployment succeed.
+
+The recovery function uses a separate restricted login/secret and shared concurrency. See [recovery setup](processing-recovery.md) for its permissions, additional parameters, alert delivery verification, and operator procedures.

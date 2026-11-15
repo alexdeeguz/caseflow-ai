@@ -1,4 +1,4 @@
-"""Build both functions from a sanitized source tree and the application lockfile."""
+"""Build Lambda functions from a sanitized source tree and the application lockfile."""
 
 import os
 import shutil

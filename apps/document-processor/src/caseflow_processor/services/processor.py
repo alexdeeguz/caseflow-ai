@@ -128,6 +128,8 @@ class Processor:
             raise RetryableError('OCR request correlation failed')
 
         checkpoint()
+        self._storage.verify_source(job)
+        checkpoint()
         provider_id = self._ocr.start(request)
         checkpoint()
         if not self._store.bind(job, provider_id):

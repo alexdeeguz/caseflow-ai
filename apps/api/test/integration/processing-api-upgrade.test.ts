@@ -6,7 +6,7 @@ import { createTestDatabase } from './database-fixture.js';
 const snapshotSql = `select jsonb_build_object(
   'users', (select jsonb_agg(u order by id) from caseflow.users u),
   'documents', (select jsonb_agg(d order by id) from caseflow.documents d),
-  'jobs', (select jsonb_agg(j order by id) from caseflow.document_processing_jobs j),
+  'jobs', (select jsonb_agg(to_jsonb(j)-array['recovery_count','recovery_check_count','recovery_next_check_at'] order by id) from caseflow.document_processing_jobs j),
   'results', (select jsonb_agg(r order by job_id) from caseflow.document_processing_results r),
   'dispatches', (select jsonb_agg(d order by id) from caseflow.processing_dispatches d),
   'audit', (select jsonb_agg(a order by id) from caseflow.audit_events a)

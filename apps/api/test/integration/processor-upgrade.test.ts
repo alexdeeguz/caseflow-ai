@@ -15,6 +15,9 @@ test('processor migration preserves existing jobs, dispatches, documents and aud
     'ocr_page_count',
     'textract_job_id',
     'textract_started_at',
+    'recovery_count',
+    'recovery_check_count',
+    'recovery_next_check_at',
   ];
   const snapshotSql = `select jsonb_build_object(
     'users', (select jsonb_agg(u order by id) from caseflow.users u),

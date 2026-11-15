@@ -43,13 +43,19 @@ class DatabaseSecret(BaseModel):
         )
 
 
+class RecoveryDatabaseSecret(DatabaseSecret):
+    user: str = Field(pattern=r'^caseflow_recovery_login\.[a-z0-9]{20}$')
+
+
 class DatabaseCredentials:
     def __init__(
         self,
         client: SecretsManagerClient,
         clock: Callable[[], float] = monotonic,
+        secret_model: type[DatabaseSecret] = DatabaseSecret,
     ) -> None:
         self._client = client
+        self._secret_model = secret_model
         self._clock = clock
         self._cached_arn: str | None = None
         self._connection: SecretStr | None = None
@@ -77,7 +83,7 @@ class DatabaseCredentials:
                 or 'AWSCURRENT' not in response.get('VersionStages', [])
             ):
                 raise ValueError('Unexpected database secret response')
-            connection = DatabaseSecret.model_validate_json(value).connection_string()
+            connection = self._secret_model.model_validate_json(value).connection_string()
         except Exception:
             raise RuntimeError('Processor database credentials are unavailable') from None
 
@@ -87,9 +93,11 @@ class DatabaseCredentials:
         return connection
 
 
-def database_secret_arn(environment: Mapping[str, str]) -> str | None:
-    secret_arn = environment.get('PROCESSOR_DATABASE_SECRET_ARN')
-    direct_url = environment.get('PROCESSOR_DATABASE_URL')
+def database_secret_arn(
+    environment: Mapping[str, str], purpose: Literal['PROCESSOR', 'RECOVERY'] = 'PROCESSOR'
+) -> str | None:
+    secret_arn = environment.get(f'{purpose}_DATABASE_SECRET_ARN')
+    direct_url = environment.get(f'{purpose}_DATABASE_URL')
     if not secret_arn:
         if environment.get('AWS_LAMBDA_FUNCTION_NAME') or not direct_url:
             raise ValueError('Lambda requires a processor database secret')

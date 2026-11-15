@@ -1,6 +1,7 @@
 export const AuditAction = {
   DocumentUploadStarted: 'document.upload_started',
   DocumentProcessingQueued: 'document.processing_queued',
+  DocumentProcessingRecovered: 'document.processing_recovered',
   DocumentProcessingCompleted: 'document.processing_completed',
   DocumentProcessingFailed: 'document.processing_failed',
   DocumentProcessingCancelled: 'document.processing_cancelled',

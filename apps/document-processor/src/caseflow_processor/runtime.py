@@ -12,15 +12,17 @@ if TYPE_CHECKING:
     from mypy_boto3_textract import TextractClient
 
 from .adapters.database import PostgresJobStore
-from .adapters.secrets import DatabaseCredentials, database_secret_arn
+from .adapters.recovery import PostgresRecoveryStore, TextractStatus
+from .adapters.secrets import DatabaseCredentials, RecoveryDatabaseSecret, database_secret_arn
 from .adapters.storage import S3Storage
 from .adapters.textract import TextractProvider
 from .adapters.textract_results import TextractResults
-from .config import CompletionSettings, Settings
+from .config import CompletionSettings, RecoverySettings, Settings
 from .constants import REGION
 from .extraction.bounded import BoundedParser
 from .services.collector import Collector
 from .services.processor import Processor
+from .services.reconciler import Reconciler
 
 
 def _sdk_config() -> Config:
@@ -83,3 +85,32 @@ def get_completion_runtime() -> tuple[CompletionSettings, Collector]:
     storage, textract = _aws_adapters()
     store = PostgresJobStore(settings.database_url.get_secret_value())
     return settings, Collector(settings, store, storage, TextractResults(textract))
+
+
+@lru_cache(maxsize=1)
+def _recovery_credentials() -> DatabaseCredentials:
+    session = boto3.Session(region_name=REGION)
+    return DatabaseCredentials(
+        session.client(
+            'secretsmanager',
+            config=_sdk_config(),
+            endpoint_url=f'https://secretsmanager.{REGION}.amazonaws.com',
+        ),
+        secret_model=RecoveryDatabaseSecret,
+    )
+
+
+def get_recovery_runtime() -> Reconciler:
+    secret_arn = database_secret_arn(os.environ, 'RECOVERY')
+    database_url = (
+        _recovery_credentials().load(secret_arn)
+        if secret_arn
+        else SecretStr(os.environ['RECOVERY_DATABASE_URL'])
+    )
+    settings = RecoverySettings.from_environment(database_url=database_url)
+    storage, textract = _aws_adapters()
+    store = PostgresRecoveryStore(settings.database_url.get_secret_value())
+    collector = Collector(settings, store, storage, TextractResults(textract))
+    return Reconciler(
+        store, TextractStatus(textract), collector, settings.bucket, settings.environment
+    )

@@ -12,11 +12,11 @@ Use fictional data for demonstrations and testing.
   with version checks to prevent overwriting concurrent changes.
 - **Documents:** direct S3 uploads with server verification, a paginated library,
   authorized downloads, reversible removal, and processing status with Admin start/retry controls.
-- **Processing foundation:** atomic job/dispatch creation, an opt-in API dispatcher
+- **Document processing:** atomic job/dispatch creation, an opt-in API dispatcher
   for SQS, authorized processing status/start/retry endpoints, restricted processor database functions,
   and Python extraction/completion workers.
 
-The Python workers and reviewable SAM configuration are implemented and tested locally. Deployment, operational monitoring, and file previews remain pending. Keep continuous dispatching disabled until both consumers and recovery are ready.
+Native PDF extraction, Textract OCR, bounded recovery, and monitoring are implemented and verified in the hosted development environment. Queue consumers and scheduled recovery run in AWS; continuous dispatch runs with the API. New deployments start with triggers disabled and follow the [verification and activation guide](docs/processing-verification.md). File previews and extracted-text viewing remain outside this phase.
 
 ## Stack and structure
 
@@ -106,3 +106,7 @@ individually, integration-test prerequisites, and dependency maintenance.
 
 See [Lambda configuration](docs/lambda-configuration.md) for secret setup, packaged TLS trust,
 container builds, IAM boundaries, and reviewed deployment with queue mappings disabled.
+
+See [processing recovery and monitoring](docs/processing-recovery.md) for bounded retries, recovery credentials, dashboards, alerts, and operator procedures.
+
+See [workflow verification](docs/processing-verification.md) for the automated matrix, hosted release checks, completion-first activation, and rollback. The hosted development workflow is active and verified with fictional native, scanned, and image documents. The guide records the remaining verification limits.

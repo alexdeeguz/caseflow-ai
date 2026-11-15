@@ -120,7 +120,7 @@ jobs:
           uv run --project infra/document-processing --locked sam validate --lint --region us-east-2 --template-file infra/document-processing/template.yaml
           uv run --project infra/document-processing --locked python infra/document-processing/scripts/validate_security.py
           uv run --project infra/document-processing --locked pytest infra/document-processing/tests
-      - name: Build both Linux Lambda functions
+      - name: Build Linux Lambda functions
         run: uv run --project infra/document-processing --locked python infra/document-processing/scripts/build.py
       - name: Verify packaged dependencies and certificate
         run: uv run --project infra/document-processing --locked python infra/document-processing/scripts/verify_build.py

@@ -2,10 +2,10 @@
 
 [Back to README](../README.md)
 
-The completion worker is implemented in `apps/document-processor` and verified with
-local AWS stubs, a local HTTP retry test, and disposable PostgreSQL databases. It is
-not deployed. Live Textract-to-SNS-to-SQS delivery remains part of deployment verification.
-Keep continuous dispatching disabled until both workers and recovery are ready.
+The completion worker in `apps/document-processor` collects real Textract results through
+SNS and SQS. Verification covers local AWS stubs, bounded HTTP retries, disposable PostgreSQL
+databases, and the hosted development workflow. See [workflow verification](processing-verification.md)
+for deployment evidence and activation requirements.
 
 ## Delivery and correlation
 
@@ -17,7 +17,8 @@ The remaining server-only settings are described in [Python processor setup](pyt
 The SNS subscription must use **raw message delivery**. The SQS body is Textract's
 JSON notification, not an SNS `Message` envelope. Validation requires
 `API=StartDocumentTextDetection`, a UUID `JobTag`, a valid provider `JobId`, recognized
-status, timestamp, and document location. The handler accepts only the configured
+status, timestamp, and document location. Optional `S3ObjectVersion` values must match the
+saved source version when supplied. The handler accepts only the configured
 queue/event source/Region, at most ten records, and notification bodies up to 16 KiB.
 Use `ReportBatchItemFailures`; start deployment verification with batch size one.
 
@@ -126,7 +127,7 @@ will stop subsequent publication when cancellation is observed.
    or need `iam:PassRole` permission.
 5. Verify real notifications, OCR output, retries, DLQ recovery, and operational alerts
    before enabling continuous dispatching. Missing notifications still require the
-   planned reconciliation path; a repeated idempotent OCR start does not resend them.
+   reconciliation path; a repeated idempotent OCR start does not resend them.
 
 These deployment steps are not performed by local tests or application startup.
 
@@ -143,4 +144,4 @@ regressions also exercise the revised correlation behavior.
 
 See [Lambda configuration](lambda-configuration.md) for the SAM template, Secrets Manager,
 verified database TLS, container builds, IAM boundaries, and deployment/rollback steps.
-Queue consumption remains disabled until full workflow verification.
+New deployments leave queue consumption disabled until their workflow checks pass.

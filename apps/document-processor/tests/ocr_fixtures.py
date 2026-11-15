@@ -28,7 +28,11 @@ def notification(job, **changes):
             'JobTag': job.job_id,
             'Status': 'SUCCEEDED',
             'Timestamp': 1800000000000,
-            'DocumentLocation': {'S3Bucket': job.source_bucket, 'S3ObjectName': job.source_key},
+            'DocumentLocation': {
+                'S3Bucket': job.source_bucket,
+                'S3ObjectName': job.source_key,
+                'S3ObjectVersion': job.source_version_id,
+            },
             **changes,
         }
     )

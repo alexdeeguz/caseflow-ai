@@ -12,6 +12,7 @@ import { auditListResource } from '../../lib/workspace-resources';
 const labels: Readonly<Record<string, string>> = {
   [AuditAction.DocumentUploadStarted]: 'Document upload started',
   [AuditAction.DocumentProcessingQueued]: 'Document processing queued',
+  [AuditAction.DocumentProcessingRecovered]: 'Document processing recovery queued',
   [AuditAction.DocumentProcessingCompleted]: 'Document processing completed',
   [AuditAction.DocumentProcessingFailed]: 'Document processing failed',
   [AuditAction.DocumentProcessingCancelled]: 'Document processing cancelled',

@@ -5,7 +5,7 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field, StrictInt
 from pydantic.alias_generators import to_pascal
 
-from ..models import DocumentText, Id, PageCount
+from ..models import DocumentText, Id, PageCount, Version
 
 ProviderId = Annotated[str, Field(strict=True, pattern=r'^[A-Za-z0-9_-]{1,64}$')]
 
@@ -29,6 +29,7 @@ class DocumentLocation(BaseModel):
 
     bucket: Annotated[str, Field(alias='S3Bucket', strict=True, min_length=3, max_length=63)]
     key: Annotated[str, Field(alias='S3ObjectName', strict=True, min_length=1, max_length=1024)]
+    version_id: Version | None = Field(default=None, alias='S3ObjectVersion')
 
 
 class CompletionNotification(BaseModel):
