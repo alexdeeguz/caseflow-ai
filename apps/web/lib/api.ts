@@ -71,6 +71,8 @@ export async function apiRequest<T>(
     }
 
     const documentMessages: Partial<Record<ErrorCode, string>> = {
+      [ErrorCode.ProcessingConflict]:
+        'Processing changed. Review the latest status before trying again.',
       [ErrorCode.DocumentConflict]:
         'This document changed. Review its latest details before trying again.',
       [ErrorCode.DocumentUnavailable]:

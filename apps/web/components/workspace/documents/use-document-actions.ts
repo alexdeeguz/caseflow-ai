@@ -11,6 +11,7 @@ export function useDocumentActions(
   request: AuthRequest,
   refresh: () => Promise<unknown>,
   onAccessRejected: (message: string) => void,
+  enabled = true,
 ) {
   const toast = useToast();
   const controller = useRef<AbortController | null>(null);
@@ -22,7 +23,7 @@ export function useDocumentActions(
   useEffect(() => () => controller.current?.abort(), []);
 
   async function perform(document: Document, action: DocumentAction) {
-    if (controller.current) {
+    if (!enabled || controller.current) {
       return;
     }
     const operation = new AbortController();
@@ -77,6 +78,7 @@ export function useDocumentActions(
     completedAction,
     removing,
     error,
+    dismissError: () => setError(null),
     cancel: () => {
       if (!controller.current) {
         setRemoving(null);
@@ -89,6 +91,9 @@ export function useDocumentActions(
       }
     },
     act(document: Document, action: DocumentAction) {
+      if (!enabled || controller.current) {
+        return;
+      }
       if (action === DocumentAction.Remove) {
         setError(null);
         setRemoving(document);

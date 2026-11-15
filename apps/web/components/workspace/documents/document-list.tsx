@@ -1,12 +1,16 @@
 'use client';
 
 import { Fragment, useId, useState } from 'react';
-import { DocumentStatus, type Document, type Role } from '@caseflow/schemas';
+import { DocumentStatus, type Document, type DocumentListItem, type Role } from '@caseflow/schemas';
 import { documentTypeLabels, formatFileSize } from '../../../lib/documents/presentation';
 import { DocumentIcon } from './document-icon';
 import { DocumentDate, DocumentDetails } from './document-details';
 import { DocumentActions } from './document-actions';
 import type { DocumentAction } from '../../../lib/documents/actions';
+import { ProcessingStatusBadge } from './processing-status';
+import { ProcessingDetails } from './processing-details';
+import { ProcessingActionButton } from './processing-action-button';
+import processingStyles from './processing.module.css';
 import styles from './documents.module.css';
 
 function DocumentStatusBadge({ status }: { status: DocumentStatus }) {
@@ -27,7 +31,9 @@ function DocumentName({ document }: { document: Document }) {
       </span>
       <div className={styles.fileText}>
         <span className={styles.filename}>{document.filename}</span>
-        <span className={styles.fileType}>{documentTypeLabels[document.contentType]}</span>
+        <span className={styles.fileType}>
+          {documentTypeLabels[document.contentType]} · {formatFileSize(document.sizeBytes)}
+        </span>
       </div>
     </div>
   );
@@ -76,12 +82,18 @@ export function DocumentList({
   archived,
   busy,
   onAction,
+  disabled,
+  processingId,
+  onProcess,
 }: {
-  items: Document[];
+  items: DocumentListItem[];
   role: Role;
   archived: boolean;
   busy: { id: string; action: DocumentAction } | null;
   onAction: (document: Document, action: DocumentAction) => void;
+  disabled: boolean;
+  processingId: string | null;
+  onProcess: (document: DocumentListItem) => void;
 }) {
   const prefix = useId();
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -95,9 +107,9 @@ export function DocumentList({
           <thead>
             <tr>
               <th scope="col">File</th>
-              <th scope="col">Size</th>
               <th scope="col">Uploaded</th>
-              <th scope="col">Status</th>
+              <th scope="col">Availability</th>
+              <th scope="col">Processing</th>
               <th scope="col">
                 <span className="sr-only">Actions</span>
               </th>
@@ -113,7 +125,6 @@ export function DocumentList({
                     <td>
                       <DocumentName document={document} />
                     </td>
-                    <td>{formatFileSize(document.sizeBytes)}</td>
                     <td>
                       <DocumentDate value={document.uploadedAt} />
                     </td>
@@ -121,11 +132,25 @@ export function DocumentList({
                       <DocumentStatusBadge status={document.status} />
                     </td>
                     <td>
+                      <div className={processingStyles.statusCell}>
+                        <ProcessingStatusBadge summary={document.processing} />
+                        <ProcessingActionButton
+                          document={document}
+                          role={role}
+                          archived={archived}
+                          disabled={disabled}
+                          busy={processingId === document.id}
+                          onProcess={onProcess}
+                        />
+                      </div>
+                    </td>
+                    <td>
                       <DocumentActions
                         document={document}
                         role={role}
                         archived={archived}
                         busy={busy}
+                        disabled={disabled}
                         onAction={onAction}
                       />
                       <DetailsToggle
@@ -138,7 +163,12 @@ export function DocumentList({
                   </tr>
                   <tr id={detailsId} hidden={!open}>
                     <td colSpan={5} className={styles.detailCell}>
-                      {open && <DocumentDetails document={document} />}
+                      {open && (
+                        <>
+                          <DocumentDetails document={document} />
+                          <ProcessingDetails document={document} />
+                        </>
+                      )}
                     </td>
                   </tr>
                 </Fragment>
@@ -155,7 +185,6 @@ export function DocumentList({
             <li key={document.id} className={styles.card}>
               <DocumentName document={document} />
               <div className={styles.cardMetadata}>
-                <span>{formatFileSize(document.sizeBytes)}</span>
                 <span>
                   Uploaded <DocumentDate value={document.uploadedAt} />
                 </span>
@@ -169,15 +198,35 @@ export function DocumentList({
                   onToggle={() => toggle(document.id)}
                 />
               </div>
-              <DocumentActions
-                document={document}
-                role={role}
-                archived={archived}
-                busy={busy}
-                onAction={onAction}
-              />
+              <div className={processingStyles.cardStatus}>
+                <span>Processing</span>
+                <ProcessingStatusBadge summary={document.processing} />
+              </div>
+              <div className={styles.documentActions}>
+                <ProcessingActionButton
+                  document={document}
+                  role={role}
+                  archived={archived}
+                  disabled={disabled}
+                  busy={processingId === document.id}
+                  onProcess={onProcess}
+                />
+                <DocumentActions
+                  document={document}
+                  role={role}
+                  archived={archived}
+                  busy={busy}
+                  disabled={disabled}
+                  onAction={onAction}
+                />
+              </div>
               <div id={detailsId} hidden={!open}>
-                {open && <DocumentDetails document={document} />}
+                {open && (
+                  <>
+                    <DocumentDetails document={document} />
+                    <ProcessingDetails document={document} />
+                  </>
+                )}
               </div>
             </li>
           );

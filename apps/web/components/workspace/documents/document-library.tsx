@@ -6,8 +6,12 @@ import { DocumentFilter, Role } from '@caseflow/schemas';
 import type { AuthRequest } from '../../../hooks/use-authentication';
 import type { WorkspaceNavigate } from '../../../hooks/use-workspace-navigation';
 import type { WorkspaceLocation } from '../../../lib/workspace-location';
-import { ApiError } from '../../../lib/api';
-import { resourceOptions, resourceState } from '../../../lib/resources';
+import { useVerifiedConnection } from '../../../hooks/use-online';
+import { documentLibraryOptions, documentLibraryState } from '../../../lib/processing/resources';
+import { ProcessingConfirmation } from './processing-confirmation';
+import { useProcessingAction } from './use-processing-action';
+import { useProcessingUpdates } from './use-processing-updates';
+import processingStyles from './processing.module.css';
 import { documentLibraryQuery, documentListResource } from '../../../lib/documents/resources';
 import { documentEmptyState, documentFilterLabels } from '../../../lib/documents/presentation';
 import { Button } from '../../ui/button';
@@ -42,9 +46,20 @@ export function DocumentLibrary({
   onAccessRejected: (message: string) => void;
 }) {
   const { filter, page } = documentLibraryQuery(location, role);
-  const query = useQuery(resourceOptions(request, documentListResource(caseId, { filter, page })));
-  const { data, error } = resourceState(query);
-  const denied = query.error instanceof ApiError && [401, 403, 404].includes(query.error.status);
+  const resource = documentListResource(caseId, { filter, page });
+  const query = useQuery(documentLibraryOptions(request, resource));
+  const { data, error, denied, stale } = documentLibraryState(query);
+  const { online, verified } = useVerifiedConnection(query.dataUpdatedAt);
+  const canAct = !!data && !error && verified;
+  const announcement = useProcessingUpdates(resource.path, data, stale || !verified);
+  const processing = useProcessingAction({
+    request,
+    role,
+    archived,
+    enabled: canAct,
+    refresh: () => query.refetch(),
+    onAccessRejected,
+  });
 
   useEffect(() => {
     if (denied && error) {
@@ -56,17 +71,25 @@ export function DocumentLibrary({
   const heading = useRef<HTMLHeadingElement>(null);
   const errorSummary = useRef<HTMLDivElement>(null);
   const uploadButton = useRef<HTMLButtonElement>(null);
-  const actions = useDocumentActions(request, () => query.refetch(), onAccessRejected);
+  const actions = useDocumentActions(
+    request,
+    () => query.refetch(),
+    onAccessRejected,
+    canAct && !processing.busy,
+  );
+  const actionsDisabled = !canAct || actions.busy !== null || processing.busy;
+  const actionError = actions.error ?? processing.error;
+  const confirming = actions.removing !== null || processing.selected !== null;
   useEffect(() => {
-    if (actions.completedAction) {
+    if (actions.completedAction || processing.completedAction) {
       heading.current?.focus();
     }
-  }, [actions.completedAction]);
+  }, [actions.completedAction, processing.completedAction]);
   useEffect(() => {
-    if (actions.error && !actions.removing) {
+    if (actionError && !confirming) {
       errorSummary.current?.focus();
     }
-  }, [actions.error, actions.removing]);
+  }, [actionError, confirming]);
   const closeUpload = () => {
     setUploadOpen(false);
     uploadButton.current?.focus();
@@ -75,6 +98,10 @@ export function DocumentLibrary({
   const navigating = pendingLocation !== null;
   const selectPage = (documentPage: number) =>
     void navigate({ ...location, documentFilter: filter, documentPage });
+
+  if (denied) {
+    return <StatusMessage tone="error">{error}</StatusMessage>;
+  }
 
   return (
     <section aria-labelledby="documents-heading" className={styles.library}>
@@ -100,6 +127,7 @@ export function DocumentLibrary({
           {!archived && (
             <Button
               ref={uploadButton}
+              disabled={actionsDisabled}
               aria-expanded={uploadOpen}
               onClick={() => setUploadOpen((value) => !value)}
             >
@@ -110,16 +138,16 @@ export function DocumentLibrary({
       </header>
       {archived && (
         <p className={styles.archiveHint}>
-          Downloads remain available. Restore this case before uploading, removing, or restoring
-          documents.
+          Downloads remain available. Restore this case before uploading, processing, removing, or
+          restoring documents.
         </p>
       )}
-      {!archived && uploadOpen && (
+      {!archived && uploadOpen && canAct && (
         <UploadPanel key={caseId} target={{ id: caseId, label: caseLabel }} onClose={closeUpload} />
       )}
-      {actions.error && !actions.removing && (
+      {actionError && !confirming && (
         <div ref={errorSummary} tabIndex={-1}>
-          <StatusMessage tone="error">{actions.error}</StatusMessage>
+          <StatusMessage tone="error">{actionError}</StatusMessage>
         </div>
       )}
       <ConfirmDialog
@@ -128,6 +156,7 @@ export function DocumentLibrary({
         confirmLabel="Remove document"
         cancelLabel="Keep document"
         busy={actions.busy !== null}
+        confirmDisabled={!canAct}
         onCancel={actions.cancel}
         onConfirm={actions.confirm}
       >
@@ -138,8 +167,36 @@ export function DocumentLibrary({
           The file and its history are retained. An administrator can restore it later. Previously
           issued download links may work for up to 60 seconds.
         </p>
+        {!canAct && <p>Reconnect and refresh the documents before continuing.</p>}
         {actions.error && <StatusMessage tone="error">{actions.error}</StatusMessage>}
       </ConfirmDialog>
+      <ProcessingConfirmation
+        processing={processing}
+        role={role}
+        archived={archived}
+        enabled={canAct && actions.busy === null}
+      />
+      {(stale || !verified) && data && (
+        <div className={processingStyles.notice}>
+          <p>
+            {!online
+              ? 'You’re offline.'
+              : stale
+                ? 'Document updates are temporarily unavailable.'
+                : 'Verifying document access…'}{' '}
+            Showing the last verified information. Actions are paused until access is verified
+            again.
+          </p>
+          <button
+            type="button"
+            className={styles.actionButton}
+            disabled={!online || query.isFetching}
+            onClick={() => void query.refetch()}
+          >
+            {query.isFetching ? 'Refreshing…' : 'Refresh documents'}
+          </button>
+        </div>
+      )}
       {role !== Role.Staff && (
         <div role="group" aria-label="Document visibility" className={styles.filters}>
           {Object.values(DocumentFilter).map((value) => (
@@ -156,12 +213,17 @@ export function DocumentLibrary({
         </div>
       )}
       {!data ? (
-        error ? (
+        !online ? (
+          <div className={styles.empty}>
+            <h3>You’re offline</h3>
+            <p>Reconnect to load the documents for this case.</p>
+          </div>
+        ) : error ? (
           <div className={styles.empty} role="alert">
             <span className={styles.emptyIcon}>
               <DocumentIcon />
             </span>
-            <h3>{denied ? 'Documents unavailable' : 'Unable to load documents'}</h3>
+            <h3>Unable to load documents</h3>
             <p>{error}</p>
             {!denied && (
               <Button
@@ -186,7 +248,7 @@ export function DocumentLibrary({
         )
       ) : (
         <>
-          <div aria-busy={navigating || query.isFetching}>
+          <div aria-busy={navigating}>
             {!data.items.length ? (
               <div className={styles.empty}>
                 <span className={styles.emptyIcon}>
@@ -207,18 +269,23 @@ export function DocumentLibrary({
                 role={role}
                 archived={archived}
                 busy={actions.busy}
-                onAction={actions.act}
+                onAction={(document, action) => {
+                  processing.dismissError();
+                  actions.act(document, action);
+                }}
+                disabled={actionsDisabled}
+                processingId={processing.busy ? (processing.selected?.id ?? null) : null}
+                onProcess={(document) => {
+                  actions.dismissError();
+                  processing.open(document);
+                }}
               />
             )}
           </div>
           {(data.total > data.pageSize || page > 1) && <Pagination {...data} onPage={selectPage} />}
-          <span className="sr-only" role="status">
-            {navigating
-              ? 'Updating documents…'
-              : `${data.total} ${data.total === 1 ? 'document' : 'documents'} in this view.`}
-          </span>
         </>
       )}
+      <span ref={announcement} className="sr-only" role="status" aria-atomic="true" />
     </section>
   );
 }

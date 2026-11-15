@@ -2,14 +2,54 @@
 
 [Back to README](../README.md)
 
-The database foundation, API dispatcher, processor database interface, and public processing API are implemented. The Python extraction and Textract completion workers are implemented and tested locally; deployment, processing UI, and operational monitoring remain pending. Keep continuous dispatching disabled until the consumer is ready.
+The database foundation, API dispatcher, processor database interface, and public processing API are implemented. The Python extraction and Textract completion workers are implemented and tested locally; deployment and operational monitoring remain pending. The document library displays processing status and authorized start/retry controls. Keep continuous dispatching disabled until the consumer is ready.
 
+- [Processing in the document library](#processing-in-the-document-library)
 - [Processing API](#processing-api)
 - [Job and dispatch records](#job-and-dispatch-records)
 - [Processor database](#processor-database)
 - [API dispatcher](#api-processing-dispatcher)
 - [Dispatcher login](#restricted-dispatcher-login)
 - [SQS permission and configuration](#sqs-permission-and-api-configuration)
+
+## Processing in the document library
+
+Processing appears separately from file availability in the desktop table and mobile cards.
+The labels are Not processed, Queued, Extracting text, Waiting for OCR, Collecting results,
+Ready, Failed, and Cancelled. Details show the extraction method, processed page count,
+latest processing update, and safe failure explanations. No progress percentages, time
+estimates, extracted-text viewer, or previews are shown.
+
+Admin and Super Admin can **Process** unprocessed available documents or **Retry** failed
+and cancelled jobs in current cases. The confirmation names the file and explains applicable
+limits: PDFs up to 20 pages; images up to 10 MB, 10,000 pixels per side, and 40 megapixels;
+and a shared allowance of 100 OCR pages per UTC day. Staff can read status for assigned
+cases. Archived cases and removed documents have no start/retry controls. API authorization
+remains authoritative.
+
+Submissions retain their original `expectedJobId` on uncertain responses. Controls prevent
+repeat submission; the success toast confirms queueing, not completion. Idempotent responses
+that have already advanced are described using their returned status. Conflicts refresh the
+library and ask the user to review its latest state.
+
+The visible library uses one cached list request every five seconds while any displayed job
+is queued or processing. Polling stops when the page is hidden, offline, unmounted, or has no
+active displayed jobs. Reconnection revalidates access before actions resume. Navigation,
+expanded details, and keyboard focus remain stable during background updates.
+
+Temporary refresh failures retain the last verified rows with a stale-data notice and pause
+actions. A 401, 403, or 404 clears protected content through the existing access-rejection
+boundary. One contextual live region announces meaningful job/stage changes; unchanged
+poll results remain silent. Mutations invalidate the affected library, processing summary,
+and audit history. Observed background processing changes also invalidate relevant summaries
+and audit history.
+
+The web tests cover role eligibility, labels, feedback, refresh decisions, stale/access-denied
+states, request sharing, and cache invalidation. Browser verification uses isolated fictional
+fixtures for state transitions, dialogs, keyboard focus, connection failures, navigation, and
+responsive layouts. It does not enable AWS consumption. Apply the processing migrations and
+complete the deployment/recovery prerequisites before expecting jobs to advance in a hosted
+workspace.
 
 ## Processing API
 

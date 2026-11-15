@@ -55,13 +55,20 @@ export function withResourceInvalidation(client: QueryClient, request: AuthReque
         const documents = /^\/cases\/([^/]+)\/(documents|document-uploads)(?:\/|$)/.exec(path);
         if (documents) {
           // Starting uploads and authorizing downloads do not change the library.
-          const libraryChanged = /\/(complete|remove|restore)$/.test(path);
+          const libraryChanged = /\/(complete|remove|restore|processing)$/.test(path);
+          const processingPath = /^\/cases\/[^/]+\/documents\/[^/]+\/processing$/;
+          const documentPath = path.replace(/\/(remove|restore|processing)$/, '/processing');
           void client.invalidateQueries({
             predicate: ({ queryKey }) => {
               const key = String(queryKey[0]);
               return (
                 key.startsWith('/admin/audit') ||
-                (libraryChanged && key.startsWith(`/cases/${documents[1]}/documents?`))
+                (libraryChanged && key.startsWith(`/cases/${documents[1]}/documents?`)) ||
+                (libraryChanged &&
+                  processingPath.test(key) &&
+                  (key === documentPath ||
+                    (documents[2] === 'document-uploads' &&
+                      key.startsWith(`/cases/${documents[1]}/documents/`))))
               );
             },
           });

@@ -11,13 +11,12 @@ Use fictional data for demonstrations and testing.
 - **Cases:** creation, searchable lists, details, editing, and reversible archiving
   with version checks to prevent overwriting concurrent changes.
 - **Documents:** direct S3 uploads with server verification, a paginated library,
-  authorized downloads, and reversible removal.
+  authorized downloads, reversible removal, and processing status with Admin start/retry controls.
 - **Processing foundation:** atomic job/dispatch creation, an opt-in API dispatcher
   for SQS, authorized processing status/start/retry endpoints, restricted processor database functions,
   and Python extraction/completion workers.
 
-The Python workers and reviewable SAM configuration are implemented and tested locally. Deployment, processing UI,
-operational monitoring, and file previews remain pending. Keep continuous dispatching disabled until both consumers and recovery are ready.
+The Python workers and reviewable SAM configuration are implemented and tested locally. Deployment, operational monitoring, and file previews remain pending. Keep continuous dispatching disabled until both consumers and recovery are ready.
 
 ## Stack and structure
 

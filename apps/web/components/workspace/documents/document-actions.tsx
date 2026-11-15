@@ -7,12 +7,14 @@ export function DocumentActions({
   role,
   archived,
   busy,
+  disabled = false,
   onAction,
 }: {
   document: Document;
   role: Role;
   archived: boolean;
   busy: { id: string; action: DocumentAction } | null;
+  disabled?: boolean;
   onAction: (document: Document, action: DocumentAction) => void;
 }) {
   const allowed = documentActions(document, role, archived);
@@ -26,7 +28,7 @@ export function DocumentActions({
             key={action}
             type="button"
             className={styles.actionButton}
-            disabled={busy !== null}
+            disabled={disabled || busy !== null}
             onClick={() => onAction(document, action)}
           >
             {busy?.id === document.id && busy.action === action ? 'Working…' : labels[action]}

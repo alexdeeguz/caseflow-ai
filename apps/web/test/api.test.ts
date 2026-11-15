@@ -173,3 +173,18 @@ test('document conflicts use document-specific safe messages', async () => {
     /This document changed/,
   );
 });
+
+test('processing conflicts use safe processing guidance instead of case-edit instructions', async () => {
+  mock.method(globalThis, 'fetch', async () =>
+    Response.json(
+      { code: 'PROCESSING_CONFLICT', error: 'private provider details' },
+      { status: 409 },
+    ),
+  );
+  await assert.rejects(
+    apiRequest('token', '/cases/case/documents/document/processing', { parse: () => null }),
+    (error: ApiError) =>
+      error.status === 409 &&
+      error.message === 'Processing changed. Review the latest status before trying again.',
+  );
+});

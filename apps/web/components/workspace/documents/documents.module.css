@@ -85,20 +85,20 @@
   background: var(--brand-paper);
 }
 .table th:first-child {
-  width: 36%;
+  width: 31%;
   border-top-left-radius: var(--radius-control);
 }
 .table th:nth-child(2) {
-  width: 11%;
+  width: 16%;
 }
 .table th:nth-child(3) {
-  width: 18%;
-}
-.table th:nth-child(4) {
   width: 15%;
 }
-.table th:last-child {
+.table th:nth-child(4) {
   width: 20%;
+}
+.table th:last-child {
+  width: 18%;
   border-top-right-radius: var(--radius-control);
 }
 .table td {
@@ -291,7 +291,7 @@
 .mobileList {
   display: none;
 }
-@container (max-width: 52rem) {
+@container (max-width: 56rem) {
   .desktopList {
     display: none;
   }
