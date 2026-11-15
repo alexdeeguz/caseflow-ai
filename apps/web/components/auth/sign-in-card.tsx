@@ -1,5 +1,7 @@
 'use client';
 
+import { Suspense } from 'react';
+
 import { useAuthentication } from '../../hooks/use-authentication';
 import { Button } from '../ui/button';
 import { StatusMessage } from '../ui/status-message';
@@ -28,13 +30,15 @@ export function SignInCard() {
 
   if (identity) {
     return (
-      <Workspace
-        key={`${identity.id}:${identity.role}`}
-        user={identity}
-        request={request}
-        signOut={signOut}
-        refreshProfile={refreshProfile}
-      />
+      <Suspense fallback={<SessionLoading />}>
+        <Workspace
+          key={`${identity.id}:${identity.role}`}
+          user={identity}
+          request={request}
+          signOut={signOut}
+          refreshProfile={refreshProfile}
+        />
+      </Suspense>
     );
   }
 

@@ -2,7 +2,9 @@ import { z } from 'zod';
 import {
   caseDetailSchema,
   casePageSchema,
-  pageQuerySchema,
+  caseCreateSchema,
+  caseQuerySchema,
+  caseSchema,
   successSchema,
 } from '@caseflow/schemas';
 
@@ -11,11 +13,20 @@ import type { RegisterProtectedRoute } from './protected-route.js';
 
 export function registerCaseRoutes(route: RegisterProtectedRoute) {
   route({
+    method: 'POST',
+    url: '/cases',
+    operation: Operation.CreateCase,
+    successStatus: 201,
+    body: caseCreateSchema,
+    output: caseSchema,
+  });
+
+  route({
     method: 'GET',
     url: '/cases',
     operation: Operation.ListCases,
     output: casePageSchema,
-    query: pageQuerySchema,
+    query: caseQuerySchema,
   });
 
   route({

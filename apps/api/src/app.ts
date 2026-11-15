@@ -26,7 +26,7 @@ export async function buildApp(
 
   await app.register(cors, {
     origin: config.webOrigin,
-    methods: ['GET', 'PATCH', 'PUT', 'DELETE'],
+    methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE'],
     allowedHeaders: ['Authorization', 'Content-Type'],
     credentials: false,
   });

@@ -1,6 +1,6 @@
 # CaseFlow AI
 
-TypeScript monorepo with Microsoft Entra sign-in, persistent profiles, role-based permissions, fictional case assignments, and audit history. Full case management and document processing are not implemented.
+TypeScript monorepo with Microsoft Entra sign-in, persistent profiles, role-based permissions, case creation and browsing, Staff assignments, and audit history. Case editing, archiving, and document processing are not implemented.
 
 ## Structure
 
@@ -8,20 +8,21 @@ TypeScript monorepo with Microsoft Entra sign-in, persistent profiles, role-base
 - `apps/api`: Fastify API with database-enforced user and case permissions.
 - `packages/schemas`: shared strict Zod request/response contracts and TypeScript types.
 
-Shared domain values live in `packages/schemas/src/constants` (roles, error codes,
+Shared domain values live in `packages/schemas/src/constants` (roles, case statuses and limits, error codes,
 and audit actions). Request/response schemas and inferred types live in
 `packages/schemas/src/contracts`, grouped by feature. Import both through
 `@caseflow/schemas`; the package entry point only re-exports its public API.
 
 API database code lives in `apps/api/src/database`: connection/transaction lifecycle
 in `index.ts`, operation identifiers and access requirements in `operations.ts`,
-parameterized queries in `queries.ts`, connection URL validation in
+operation dispatch and shared queries in `queries.ts`, case queries in `cases.ts`, connection URL validation in
 `connection-config.ts`, and safe database-error translation in `errors.ts`. Application errors are defined separately in `apps/api/src/errors.ts`.
 
 Frontend workspace components live in `apps/web/components/workspace`; case list,
-detail, and assignment-picker components are grouped under `cases/`. Reusable
+creation form, status badge, detail, and assignment-picker components are grouped under `cases/`. Reusable
 controls and loading/pagination components live in `components/ui`. Constants used
-by one component stay with that component.
+by one component stay with that component. Shared workspace navigation constants live in
+`lib/constants/navigation.ts`; URL parsing/serialization lives in `lib/workspace-location.ts`.
 
 ## Setup
 
@@ -118,6 +119,7 @@ or assignments. Migration and seed commands never reset the existing database.
 | --------------------------------------- | --------------------- | --------------------- | --------------------- |
 | Edit own display name                   | Yes                   | Yes                   | Yes                   |
 | View cases                              | Assigned only         | All                   | All                   |
+| Create cases                            | No                    | Yes                   | Yes                   |
 | Assign/remove Staff                     | No                    | Yes                   | Yes                   |
 | Enable/disable Staff                    | No                    | Yes                   | Yes                   |
 | Promote/demote or enable/disable Admins | No                    | No                    | Yes                   |
@@ -148,14 +150,42 @@ This serializes the demo's small administration workload; ordinary reads remain
 concurrent. New authorization checks observe committed permission changes. Data
 already delivered to a browser cannot be recalled.
 
+### Creating and viewing cases
+
+Admin and Super Admin users can choose **Create case** in the Cases workspace.
+The form requires a case title (up to 200 characters) and fictional client name
+(up to 100). Incident date and summary (up to 2,000 characters) are optional.
+Status defaults to Intake; Active and Closed are also available at creation.
+Editing existing case information or changing status is not yet supported.
+
+The server generates the UUID, case number, creation time, and creator identity.
+Case numbers use a database sequence, such as `CF-000001`; gaps are expected after
+rollbacks or repeated seed runs. New cases have no Staff assignments. After saving,
+the case details screen provides the existing assignment controls.
+
+The case list supports case-insensitive literal substring search across case number,
+title, and client name, plus a status filter. Results and totals obey case permissions
+and are ordered newest first, with UUID as a stable tie-breaker. Incident dates are
+calendar dates, so they do not shift with the viewer's time zone.
+
+Workspace URLs retain the selected tab, case, search, status, and page, allowing
+bookmarks, refresh, and browser Back/Forward. Form drafts are not stored in URLs.
+The desktop list uses a table; narrow screens use case cards.
+
+For an existing local installation, run `npm run db:migrate` before starting the
+updated API. The additive migration preserves existing profiles, case IDs, assignments,
+and audit events, and fills the seeded cases with fictional client metadata.
+Legacy cases have no recorded creator; newly created cases always do. No reset or
+credential rotation is required.
+
 ### API contracts and verification
 
 Route definitions are grouped by feature under `apps/api/src/routes`:
 
 - `profile.ts`: current-user profile retrieval and updates.
 - `users.ts`: administrative user listing, role changes, and account access.
-- `cases.ts`: case listing/details and Staff assignments.
-- `audit.ts`: permission audit history.
+- `cases.ts`: case creation, searchable listing, details, and Staff assignments.
+- `audit.ts`: case, permission, and profile audit history.
 - `protected-route.ts`: shared bearer-token verification and request/response validation.
 
 `app.ts` configures Fastify, CORS, error handling, and registers the feature routes.
@@ -169,7 +199,8 @@ All endpoints require a Microsoft bearer access token. Shared contracts live in
 | ---------------------------------------------------- | --------------------------------------------- |
 | `GET /me`                                            | Provision once and return the current profile |
 | `PATCH /me`                                          | Change own display name only                  |
-| `GET /cases`, `GET /cases/:id`                       | List accessible cases and read details        |
+| `POST /cases`                                        | Admin/Super Admin creates a case; returns 201 |
+| `GET /cases`, `GET /cases/:id`                       | Search accessible cases and read details      |
 | `GET /admin/users`                                   | Search/paginate users; optional role filter   |
 | `PATCH /admin/users/:id/role`                        | Super Admin changes Staff/Admin role          |
 | `PATCH /admin/users/:id/access`                      | Enable/disable permitted target               |
@@ -177,6 +208,11 @@ All endpoints require a Microsoft bearer access token. Shared contracts live in
 | `GET /admin/audit`                                   | Paginated audit history                       |
 
 Lists accept `page` (default 1) and `pageSize` (default 25, maximum 100).
+`GET /cases` also accepts `search` (up to 200 characters) and optional `status`
+(`intake`, `active`, or `closed`). `POST /cases` accepts only `title`, `clientName`,
+`incidentDate` (`YYYY-MM-DD` or null), `status`, and `summary`; the last three are
+optional. Creation commits with a `case.created` audit event and rechecks current
+admin authorization inside the permission transaction lock.
 Errors contain stable `code` and safe `error` text. Disabled accounts return
 `403 ACCOUNT_DISABLED`; ordinary permission denials return `403 FORBIDDEN`;
 inaccessible cases return 404; database outages fail closed with 503.

@@ -1,4 +1,5 @@
 export * from './constants/roles.js';
+export * from './constants/case-statuses.js';
 export * from './constants/error-codes.js';
 export * from './constants/audit-actions.js';
 export * from './contracts/common.js';

@@ -11,6 +11,9 @@ import { LoadState } from '../../ui/load-state';
 import { RoleBadge } from '../role-badge';
 import { StaffPicker } from './staff-picker';
 import { caseDetailResource } from '../../../lib/workspace-resources';
+import { CaseStatusBadge } from './case-status-badge';
+import { formatIncidentDate } from '../../../lib/case-dates';
+import styles from './cases.module.css';
 
 export function CaseDetail({
   id,
@@ -51,8 +54,35 @@ export function CaseDetail({
         <LoadState error={loadError} />
       ) : (
         <>
-          <h1 className="mt-6">{data.case.title}</h1>
-          <p>{data.case.summary}</p>
+          <header className="mt-8">
+            <p className={styles.eyebrow}>{data.case.caseNumber}</p>
+            <div className="flex flex-wrap items-center gap-4">
+              <h1 className="break-words min-w-0">{data.case.title}</h1>
+              <CaseStatusBadge status={data.case.status} />
+            </div>
+          </header>
+          <dl className={styles.metadata}>
+            <div>
+              <dt>Client</dt>
+              <dd>{data.case.clientName}</dd>
+            </div>
+            <div>
+              <dt>Incident date</dt>
+              <dd>{formatIncidentDate(data.case.incidentDate)}</dd>
+            </div>
+            <div>
+              <dt>Created</dt>
+              <dd>
+                <time dateTime={data.case.createdAt}>
+                  {new Date(data.case.createdAt).toLocaleString()}
+                </time>
+              </dd>
+            </div>
+          </dl>
+          <h2 className="font-semibold text-lg">Summary</h2>
+          <p className="mt-3 whitespace-pre-wrap break-words text-ink-soft">
+            {data.case.summary || 'No summary provided.'}
+          </p>
           {user.role !== Role.Staff && (
             <>
               <h2 className="mt-8">Assigned people</h2>

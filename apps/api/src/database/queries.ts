@@ -2,6 +2,7 @@ import { ErrorCode, Role, type Audit, type User } from '@caseflow/schemas';
 import type { PoolClient } from 'pg';
 import { AppError } from '../errors.js';
 import { Operation, operationRequiresAdmin } from './operations.js';
+import { createCase, getCase, listCases, setCaseAssignment } from './cases.js';
 
 export const userColumns = 'id, display_name as "displayName", role, active';
 
@@ -68,54 +69,18 @@ export async function executeOperation(
       return { items: result.rows, total: count.rows[0].total, page, pageSize };
     }
 
-    case Operation.ListCases: {
-      const count = await client.query('select count(*)::int as total from caseflow.cases');
-      const result = await client.query(
-        `select id, title, summary from caseflow.cases
-         order by title, id limit $1 offset $2`,
-        [pageSize, offset],
-      );
+    case Operation.CreateCase:
+      return createCase(client, input);
 
-      return { items: result.rows, total: count.rows[0].total, page, pageSize };
-    }
+    case Operation.ListCases:
+      return listCases(client, input);
 
-    case Operation.GetCase: {
-      const result = await client.query(
-        'select id, title, summary from caseflow.cases where id = $1',
-        [input.id],
-      );
-      const caseRecord = result.rows[0];
-
-      if (!caseRecord) {
-        throw new AppError(ErrorCode.NotFound, 404, 'Case not found.');
-      }
-
-      let assignedUsers: User[] = [];
-
-      if (isAdmin) {
-        const assignments = await client.query<User>(
-          `select ${userColumns}
-           from caseflow.users
-           where id in (select user_id from caseflow.assignments where case_id = $1)
-           order by display_name, id`,
-          [input.id],
-        );
-
-        assignedUsers = assignments.rows;
-      }
-
-      return { case: caseRecord, assignedUsers };
-    }
+    case Operation.GetCase:
+      return getCase(client, input.id, isAdmin);
 
     case Operation.AssignCase:
     case Operation.UnassignCase:
-      await client.query('select caseflow.set_assignment($1, $2, $3)', [
-        input.id,
-        input.userId,
-        operation === Operation.AssignCase,
-      ]);
-
-      return { success: true };
+      return setCaseAssignment(client, input, operation === Operation.AssignCase);
 
     case Operation.ListAudit: {
       const count = await client.query('select count(*)::int as total from caseflow.audit_events');

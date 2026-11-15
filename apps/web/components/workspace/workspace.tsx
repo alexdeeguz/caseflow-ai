@@ -1,15 +1,11 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { QueryClientProvider, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useMemo, useState } from 'react';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { Role, type User } from '@caseflow/schemas';
 
 import type { AuthRequest } from '../../hooks/use-authentication';
-import {
-  createResourceClient,
-  preloadResource,
-  withResourceInvalidation,
-} from '../../lib/resources';
+import { createResourceClient, withResourceInvalidation } from '../../lib/resources';
 import { RoleBadge } from './role-badge';
 import { Profile } from './profile';
 import { Cases } from './cases/cases';
@@ -18,7 +14,9 @@ import { AuditHistory } from './audit';
 import { WorkspaceFrame } from './workspace-frame';
 import { WorkspaceNavigation } from './workspace-navigation';
 import { SignOutIcon } from './workspace-icons';
-import { WorkspaceTab, tabLabels, tabResource } from './navigation';
+import { WorkspaceTab, tabLabels } from './navigation';
+import { useWorkspaceNavigation } from '../../hooks/use-workspace-navigation';
+import { StatusMessage } from '../ui/status-message';
 import styles from './workspace.module.css';
 
 interface WorkspaceProps {
@@ -46,33 +44,11 @@ export function Workspace(props: WorkspaceProps) {
 }
 
 function WorkspaceContent({ user, request, signOut, refreshProfile }: WorkspaceProps) {
-  const client = useQueryClient();
-  const [tab, setTab] = useState<WorkspaceTab>(WorkspaceTab.Cases);
-  const [pendingTab, setPendingTab] = useState<WorkspaceTab | null>(null);
-  const navigation = useRef(0);
+  const { location, pending, navigate } = useWorkspaceNavigation(request, refreshProfile);
+  const tab = location.tab;
+  const pendingTab = pending?.tab ?? null;
 
-  async function selectTab(nextTab: WorkspaceTab) {
-    const sequence = ++navigation.current;
-
-    if (nextTab === tab) {
-      setPendingTab(null);
-      return;
-    }
-
-    setPendingTab(nextTab);
-
-    const resource = tabResource(nextTab);
-
-    await Promise.all([
-      refreshProfile(),
-      resource ? preloadResource(client, request, resource) : Promise.resolve(),
-    ]);
-
-    if (sequence === navigation.current) {
-      setTab(nextTab);
-      setPendingTab(null);
-    }
-  }
+  const selectTab = (nextTab: WorkspaceTab) => navigate({ ...location, tab: nextTab, case: null });
 
   return (
     <WorkspaceFrame
@@ -104,7 +80,12 @@ function WorkspaceContent({ user, request, signOut, refreshProfile }: WorkspaceP
       <span role="status" className="sr-only">
         {pendingTab ? `Opening ${tabLabels[pendingTab]}…` : ''}
       </span>
-      {tab === WorkspaceTab.Cases && <Cases request={request} user={user} />}
+      {tab === WorkspaceTab.Cases && (
+        <Cases request={request} user={user} location={location} navigate={navigate} />
+      )}
+      {user.role === Role.Staff && (tab === WorkspaceTab.Users || tab === WorkspaceTab.Audit) && (
+        <StatusMessage tone="error">You do not have permission to view this page.</StatusMessage>
+      )}
       {tab === WorkspaceTab.Profile && (
         <Profile user={user} request={request} onSaved={refreshProfile} />
       )}

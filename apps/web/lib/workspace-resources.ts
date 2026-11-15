@@ -4,12 +4,18 @@ import {
   casePageSchema,
   userPageSchema,
   type Role,
+  type CaseQuery,
 } from '@caseflow/schemas';
 
-export const caseListResource = (page = 1) => ({
-  path: `/cases?page=${page}`,
-  schema: casePageSchema,
-});
+export function caseListResource({ page = 1, search = '', status }: Partial<CaseQuery> = {}) {
+  const query = new URLSearchParams({ page: String(page), search });
+
+  if (status) {
+    query.set('status', status);
+  }
+
+  return { path: `/cases?${query}`, schema: casePageSchema };
+}
 
 export const caseDetailResource = (id: string) => ({
   path: `/cases/${id}`,

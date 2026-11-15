@@ -8,7 +8,8 @@ import type { Operation } from '../database/operations.js';
 import { AppError } from '../errors.js';
 
 interface ProtectedRouteDefinition {
-  method: 'GET' | 'PATCH' | 'PUT' | 'DELETE';
+  method: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
+  successStatus?: 200 | 201;
   url: string;
   operation: Operation;
   output: z.ZodType;
@@ -23,6 +24,7 @@ export function createProtectedRouteRegistrar(
 ) {
   return function registerProtectedRoute({
     method,
+    successStatus = 200,
     url,
     operation,
     output,
@@ -63,7 +65,7 @@ export function createProtectedRouteRegistrar(
           );
         }
 
-        return reply.send(parsed.data);
+        return reply.code(successStatus).send(parsed.data);
       },
     });
   };

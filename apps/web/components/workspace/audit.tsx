@@ -10,6 +10,7 @@ import { Pagination } from '../ui/pagination';
 import { auditListResource } from '../../lib/workspace-resources';
 
 const labels: Readonly<Record<string, string>> = {
+  [AuditAction.CaseCreated]: 'Case created',
   [AuditAction.ProfileUpdated]: 'Profile updated',
   [AuditAction.UserRoleChanged]: 'Role changed',
   [AuditAction.UserAccessChanged]: 'Account access changed',
@@ -25,8 +26,8 @@ export function AuditHistory({ request }: { request: AuthRequest }) {
     <section>
       <h1>Audit history</h1>
       <p>
-        Permission and profile changes, newest first. Actor IDs remain stable when display names
-        change.
+        Case, permission, and profile changes, newest first. Actor IDs remain stable when display
+        names change.
       </p>
       {!data ? (
         <LoadState error={error} />

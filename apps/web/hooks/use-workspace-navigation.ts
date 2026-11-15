@@ -1,0 +1,72 @@
+'use client';
+
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
+import type { AuthRequest } from './use-authentication';
+import {
+  parseWorkspaceLocation,
+  workspaceHref,
+  type WorkspaceLocation,
+} from '../lib/workspace-location';
+import { preloadResource } from '../lib/resources';
+import { locationResource } from '../components/workspace/navigation';
+
+export function useWorkspaceNavigation(request: AuthRequest, refreshProfile: () => Promise<void>) {
+  const params = useSearchParams();
+  const serialized = params.toString();
+  const location = useMemo(
+    () => parseWorkspaceLocation(new URLSearchParams(serialized)),
+    [serialized],
+  );
+  const router = useRouter();
+  const client = useQueryClient();
+  const lifecycle = useRef({ sequence: 0 });
+  const [pendingNavigation, setPending] = useState<{
+    from: string;
+    destination: WorkspaceLocation;
+  } | null>(null);
+
+  useEffect(() => {
+    const state = lifecycle.current;
+    const cancel = () => {
+      state.sequence++;
+      setPending(null);
+    };
+
+    window.addEventListener('popstate', cancel);
+    return () => {
+      state.sequence++;
+      window.removeEventListener('popstate', cancel);
+    };
+  }, [serialized]);
+
+  const navigate = useCallback(
+    async (next: WorkspaceLocation, replace = false) => {
+      const current = ++lifecycle.current.sequence;
+
+      if (workspaceHref(next) === workspaceHref(location)) {
+        setPending(null);
+        return;
+      }
+
+      setPending({ from: serialized, destination: next });
+      const resource = locationResource(next);
+
+      await Promise.all([
+        refreshProfile(),
+        resource ? preloadResource(client, request, resource) : Promise.resolve(),
+      ]);
+
+      if (lifecycle.current.sequence === current) {
+        router[replace ? 'replace' : 'push'](workspaceHref(next), { scroll: false });
+        setPending(null);
+      }
+    },
+    [client, location, refreshProfile, request, router, serialized],
+  );
+
+  const pending = pendingNavigation?.from === serialized ? pendingNavigation.destination : null;
+
+  return { location, pending, navigate };
+}

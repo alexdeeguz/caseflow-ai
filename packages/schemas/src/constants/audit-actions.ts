@@ -1,4 +1,5 @@
 export const AuditAction = {
+  CaseCreated: 'case.created',
   ProfileUpdated: 'profile.updated',
   UserRoleChanged: 'user.role_changed',
   UserAccessChanged: 'user.access_changed',
