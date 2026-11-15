@@ -8,6 +8,7 @@ import { getAuthClient } from '../lib/auth';
 import { getPublicConfig } from '../lib/config';
 import { apiRequest, ApiError, type Parser } from '../lib/api';
 import { isAccessRejected } from '../lib/auth-errors';
+import { rememberWorkspaceShell } from '../lib/session-presentation';
 
 const permissionsChangedEvent = 'caseflow:permissions';
 
@@ -34,6 +35,7 @@ export function useAuthentication() {
       })
       .catch(() => {
         if (live) {
+          rememberWorkspaceShell(false);
           setError('Microsoft sign-in could not initialize. Please reload.');
         }
       });
@@ -85,6 +87,7 @@ export function useAuthentication() {
         if (error instanceof ApiError) {
           if (error.status === 401 || error.code === ErrorCode.AccountDisabled) {
             lifecycle.current.generation++;
+            rememberWorkspaceShell(false);
             setIdentity(null);
             setError(error.message);
           } else if (error.status === 403 && path !== '/me') {
@@ -121,6 +124,7 @@ export function useAuthentication() {
           error.name !== 'AbortError'
         ) {
           if (isAccessRejected(error)) {
+            rememberWorkspaceShell(false);
             setIdentity(null);
           }
           setError(error.message);
@@ -158,17 +162,20 @@ export function useAuthentication() {
     try {
       const client = await getAuthClient();
 
+      rememberWorkspaceShell(true);
       await client.loginRedirect({
         scopes: [getPublicConfig().apiScope],
         prompt: 'select_account',
       });
     } catch {
+      rememberWorkspaceShell(false);
       setError('Microsoft sign-in could not finish. Please try again.');
       setBusy(false);
     }
   }
 
   async function signOut() {
+    rememberWorkspaceShell(false);
     lifecycle.current.generation++;
     setIdentity(null);
     setBusy(true);
@@ -182,6 +189,17 @@ export function useAuthentication() {
       setBusy(false);
     }
   }
+
+  const hasIdentity = identity !== null;
+  const hasAccount = account !== null;
+
+  useEffect(() => {
+    if (hasIdentity) {
+      rememberWorkspaceShell(true);
+    } else if (ready && !hasAccount) {
+      rememberWorkspaceShell(false);
+    }
+  }, [hasIdentity, hasAccount, ready]);
 
   const restoring = !error && (!ready || (account !== null && identity === null));
 

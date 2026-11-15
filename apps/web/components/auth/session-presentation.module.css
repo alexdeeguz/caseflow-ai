@@ -1,0 +1,11 @@
+.workspace {
+  display: none;
+}
+
+:global(html[data-workspace-shell='true']) .initializing .signIn {
+  display: none;
+}
+
+:global(html[data-workspace-shell='true']) .initializing .workspace {
+  display: block;
+}

@@ -9,6 +9,7 @@ import { AuthShell } from './auth-shell';
 import { Workspace } from '../workspace/workspace';
 import { AuthPanel } from './auth-panel';
 import { SessionLoading } from './session-loading';
+import styles from './session-presentation.module.css';
 
 export function SignInCard() {
   const {
@@ -24,7 +25,7 @@ export function SignInCard() {
     request,
   } = useAuthentication();
 
-  if (restoring) {
+  if (restoring && ready) {
     return <SessionLoading />;
   }
 
@@ -42,7 +43,7 @@ export function SignInCard() {
     );
   }
 
-  return (
+  const signInView = (
     <AuthShell>
       <AuthPanel
         eyebrow="MICROSOFT SIGN-IN"
@@ -53,7 +54,11 @@ export function SignInCard() {
             : 'Use your work, school or personal Microsoft account to get started.'
         }
       >
-        {!ready && !error && <StatusMessage>Preparing sign-in…</StatusMessage>}
+        {!ready && !error && (
+          <span role="status" className="sr-only">
+            Preparing sign-in…
+          </span>
+        )}
         {account && (
           <p className="break-words text-sm leading-6 text-ink-soft">
             Signed in as <strong className="text-ink">{account.name ?? account.username}</strong>
@@ -69,7 +74,11 @@ export function SignInCard() {
             </Button>
           </>
         ) : (
-          <Button disabled={!ready || busy} onClick={() => void signIn()}>
+          <Button
+            disabled={!ready || busy}
+            aria-busy={!ready || busy}
+            onClick={() => void signIn()}
+          >
             <svg aria-hidden="true" width="18" height="18" viewBox="0 0 18 18" fill="currentColor">
               <path d="M0 0h8v8H0zM10 0h8v8h-8zM0 10h8v8H0zM10 10h8v8h-8z" />
             </svg>
@@ -79,5 +88,16 @@ export function SignInCard() {
         {error && <StatusMessage tone="error">{error}</StatusMessage>}
       </AuthPanel>
     </AuthShell>
+  );
+
+  return (
+    <div className={!ready && !error ? styles.initializing : undefined}>
+      <div className={styles.signIn}>{signInView}</div>
+      {!ready && !error && (
+        <div className={styles.workspace}>
+          <SessionLoading />
+        </div>
+      )}
+    </div>
   );
 }

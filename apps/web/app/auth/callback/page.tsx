@@ -6,6 +6,7 @@ import { broadcastResponseToMainFrame } from '@azure/msal-browser/redirect-bridg
 import { AuthShell } from '../../../components/auth/auth-shell';
 import { AuthPanel } from '../../../components/auth/auth-panel';
 import { StatusMessage } from '../../../components/ui/status-message';
+import { SessionLoading } from '../../../components/auth/session-loading';
 
 let completion: Promise<void> | undefined;
 
@@ -18,28 +19,26 @@ export default function AuthCallback() {
     void completion.catch(() => setFailed(true));
   }, []);
 
+  if (!failed) {
+    return <SessionLoading />;
+  }
+
   return (
     <AuthShell>
       <AuthPanel
         eyebrow="MICROSOFT SIGN-IN"
-        title={failed ? 'Let’s try that again.' : 'One moment.'}
+        title="Let’s try that again."
         description="Completing your return to CaseFlow."
       >
-        <StatusMessage tone={failed ? 'error' : 'info'}>
-          {failed ? (
-            <>
-              Sign-in could not finish.{' '}
-              <Link
-                className="font-semibold underline underline-offset-4 focus-visible:outline-brand"
-                href="/"
-              >
-                Return to CaseFlow
-              </Link>{' '}
-              and try again.
-            </>
-          ) : (
-            'Completing Microsoft sign-in…'
-          )}
+        <StatusMessage tone="error">
+          Sign-in could not finish.{' '}
+          <Link
+            className="font-semibold underline underline-offset-4 focus-visible:outline-brand"
+            href="/"
+          >
+            Return to CaseFlow
+          </Link>{' '}
+          and try again.
         </StatusMessage>
       </AuthPanel>
     </AuthShell>
