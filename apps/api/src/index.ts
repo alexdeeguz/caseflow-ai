@@ -14,5 +14,6 @@ try {
   await server.listen({ port, host: process.env.API_HOST ?? '127.0.0.1' });
 } catch (error) {
   server.log.error(error);
+  await server.close();
   process.exitCode = 1;
 }

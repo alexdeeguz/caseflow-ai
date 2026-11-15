@@ -33,7 +33,7 @@ cd caseflow-ai
 npm install
 cp apps/web/.env.example apps/web/.env.local
 cp apps/api/.env.example apps/api/.env
-# Complete the local database setup below before starting the app.
+# Complete either the local or hosted database setup below before starting the app.
 npm run dev
 ```
 
@@ -113,7 +113,156 @@ for the request transaction. It is not a defense against a compromised API proce
 The seed command adds three fictional cases idempotently. It does not reset users
 or assignments. Migration and seed commands never reset the existing database.
 
-### Roles and administration
+## Hosted database
+
+The API can use hosted Supabase PostgreSQL while the frontend and API run locally.
+Local and hosted databases are independent: migrations create the schema, not a copy
+of local users, assignments, cases, or document metadata. Microsoft Entra remains
+the authentication provider. No Supabase browser keys are needed.
+
+### Project and migrations
+
+1. Create a Supabase project in the same region as the application's storage when
+   available. Disable the Data API and automatic table exposure for this setup;
+   never expose the `caseflow` schema.
+2. From **Database → Settings → SSL Configuration**, enable SSL enforcement and
+   download the CA certificate. Applying enforcement briefly restarts the database.
+   Store the certificate at a stable path outside the repository.
+3. Authenticate the pinned CLI and review pending migrations before applying them:
+
+   ```sh
+   export SUPABASE_TELEMETRY_DISABLED=1
+   npx supabase login
+   npx supabase link --project-ref PROJECT_REF
+   npx supabase db push --remote=PROJECT_REF --dry-run --skip-vault
+   npx supabase db push --remote=PROJECT_REF --skip-vault
+   ```
+
+   Review the target and confirmation before applying. CLI v3 defaults to local
+   targets; explicit `--remote=PROJECT_REF` avoids ambiguity. Do not reset either
+   database. Hosted seeding is optional; it is not part of migration application.
+
+### Runtime connection
+
+Use **Connect → Session pooler** for the persistent Node API. Copy the exact pooler
+host from the dashboard; it cannot be derived from the region alone. The session
+port is `5432`, and the database is `postgres`.
+
+Connect with an administrator through `psql` using TLS verification, then set the
+restricted role's password interactively:
+
+```text
+\password caseflow_runtime
+```
+
+This role already exists after migration. Use a separate password from the
+administrator's password. The `\password` prompt avoids plaintext passwords in
+SQL snippets and shell history.
+
+Set the ignored `apps/api/.env` using URL-encoded credentials and the actual
+absolute certificate path:
+
+```dotenv
+DATABASE_URL=postgresql://caseflow_runtime.PROJECT_REF:URL_ENCODED_PASSWORD@POOLER_HOST:5432/postgres?sslmode=verify-full&sslrootcert=/absolute/path/supabase-ca.crt
+```
+
+The shared pooler username includes the project reference; PostgreSQL still sees
+`caseflow_runtime` as the role. Configuration accepts this qualified username only
+on Supabase pooler hosts. Administrator usernames, unverified remote connections,
+and query parameters that override credentials are rejected.
+
+Restart the API after changing configuration. Keep passwords, full connection
+URLs, and private environment files out of screenshots, logs, and Git. The CA
+certificate is a trust anchor, not a database password. The API retains its bounded
+five-connection pool and transaction-local identity settings.
+
+### First sign-in and verification
+
+A first authenticated `GET /me` creates an active Staff profile in the selected
+database. Existing local privileges do not carry over. In hosted Studio, choose
+**Table Editor → caseflow → users**, or use an administrative SQL session:
+
+```sql
+select id, display_name, role, active, created_at
+from caseflow.users
+order by created_at desc;
+```
+
+To bootstrap the verified application user, run the same audited function used
+by the operator command:
+
+```sql
+select caseflow.operator_set_role('APPLICATION_USER_UUID'::uuid, 'super_admin');
+```
+
+Alternatively, configure a separate hosted `OPERATOR_DATABASE_URL` in the ignored
+`apps/api/.env.operator` and use `npm run operator:role -- USER_UUID super_admin`.
+Check its target first: a local operator connection changes only local roles.
+Never place operator credentials in `apps/api/.env` or the deployed API. The
+operator function protects the last active Super Admin. Disable users to block
+access; deleting a profile allows automatic provisioning on the next sign-in.
+
+Verify hosted configuration with:
+
+```sh
+npx supabase ssl-enforcement get --remote=PROJECT_REF --experimental
+npx supabase db advisors --remote=PROJECT_REF --type security --level warn
+npx supabase db query --remote=PROJECT_REF --read-only \
+  "select version from supabase_migrations.schema_migrations order by version"
+```
+
+Then verify profile loading, creation of a fictional case, upload, download,
+removal/restoration, and audit history through the application. A successful
+Microsoft sign-in alone does not verify the database connection. Download URLs
+are credentials; do not log or save them. If Chrome reports `ERR_BLOCKED_BY_CLIENT`,
+check the browser separately from API authorization and S3 response validation.
+
+### Local tests and switching environments
+
+`npm run db:configure` is **local-only** and overwrites the API's `DATABASE_URL`.
+Do not run it while expecting to retain hosted configuration. Keep local and hosted
+credentials in separately protected configuration and restart the API when switching.
+Existing uploaded S3 objects do not automatically acquire metadata in a new database.
+
+Integration tests create and drop disposable databases. They require explicit
+**local** operator and runtime URLs pointing at the same local server; the runtime
+username must be `caseflow_runtime`. Their fixture rejects hosted targets. When
+`apps/api/.env` targets hosted Supabase, supply local test credentials as shell
+environment variables before `npm run test:integration`; shell values take
+precedence over the environment files. Do not rotate a shared local role password
+just to run tests. Use an isolated PostgreSQL instance when local credentials are
+unavailable.
+
+### Backup, recovery, and deployment
+
+On the Free plan, maintain private exports rather than assuming paid-plan backup
+retention. From an authorized operator session, an application-data export is:
+
+```sh
+umask 077
+npx supabase db dump --remote=PROJECT_REF --schema caseflow \
+  --data-only --use-copy --file /private/backup/location/caseflow-data.sql
+```
+
+Keep exports outside Git and encrypt off-device copies. Reapply the versioned
+migrations to an isolated database, restore the data export with an administrative
+client, and verify row counts, constraints, sequences, and permissions before
+relying on recovery. Re-establish runtime passwords separately. Database backups
+contain document metadata, not S3 file bytes; retain the referenced S3 versions.
+Never test a restore against the working database.
+
+Before deploying the API, provision runtime credentials through the hosting
+platform's secret store, mount the trusted CA certificate, and establish credential
+rotation, scheduled backups, recovery drills, and monitoring for database capacity,
+connections, and application failures. These operational services are not enabled
+by a local `.env` configuration or a one-time backup. Account for Free-plan project
+pausing when preparing demos. No paid-plan upgrade is required by these instructions.
+
+References: [connection modes](https://supabase.com/docs/guides/database/connecting-to-postgres),
+[SSL enforcement](https://supabase.com/docs/guides/platform/ssl-enforcement), and
+[backup guidance](https://supabase.com/docs/guides/platform/backups).
+
+## Roles and administration
 
 | Capability                              | Staff                 | Admin                 | Super Admin           |
 | --------------------------------------- | --------------------- | --------------------- | --------------------- |
@@ -554,16 +703,129 @@ sending but before acknowledgment can deliver a job more than once; the future w
 must deduplicate by job ID. Messages contain only a schema version and job ID, never
 client-provided storage locations or credentials.
 
-This foundation does not create cloud resources, send queue messages, run OCR, add
-processing API routes, or display processing status. Dispatcher credentials, sender
-implementation, worker transitions, and operational monitoring remain separate steps.
-Apply the migration through the existing reviewed migration workflow; it is not
-applied automatically by starting the API. Until the sender and worker are enabled,
-new jobs remain queued after the migration is applied.
+This foundation does not create cloud resources, run OCR, add processing API routes,
+or display processing status. The API dispatcher below sends queued jobs once enabled;
+worker transitions and operational monitoring remain separate steps. Apply the migration
+through the existing reviewed migration workflow; starting the API never applies it.
+Until dispatching is enabled, new jobs remain queued in PostgreSQL.
 
 `npm run test:integration` covers atomic rollback, completion and retry idempotency,
 role changes, RLS, dispatch concurrency and expired claims, migration preservation,
 and repeatable seeds using disposable local databases.
+
+## API processing dispatcher
+
+The API includes an opt-in background dispatcher in `apps/api/src/processing/`.
+Configuration, PostgreSQL queries, SQS operations, orchestration, and Fastify lifecycle
+hooks are separate modules. The internal dispatch-claim schema and type live in the
+API processing module; shared packages contain application and queue contracts.
+There is no public dispatch endpoint and no browser configuration. It starts only after the API begins listening, polls once per second
+between batches, and sends at most five jobs concurrently per API instance. Its
+separate PostgreSQL pool holds at most two connections.
+
+Each database claim commits before SQS I/O. A send has a 20-second deadline, shortened
+when necessary to leave a 10-second lease margin. SDK requests use bounded connection
+and request timeouts with at most three attempts. Successful sends are acknowledged
+with the SQS message ID and lease token; failed sends use the existing 30-second
+database backoff. Expired leases recover interrupted work. Shutdown stops polling,
+aborts pending sends, waits for bounded database operations, and closes both clients.
+
+Delivery is **at least once**. If SQS accepts a message but acknowledgement fails, its
+lease eventually expires and another dispatcher may send the same job again. A send
+timeout also cannot prove SQS rejected the message. Worker idempotency by job ID is
+required. Dispatch attempts are distinct from processing attempts and do not mark a
+processing job failed. PostgreSQL coordinates concurrent API instances; dispatching
+runs only while at least one enabled API process is running.
+
+### Restricted dispatcher login
+
+First apply the processing migration using the reviewed migration workflow. It creates
+a `caseflow_dispatcher` permission role with `NOLOGIN`. Keep that role without a password;
+create a separate login that inherits only its permissions. Run the following once
+through the operator connection to the intended database:
+
+```sql
+create role caseflow_dispatcher_login
+  login inherit nosuperuser nocreatedb nocreaterole noreplication nobypassrls;
+grant caseflow_dispatcher to caseflow_dispatcher_login with inherit true, set false;
+```
+
+In the same interactive `psql` session, assign a unique password without placing it in
+SQL history or this repository:
+
+```text
+\password caseflow_dispatcher_login
+```
+
+For the hosted Session pooler, use `caseflow_dispatcher_login.<project-ref>` as the
+connection username. Use the same host, port, database, and project as the API runtime
+connection, with `sslmode=verify-full` and the trusted certificate path. Local direct
+connections use `caseflow_dispatcher_login`. Do not use the operator password, grant
+this login membership in `caseflow_runtime`, or grant either runtime role membership
+in the dispatcher role. The dispatcher can call only the three dispatch functions;
+it cannot read application tables or manage users.
+
+Production needs its own CA certificate file at the path in `sslrootcert`; a developer's
+local filesystem path is not available inside a deployed container. Include the trusted
+public CA certificate in the image or mount it at a stable path such as
+`/app/certs/supabase-ca.crt`, then configure both database URLs with that path and
+`sslmode=verify-full`. The CA certificate is public trust material. Database passwords
+are secrets and belong in the deployment secret store. The Python processor will also
+need a trusted CA configuration when it is deployed.
+
+### SQS permission and API configuration
+
+Grant the API workload's AWS role this additional permission, substituting the intended
+project ID. Retain its existing scoped S3 permissions. Do not broaden the role to
+administrator access or grant it SQS receive/delete permissions.
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "sqs:SendMessage",
+      "Resource": "arn:aws:sqs:us-east-2:123456789012:caseflow-document-processing"
+    }
+  ]
+}
+```
+
+Set these **server-only** values in the API environment or deployment secret store:
+
+| Setting                              | Value                                                                         |
+| ------------------------------------ | ----------------------------------------------------------------------------- |
+| `PROCESSING_DISPATCHER_ENABLED`      | `false` by default; `true` enables dispatching                                |
+| `PROCESSING_DISPATCHER_DATABASE_URL` | Restricted dispatcher connection described above                              |
+| `PROCESSING_QUEUE_URL`               | HTTPS URL of the standard processing queue, not the completion queue or a DLQ |
+| `AWS_REGION`                         | `us-east-2`                                                                   |
+| `AWS_PROFILE`                        | Local restricted workload profile; omit when using a deployment workload role |
+
+The queue URL must match `AWS_REGION`. Explicit local profiles are used without falling
+back to unrelated environment credentials. Deployment uses the SDK credential chain
+and should supply a workload role, not static keys. Invalid enabled configuration fails
+at startup with value-free errors. Disabled configuration creates no dispatcher clients.
+
+Keep the dispatcher disabled until the queue, restricted database login, IAM permission,
+and processing consumer are ready. A deliberately sent test message can wait for a
+consumer, but SQS retention still applies; messages can expire if the worker is not
+running. The dispatcher does not requeue records already acknowledged as sent. Queue
+age, DLQ depth, database dispatch backlog, and recurring dispatch failures need monitoring
+before deployment. Existing uploaded documents are not automatically backfilled.
+
+Logs contain event names and job/dispatch IDs, never connection strings, credentials,
+lease tokens, document contents, or raw provider errors. `processing_dispatch_sent`
+means SQS accepted the message and PostgreSQL recorded the acknowledgement; it does
+not mean document processing completed. Failed acknowledgements leave the lease for
+recovery. Check IAM permissions, connection configuration, and migration state when
+send or claim failures repeat; leave direct outbox updates to reviewed recovery procedures.
+
+Unit tests cover configuration, signed requests, safe errors, timeouts, and server
+lifecycle. Disposable PostgreSQL integration tests cover concurrent senders, committed
+claims before network I/O, failure backoff, duplicate delivery after acknowledgement
+loss, stale lease fencing, and restricted credentials. These tests use an injected SQS
+adapter and never send messages to the live processing queue.
 
 ## Authentication
 

@@ -60,11 +60,3 @@ export const processingMessageSchema = z.strictObject({
 });
 
 export type ProcessingMessage = z.infer<typeof processingMessageSchema>;
-
-export const processingDispatchClaimSchema = z.strictObject({
-  dispatchId: idSchema,
-  jobId: idSchema,
-  leaseToken: idSchema,
-  leaseExpiresAt: z.iso.datetime(),
-  attemptCount: z.number().int().positive(),
-});

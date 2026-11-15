@@ -6,6 +6,8 @@ import { ErrorCode } from '@caseflow/schemas';
 import { AuthError, createTokenVerifier } from './auth.js';
 import type { ApiConfig } from './config.js';
 import { AppError } from './errors.js';
+import { registerProcessingDispatcher } from './processing/register.js';
+import type { ProcessingDispatcher } from './processing/dispatcher.js';
 import { createDatabase, type WorkspaceStore } from './database/index.js';
 import { registerAuditRoutes } from './routes/audit.js';
 import { registerCaseRoutes } from './routes/cases.js';
@@ -24,6 +26,7 @@ export async function buildApp(
   store: WorkspaceStore = createDatabase(config.databaseUrl),
   uploadStorage?: UploadStorage,
   downloadStorage?: DownloadStorage,
+  dispatcher?: ProcessingDispatcher,
 ) {
   const app = Fastify({
     bodyLimit: 16384,
@@ -105,6 +108,8 @@ export async function buildApp(
     uploadStorage ?? (storage ? createUploadStorage(storage) : null),
     downloadStorage ?? (storage ? createDownloadStorage(storage) : null),
   );
+
+  registerProcessingDispatcher(app, config.dispatcher, dispatcher);
 
   return app;
 }

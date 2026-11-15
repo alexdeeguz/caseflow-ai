@@ -1,3 +1,4 @@
+import { readDispatcherConfig, type DispatcherConfig } from './processing/config.js';
 import { readStorageConfig, type StorageConfig } from './storage/config.js';
 import { parseDatabaseUrl } from './database/connection-config.js';
 
@@ -7,6 +8,7 @@ export interface ApiConfig {
   webOrigin: string;
   databaseUrl: string;
   storage?: StorageConfig;
+  dispatcher?: DispatcherConfig;
 }
 
 const guid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -50,6 +52,7 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
   }
 
   const storage = readStorageConfig(env);
+  const dispatcher = readDispatcherConfig(env, databaseUrl);
 
   return {
     clientId,
@@ -57,5 +60,6 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
     webOrigin: origin.origin,
     databaseUrl,
     ...(storage ? { storage } : {}),
+    ...(dispatcher ? { dispatcher } : {}),
   };
 }
