@@ -10,6 +10,11 @@ import { Pagination } from '../ui/pagination';
 import { auditListResource } from '../../lib/workspace-resources';
 
 const labels: Readonly<Record<string, string>> = {
+  [AuditAction.DocumentUploadStarted]: 'Document upload started',
+  [AuditAction.DocumentUploaded]: 'Document uploaded',
+  [AuditAction.DocumentRemoved]: 'Document removed',
+  [AuditAction.DocumentRestored]: 'Document restored',
+  [AuditAction.DocumentDownloadAuthorized]: 'Document download authorized',
   [AuditAction.CaseCreated]: 'Case created',
   [AuditAction.CaseUpdated]: 'Case updated',
   [AuditAction.CaseArchived]: 'Case archived',

@@ -12,6 +12,7 @@ import { registerCaseRoutes } from './routes/cases.js';
 import { registerProfileRoutes } from './routes/profile.js';
 import { createProtectedRouteRegistrar } from './routes/protected-route.js';
 import { registerUserRoutes } from './routes/users.js';
+import { createDocumentStorage } from './storage/s3.js';
 
 export async function buildApp(
   config: ApiConfig,
@@ -23,6 +24,11 @@ export async function buildApp(
     bodyLimit: 16384,
     logger: logger ? { redact: ['req.headers.authorization', 'req.headers.cookie'] } : false,
   });
+
+  const storage = config.storage ? createDocumentStorage(config.storage) : null;
+
+  app.decorate('documentStorage', storage);
+  app.addHook('onClose', async () => storage?.client.destroy());
 
   await app.register(cors, {
     origin: config.webOrigin,

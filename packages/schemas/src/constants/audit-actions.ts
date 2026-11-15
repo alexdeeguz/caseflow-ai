@@ -1,4 +1,10 @@
 export const AuditAction = {
+  DocumentUploadStarted: 'document.upload_started',
+  DocumentUploaded: 'document.uploaded',
+  DocumentRemoved: 'document.removed',
+  DocumentRestored: 'document.restored',
+  DocumentDownloadAuthorized: 'document.download_authorized',
+
   CaseCreated: 'case.created',
   CaseUpdated: 'case.updated',
   CaseArchived: 'case.archived',

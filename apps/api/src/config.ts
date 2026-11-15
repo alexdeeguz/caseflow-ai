@@ -1,3 +1,4 @@
+import { readStorageConfig, type StorageConfig } from './storage/config.js';
 import { parseDatabaseUrl } from './database/connection-config.js';
 
 export interface ApiConfig {
@@ -5,6 +6,7 @@ export interface ApiConfig {
   webClientId: string;
   webOrigin: string;
   databaseUrl: string;
+  storage?: StorageConfig;
 }
 
 const guid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -43,5 +45,13 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
     throw new Error('DATABASE_URL must use the caseflow_runtime database role.');
   }
 
-  return { clientId, webClientId, webOrigin: origin.origin, databaseUrl };
+  const storage = readStorageConfig(env);
+
+  return {
+    clientId,
+    webClientId,
+    webOrigin: origin.origin,
+    databaseUrl,
+    ...(storage ? { storage } : {}),
+  };
 }

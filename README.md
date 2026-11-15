@@ -1,6 +1,6 @@
 # CaseFlow AI
 
-TypeScript monorepo with Microsoft Entra sign-in, persistent profiles, role-based permissions, case creation, editing, reversible archiving, Staff assignments, and audit history. Document processing is not implemented.
+TypeScript monorepo with Microsoft Entra sign-in, persistent profiles, role-based permissions, case creation, editing, reversible archiving, Staff assignments, and audit history. Document metadata and S3 client foundations are present; document uploads and processing are not implemented.
 
 ## Structure
 
@@ -275,6 +275,86 @@ Integration tests require Docker plus the local operator/runtime environment fil
 They create and drop a uniquely named disposable database, apply migrations and
 seeds there, and exercise real restricted-login permissions. They never reset the
 working database and do not silently skip when the database is unavailable. Coverage includes partial edits, archive access/filtering, retained assignments, concurrent writes, demotion/disable races, audit rollback, migration preservation, and direct runtime-role restrictions.
+
+## Document storage foundation
+
+The API has a reusable S3 client, shared document contracts, and private document
+tables. Upload, completion, listing, download, removal, and restoration endpoints
+and their UI are not implemented yet.
+
+S3 configuration lives in `apps/api/src/storage/config.ts`; the client and its
+Fastify lifecycle live in `src/storage/s3.ts`. Install dependencies with `npm install`
+and apply the additive migration with `npm run db:migrate`.
+
+Configure these values only in the ignored `apps/api/.env`:
+
+```dotenv
+S3_BUCKET=your-private-document-bucket
+AWS_REGION=us-east-2
+S3_ENVIRONMENT=dev
+AWS_PROFILE=caseflow-api-dev
+```
+
+`AWS_PROFILE` selects a restricted local assume-role profile stored outside the
+repository in the AWS shared configuration. It takes precedence over ambient
+access keys. Refresh its source login with `aws login --profile <source-profile>`
+when needed. Do not use an administrator profile for the API or place AWS
+credentials in frontend variables. For deployment, omit `AWS_PROFILE` and configure
+temporary workload credentials supported by the SDK's default credential chain.
+
+When both `S3_BUCKET` and `S3_ENVIRONMENT` are absent, storage is disabled and existing
+features remain available. Partial or malformed settings fail startup. Credentials
+are resolved lazily on S3 requests; starting the API does not prove bucket access.
+The client is reused, has bounded retries, timeouts, and sockets, and is destroyed
+when Fastify closes. Restart the API after changing its environment.
+
+The bucket must remain private, enforce HTTPS, disable ACLs, use encryption, and
+have versioning enabled. Its browser CORS policy should allow only the intended
+frontend origins. The runtime role needs `s3:PutObject`, `s3:GetObject`, and
+`s3:GetObjectVersion` on the intended environment's original-document prefix;
+it does not need bucket administration, listing, or permanent deletion.
+
+Original keys are generated in PostgreSQL from validated metadata:
+
+```text
+{environment}/cases/{case-id}/documents/{document-id}/original/{filename}
+```
+
+`caseflow.documents` stores case/uploader references, filename, declared size and
+type, lifecycle state, timestamps, version, and internal S3 location/version
+metadata. `caseflow.document_upload_sessions` tracks one attempt per document with
+an expiry, terminal timestamp, and bounded failure codes. A fresh attempt uses a
+fresh document/key. Neither table is exposed through Supabase's Data API.
+
+- Files: PDF, JPEG, or PNG; 1 byte through 25 MiB. Contracts reject unknown fields,
+  paths, control characters, mismatched extensions/types, and client-supplied
+  storage identifiers. Actual object and content verification belongs to the
+  completion handler; filename/type validation alone does not verify file bytes.
+- Document states: `pending_upload`, `available`, `removed`. An available or
+  removed document requires a pinned, non-null S3 version and upload timestamp.
+  Soft removal requires both a timestamp and actor; it retains the object.
+- Session states: `pending`, `completed`, `failed`, `expired`, `cancelled`. The
+  database bounds session lifetime to five minutes; no expiry worker exists yet.
+- RLS inherits active-account and case-assignment checks. Staff can read available
+  documents on assigned cases and their own pending uploads/sessions. Admins can
+  read all states on accessible cases. Removed documents are hidden from Staff.
+  Archived case reads remain allowed; later write handlers must reject archived
+  cases and recheck permissions inside their transactions.
+- The runtime role has SELECT only on these tables. Document write functions and
+  atomic audit writes will be introduced with the upload/removal endpoints.
+  Shared audit actions distinguish upload initiation/completion, removal,
+  restoration, and download authorization; authorization is not proof of download.
+
+Shared limits reserve ten files per selection, two concurrent uploads, a 1 GiB
+workspace quota, five-minute uploads, and one-minute download links for the next
+implementation step. Selection/concurrency limits, quota accounting/reservations,
+presigned requests, cleanup, and cross-table lifecycle transitions are not enforced
+by this foundation alone.
+
+Unit tests cover contracts, unsafe configuration, explicit profile selection,
+request signing, and client shutdown. Integration tests use a disposable PostgreSQL
+database to verify migration preservation, constraints, RLS, foreign keys, and
+restricted-role behavior without uploading objects or changing AWS resources.
 
 ## Authentication
 
