@@ -267,3 +267,27 @@ test('database query parameters cannot override validated connection settings', 
 
   assert.equal(readConfig({ ...base, DATABASE_URL: verified }).databaseUrl, verified);
 });
+
+test('accepts qualified runtime users only on Supabase pooler hosts', () => {
+  const base = { ENTRA_API_CLIENT_ID: config.clientId, ENTRA_WEB_CLIENT_ID: config.webClientId };
+  const host = 'aws-0-us-east-2.pooler.supabase.com';
+  const username = 'caseflow_runtime.abcdefghijklmnopqrst';
+  const connection = (user: string, hostname = host) =>
+    `postgresql://${user}:secret@${hostname}:5432/postgres?sslmode=verify-full`;
+  const url = connection(username);
+
+  assert.equal(readConfig({ ...base, DATABASE_URL: url }).databaseUrl, url);
+
+  for (const invalid of [
+    connection('postgres.abcdefghijklmnopqrst'),
+    connection('caseflow_runtime_admin.abcdefghijklmnopqrst'),
+    connection('caseflow_runtime.'),
+    connection('caseflow_runtime.invalid'),
+    connection(`${username}.extra`),
+    connection(username, 'db.example.com'),
+    connection(username, `${host}.example.com`),
+    url.replace('verify-full', 'require'),
+  ]) {
+    assert.throws(() => readConfig({ ...base, DATABASE_URL: invalid }));
+  }
+});

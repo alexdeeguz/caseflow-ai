@@ -41,7 +41,11 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
 
   const database = parseDatabaseUrl(databaseUrl);
 
-  if (database.username !== 'caseflow_runtime') {
+  const isSupabasePooler = database.hostname.endsWith('.pooler.supabase.com');
+  const isPooledRuntime =
+    isSupabasePooler && /^caseflow_runtime\.[a-z0-9]{20}$/.test(database.username);
+
+  if (database.username !== 'caseflow_runtime' && !isPooledRuntime) {
     throw new Error('DATABASE_URL must use the caseflow_runtime database role.');
   }
 
