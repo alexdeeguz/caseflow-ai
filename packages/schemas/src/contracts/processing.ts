@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import {
   DispatchStatus,
+  ExtractionMethod,
   ProcessingFailureCode,
   ProcessingLimits,
   ProcessingStage,
@@ -60,3 +61,29 @@ export const processingMessageSchema = z.strictObject({
 });
 
 export type ProcessingMessage = z.infer<typeof processingMessageSchema>;
+
+export const processingResultSummarySchema = z.strictObject({
+  extractionMethod: z.enum(ExtractionMethod),
+  pageCount: z.number().int().min(1).max(ProcessingLimits.MaxPdfPages),
+  pipelineVersion: z.string().min(1).max(32),
+});
+
+export type ProcessingResultSummary = z.infer<typeof processingResultSummarySchema>;
+
+export const processingSummarySchema = z
+  .strictObject({
+    status: processingStatusSchema,
+    job: processingJobSchema.nullable(),
+    result: processingResultSummarySchema.nullable(),
+  })
+  .refine(
+    (summary) =>
+      (summary.job === null
+        ? summary.status === ProcessingStatus.NotProcessed
+        : summary.status === summary.job.status) &&
+      (summary.status === ProcessingStatus.Ready) === (summary.result !== null),
+    { message: 'Processing summary is inconsistent with its job and result.' },
+  );
+
+export type ProcessingSummary = z.infer<typeof processingSummarySchema>;
+export const processingQuerySchema = z.strictObject({});

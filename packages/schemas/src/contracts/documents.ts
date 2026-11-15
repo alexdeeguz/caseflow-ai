@@ -10,6 +10,7 @@ import {
 } from '../constants/documents.js';
 import { idSchema } from './common.js';
 import { pageQuerySchema, pageSchema } from './pagination.js';
+import { processingSummarySchema } from './processing.js';
 
 export const documentFilenameSchema = z
   .string()
@@ -129,7 +130,18 @@ export const documentVersionSchema = z.strictObject({
   expectedVersion: z.number().int().min(1).max(2147483647),
 });
 
-export const documentPageSchema = pageSchema(documentSchema);
+export const documentListItemSchema = documentSchema
+  .safeExtend({
+    processing: processingSummarySchema,
+  })
+  .refine(
+    (document) =>
+      document.processing.job === null || document.processing.job.documentId === document.id,
+    { message: 'Processing job must belong to the document.' },
+  );
+
+export type DocumentListItem = z.infer<typeof documentListItemSchema>;
+export const documentPageSchema = pageSchema(documentListItemSchema);
 
 export const documentUploadResultSchema = z.strictObject({
   document: documentSchema,

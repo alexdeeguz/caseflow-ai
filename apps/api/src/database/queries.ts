@@ -2,6 +2,7 @@ import { ErrorCode, Role, type Audit, type User } from '@caseflow/schemas';
 import type { PoolClient } from 'pg';
 import { AppError } from '../errors.js';
 import { Operation, operationRequiresAdmin } from './operations.js';
+import { getDocumentProcessing, requestDocumentProcessing } from './processing.js';
 import {
   createCase,
   getCase,
@@ -103,6 +104,12 @@ export async function executeOperation(
     case Operation.AssignCase:
     case Operation.UnassignCase:
       return setCaseAssignment(client, input, operation === Operation.AssignCase);
+
+    case Operation.GetDocumentProcessing:
+      return getDocumentProcessing(client, input);
+
+    case Operation.RequestDocumentProcessing:
+      return requestDocumentProcessing(client, input);
 
     case Operation.ListDocuments:
       return listDocuments(client, input);

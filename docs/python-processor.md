@@ -6,7 +6,7 @@ The extraction worker is implemented in `apps/document-processor`. It consumes
 processing jobs, publishes native PDF text, and starts asynchronous Textract OCR.
 The completion worker also collects Textract results and publishes OCR artifacts.
 Neither worker is deployed or connected to a queue yet. Reconciliation, processing
-API/UI, and operational monitoring are separate work.
+UI and operational monitoring are separate work; the [processing API](document-processing.md#processing-api) exposes saved job state.
 Keep continuous dispatching disabled until those deployment prerequisites are ready.
 
 ## Structure and local tooling

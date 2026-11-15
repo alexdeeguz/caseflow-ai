@@ -2,13 +2,79 @@
 
 [Back to README](../README.md)
 
-The database foundation, API dispatcher, and processor database interface are implemented. The Python extraction and Textract completion workers are implemented and tested locally; deployment, processing API/UI, and operational monitoring remain pending. Keep continuous dispatching disabled until the consumer is ready.
+The database foundation, API dispatcher, processor database interface, and public processing API are implemented. The Python extraction and Textract completion workers are implemented and tested locally; deployment, processing UI, and operational monitoring remain pending. Keep continuous dispatching disabled until the consumer is ready.
 
+- [Processing API](#processing-api)
 - [Job and dispatch records](#job-and-dispatch-records)
 - [Processor database](#processor-database)
 - [API dispatcher](#api-processing-dispatcher)
 - [Dispatcher login](#restricted-dispatcher-login)
 - [SQS permission and configuration](#sqs-permission-and-api-configuration)
+
+## Processing API
+
+| Endpoint                                               | Body                                                                                          | Successful response                 |
+| ------------------------------------------------------ | --------------------------------------------------------------------------------------------- | ----------------------------------- |
+| `GET /cases/:caseId/documents/:documentId/processing`  | None                                                                                          | Latest processing summary, HTTP 200 |
+| `POST /cases/:caseId/documents/:documentId/processing` | `{ "expectedJobId": null }` or `{ "expectedJobId": "<latest-failed-or-cancelled-job-uuid>" }` | Resulting job summary, HTTP 200     |
+
+Both routes require a valid Microsoft bearer token and an active application profile.
+Unknown query/body fields are rejected; responses use `Cache-Control: no-store`.
+Assigned Staff can read available documents; Admin and Super Admin can also read removed
+metadata. Archived cases remain readable. Start/retry requires Admin or Super Admin,
+an available document, and a current case. Inaccessible or mismatched case/document IDs
+return 404. Visible pending uploads return `409 DOCUMENT_UNAVAILABLE`.
+
+The shared `processingSummarySchema` has three fields:
+
+- `status`: `not_processed`, `queued`, `processing`, `ready`, `failed`, or `cancelled`.
+- `job`: the existing public job contract, or null when no job exists. It includes the
+  job/document/requester IDs, stage, extraction attempt count/limit, safe failure code,
+  and creation/update/completion timestamps.
+- `result`: null until Ready; then `{ "extractionMethod": "native" | "ocr", "pageCount": 1..20, "pipelineVersion": "1" }`.
+
+An existing document without a job returns exactly:
+
+```json
+{ "status": "not_processed", "job": null, "result": null }
+```
+
+Failure codes use the shared `ProcessingFailureCode` constants and
+`processingFailureMessages` for display text. No provider error text, source locations,
+artifact references, Textract IDs, lease tokens, or credentials appear in these responses.
+A Ready job with a missing durable result fails closed with 503 instead of reporting an
+incomplete result as usable. This API does not serve extracted text or artifact downloads.
+
+Initial requests use `expectedJobId: null`. Retries use the latest failed/cancelled job ID.
+Concurrent or repeated identical requests return the same resulting job at its current
+state. A replay of its original creation request can return a job that has since become
+Ready; it never starts another job. Requests to retry a Ready or active job, stale
+expectations, and unknown expected job IDs return `409 PROCESSING_CONFLICT`.
+Removed documents return `409 DOCUMENT_UNAVAILABLE`; archived cases return `409 CASE_ARCHIVED`.
+The existing database function rechecks permissions under the administrative transaction
+lock and atomically creates the job, dispatch record, and audit event.
+
+`GET /cases/:caseId/documents` adds a `processing` summary to each item. Visibility,
+filters, totals, stable pagination, latest job, and result summary are read from one SQL
+snapshot. The indexed latest-job join runs only for the requested page, with no separate
+request or SQL round trip per document. Upload and remove/restore response contracts
+remain unchanged; clients refresh the library after mutations.
+
+Apply `20261115195228_processing_api.sql` after the existing processing/worker migrations
+through the [reviewed migration workflow](hosted-database.md). It grants the runtime role
+only four result-summary columns and adds a SELECT policy following the existing
+job/document/case RLS chain. Artifact fields remain inaccessible, and no table-write
+permissions are added. API startup does not apply migrations.
+
+These routes can be developed and tested without Lambda deployment or Secrets Manager.
+Starting a job records work in PostgreSQL; execution still requires the dispatcher and
+both configured consumers. Leave continuous dispatching disabled until recovery and full
+workflow verification are complete.
+
+`npm run test:integration` verifies signed-token requests, roles, cross-case IDs,
+archived/removed/pending documents, strict inputs, idempotency, concurrent retries,
+permission races, audit rollback, RLS/column grants, safe native/OCR summaries, missing
+results, and migration preservation on disposable PostgreSQL databases.
 
 ## Job and dispatch records
 
@@ -43,8 +109,8 @@ sending but before acknowledgment can deliver a job more than once; the worker
 deduplicates by job ID. Messages contain only a schema version and job ID, never
 client-provided storage locations or credentials.
 
-This foundation does not create cloud resources, run OCR, add processing API routes,
-or display processing status. The [API dispatcher](#api-processing-dispatcher) sends queued jobs once enabled;
+The database foundation does not create cloud resources or run OCR. The processing API
+exposes job state; processing controls in the document UI remain separate work. The [API dispatcher](#api-processing-dispatcher) sends queued jobs once enabled;
 Worker deployment and operational monitoring remain separate steps. Apply the migration
 through the existing reviewed migration workflow; starting the API never applies it.
 Until dispatching is enabled, new jobs remain queued in PostgreSQL.

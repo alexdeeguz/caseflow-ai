@@ -15,6 +15,7 @@ import { registerProfileRoutes } from './routes/profile.js';
 import { createProtectedRouteRegistrar } from './routes/protected-route.js';
 import { registerUserRoutes } from './routes/users.js';
 import { registerDocumentRoutes } from './routes/documents.js';
+import { registerProcessingRoutes } from './routes/processing.js';
 import { createUploadStorage, type UploadStorage } from './storage/uploads.js';
 import { createDocumentStorage } from './storage/s3.js';
 import { createDownloadStorage, type DownloadStorage } from './storage/downloads.js';
@@ -102,6 +103,7 @@ export async function buildApp(
   registerUserRoutes(route);
   registerCaseRoutes(route);
   registerAuditRoutes(route);
+  registerProcessingRoutes(route);
   registerDocumentRoutes(
     route,
     store,

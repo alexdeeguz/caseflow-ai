@@ -10,6 +10,7 @@ import {
 } from '@caseflow/schemas';
 import { AppError } from '../errors.js';
 import { Operation } from './operations.js';
+import { processingSummaryJoin, serializeProcessing, type ProcessingRecord } from './processing.js';
 
 // All document queries use the same public metadata projection.
 const documentProjection = `jsonb_build_object(
@@ -119,15 +120,23 @@ export async function executeDocumentUpload(
 export async function listDocuments(client: PoolClient, input: Record<string, unknown>) {
   const page = Number(input.page ?? 1);
   const pageSize = Number(input.pageSize ?? 25);
-  const result = await client.query<{ visible: boolean; total: number; items: Document[] }>(
+  const result = await client.query<{
+    visible: boolean;
+    total: number;
+    items: (Document & { processing: ProcessingRecord })[];
+  }>(
     `with matching as materialized (
       select d.* from caseflow.documents d
       where d.case_id = $1 and d.status in ('available', 'removed')
         and ($2 = 'all' or ($2 = 'current' and d.status = 'available')
           or ($2 = 'removed' and d.status = 'removed'))
+    ), page_documents as (
+      select * from matching order by created_at desc, id desc limit $3 offset $4
     ), paged as (
-      select ${documentProjection} as document, d.created_at, d.id from matching d
-      order by d.created_at desc, d.id desc limit $3 offset $4
+      select ${documentProjection} || jsonb_build_object('processing',
+        jsonb_build_object('job', processing.job, 'result', processing.result)) as document,
+        d.created_at, d.id
+      from page_documents d ${processingSummaryJoin}
     )
     select exists(select 1 from caseflow.cases where id = $1) as visible,
       (select count(*)::int from matching) as total,
@@ -140,7 +149,12 @@ export async function listDocuments(client: PoolClient, input: Record<string, un
     throw new AppError(ErrorCode.NotFound, 404, 'Case not found.');
   }
 
-  return { items: row.items.map(serializeDocument), total: row.total, page, pageSize };
+  const items = row.items.map(({ processing, ...document }) => ({
+    ...serializeDocument(document),
+    processing: serializeProcessing(processing),
+  }));
+
+  return { items, total: row.total, page, pageSize };
 }
 
 const downloadRecordSchema = z.strictObject({

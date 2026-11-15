@@ -27,6 +27,9 @@ export const ProcessingFailureCode = {
   OcrResultsExpired: 'ocr_results_expired',
 } as const;
 
+export type ProcessingFailureCode =
+  (typeof ProcessingFailureCode)[keyof typeof ProcessingFailureCode];
+
 export const DispatchStatus = {
   Pending: 'pending',
   Leased: 'leased',
@@ -42,3 +45,27 @@ export const ProcessingLimits = {
   DispatchRetrySeconds: 30,
   MessageSchemaVersion: 1,
 } as const;
+
+export const ExtractionMethod = {
+  Native: 'native',
+  Ocr: 'ocr',
+} as const;
+
+export type ExtractionMethod = (typeof ExtractionMethod)[keyof typeof ExtractionMethod];
+
+export const processingFailureMessages: Readonly<Record<ProcessingFailureCode, string>> = {
+  [ProcessingFailureCode.InvalidDocument]:
+    'This document could not be read. Check the file before uploading it again.',
+  [ProcessingFailureCode.LimitExceeded]: 'This document exceeds the processing limits.',
+  [ProcessingFailureCode.StorageUnavailable]:
+    'The document could not be accessed. Try again later.',
+  [ProcessingFailureCode.OcrUnavailable]:
+    'Text recognition is temporarily unavailable. Try again later.',
+  [ProcessingFailureCode.AttemptsExhausted]: 'Processing could not finish after several attempts.',
+  [ProcessingFailureCode.InternalError]: 'Processing could not finish. Try again later.',
+  [ProcessingFailureCode.OcrBudgetExceeded]:
+    'The daily text recognition allowance has been reached. Try again later.',
+  [ProcessingFailureCode.OcrIncomplete]: 'Text recognition returned incomplete results.',
+  [ProcessingFailureCode.OcrResultsExpired]:
+    'Text recognition results expired before they could be saved.',
+};

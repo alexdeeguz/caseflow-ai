@@ -2,6 +2,7 @@ node_modules
 dist
 .next
 .tools
+.aws-sam/
 package-lock.json
 apps/web/next-env.d.ts
 

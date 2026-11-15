@@ -11,6 +11,7 @@ Route definitions are grouped by feature under `apps/api/src/routes`:
 - `cases.ts`: case creation, editing, archive/restore, searchable listing, details, and Staff assignments.
 - `audit.ts`: case, permission, profile, and document audit history.
 - `documents.ts`: upload sessions, document listing, download authorization, removal, and restoration.
+- `processing.ts`: processing status and administrator start/retry actions.
 - `protected-route.ts`: shared bearer-token verification and request/response validation.
 
 `app.ts` configures Fastify, CORS, error handling, and registers the feature routes.
@@ -59,6 +60,17 @@ inaccessible cases return 404; database outages fail closed with 503.
 ## Document endpoints
 
 See the [upload protocol](document-management.md#upload-protocol) for upload-session creation and completion, and [document listing and downloads](document-management.md#document-listing-and-downloads) for library, download, removal, and restoration endpoints. Those sections include request bodies, response shapes, permissions, and failure behavior.
+
+## Processing endpoints
+
+`GET /cases/:caseId/documents/:documentId/processing` reads the latest public processing
+summary. `POST` at the same URL starts or retries with the required `expectedJobId`
+(null for an initial request). Both return HTTP 200. Document list items include the
+same summary as `processing`, using one database query for the page.
+
+See [processing API behavior](document-processing.md#processing-api) for response fields,
+permissions, retry/idempotency semantics, conflict codes, and migration prerequisites.
+The API processing routes are separate from the background SQS dispatcher.
 
 ## Related guides
 

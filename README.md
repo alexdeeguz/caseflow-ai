@@ -13,9 +13,10 @@ Use fictional data for demonstrations and testing.
 - **Documents:** direct S3 uploads with server verification, a paginated library,
   authorized downloads, and reversible removal.
 - **Processing foundation:** atomic job/dispatch creation, an opt-in API dispatcher
-  for SQS, restricted processor database functions, and Python extraction/completion workers.
+  for SQS, authorized processing status/start/retry endpoints, restricted processor database functions,
+  and Python extraction/completion workers.
 
-The Python workers and reviewable SAM configuration are implemented and tested locally. Deployment, processing API/UI,
+The Python workers and reviewable SAM configuration are implemented and tested locally. Deployment, processing UI,
 operational monitoring, and file previews remain pending. Keep continuous dispatching disabled until both consumers and recovery are ready.
 
 ## Stack and structure
