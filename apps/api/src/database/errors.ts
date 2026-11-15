@@ -29,6 +29,14 @@ const applicationErrors: Partial<Record<ErrorCode, { status: number; message: st
     status: 409,
     message: 'Restore this archived case before editing it.',
   },
+  [ErrorCode.DocumentConflict]: {
+    status: 409,
+    message: 'This document changed. Reload the document list before trying again.',
+  },
+  [ErrorCode.DocumentUnavailable]: {
+    status: 409,
+    message: 'This document is not available for this action.',
+  },
   [ErrorCode.UploadConflict]: {
     status: 409,
     message: 'This upload cannot be reused. Start a new upload.',

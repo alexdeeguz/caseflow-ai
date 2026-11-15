@@ -6,6 +6,8 @@ export const ErrorCode = {
   InvalidInput: 'INVALID_INPUT',
   CaseConflict: 'CASE_CONFLICT',
   CaseArchived: 'CASE_ARCHIVED',
+  DocumentConflict: 'DOCUMENT_CONFLICT',
+  DocumentUnavailable: 'DOCUMENT_UNAVAILABLE',
   UploadConflict: 'UPLOAD_CONFLICT',
   UploadExpired: 'UPLOAD_EXPIRED',
   UploadVerificationFailed: 'UPLOAD_VERIFICATION_FAILED',

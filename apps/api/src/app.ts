@@ -15,6 +15,7 @@ import { registerUserRoutes } from './routes/users.js';
 import { registerDocumentRoutes } from './routes/documents.js';
 import { createUploadStorage, type UploadStorage } from './storage/uploads.js';
 import { createDocumentStorage } from './storage/s3.js';
+import { createDownloadStorage, type DownloadStorage } from './storage/downloads.js';
 
 export async function buildApp(
   config: ApiConfig,
@@ -22,6 +23,7 @@ export async function buildApp(
   logger = true,
   store: WorkspaceStore = createDatabase(config.databaseUrl),
   uploadStorage?: UploadStorage,
+  downloadStorage?: DownloadStorage,
 ) {
   const app = Fastify({
     bodyLimit: 16384,
@@ -101,6 +103,7 @@ export async function buildApp(
     route,
     store,
     uploadStorage ?? (storage ? createUploadStorage(storage) : null),
+    downloadStorage ?? (storage ? createDownloadStorage(storage) : null),
   );
 
   return app;

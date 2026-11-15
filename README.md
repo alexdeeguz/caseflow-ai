@@ -218,7 +218,8 @@ Route definitions are grouped by feature under `apps/api/src/routes`:
 - `profile.ts`: current-user profile retrieval and updates.
 - `users.ts`: administrative user listing, role changes, and account access.
 - `cases.ts`: case creation, editing, archive/restore, searchable listing, details, and Staff assignments.
-- `audit.ts`: case, permission, and profile audit history.
+- `audit.ts`: case, permission, profile, and document audit history.
+- `documents.ts`: upload sessions, document listing, download authorization, removal, and restoration.
 - `protected-route.ts`: shared bearer-token verification and request/response validation.
 
 `app.ts` configures Fastify, CORS, error handling, and registers the feature routes.
@@ -278,11 +279,12 @@ working database and do not silently skip when the database is unavailable. Cove
 
 ## Document storage and uploads
 
-The API supports upload authorization and verified completion. Document listing,
-download, removal/restoration, upload UI, and background processing are not yet implemented.
+The API supports upload authorization, verified completion, paginated document listing,
+short-lived downloads, and administrative removal/restoration. The document UI and
+background processing are not yet implemented.
 
-Storage configuration and S3 adapters live in `apps/api/src/storage`. Upload
-orchestration lives in `src/documents/upload-service.ts`, HTTP definitions in
+Storage configuration and S3 adapters live in `apps/api/src/storage`. Upload and download
+orchestration live in `src/documents`, HTTP definitions in
 `src/routes/documents.ts`, and database queries in `src/database/documents.ts`.
 Shared contracts and limits live in `packages/schemas`. Install dependencies with
 `npm install` and apply additive migrations with `npm run db:migrate`.
@@ -305,7 +307,9 @@ configure temporary workload credentials supported by the SDK's default chain.
 Keep credentials and storage configuration out of frontend environment variables.
 
 When both S3-specific settings are absent, storage is disabled; existing features
-remain available and upload endpoints return 503 after checking case access.
+remain available, including document listing and removal/restoration. Upload endpoints
+return 503 after checking case access; download authorization returns 503 after checking
+document access and availability.
 Partial settings fail startup. Restart the API after changing its environment.
 The shared client uses bounded retries, timeouts, and sockets and closes with Fastify.
 
@@ -352,12 +356,76 @@ browser does not need to read or submit S3 version headers.
    existing object before deciding whether to start another attempt.
 4. Call `POST /cases/:caseId/document-uploads/:sessionId/complete` with the bearer
    token and `{}`. A 200 response contains the available document and completed
-   session. Retries return the same saved result without another S3 read or audit.
+   session. Retries return the current saved metadata without another S3 read or audit.
+   If subsequently removed, the document is hidden from Staff retries; administrators
+   can still read its removed metadata. Retrying completion never restores a document.
 
 Staff may upload to assigned, current cases. Admin/Super Admin may upload to all
 current cases and complete uploads for those cases. Staff may only complete their
 own sessions. Disabled/unprovisioned users and inaccessible case/session IDs are
 rejected. Archived cases reject uploads and completion.
+
+### Document listing and downloads
+
+| Endpoint                                             | Input                                         | Response                            |
+| ---------------------------------------------------- | --------------------------------------------- | ----------------------------------- |
+| `GET /cases/:caseId/documents`                       | `page`, `pageSize`, `filter` query parameters | `{ items, total, page, pageSize }`  |
+| `POST /cases/:caseId/documents/:documentId/download` | `{}`                                          | `{ method: "GET", url, expiresAt }` |
+| `POST /cases/:caseId/documents/:documentId/remove`   | `{ expectedVersion }`                         | Updated document                    |
+| `POST /cases/:caseId/documents/:documentId/restore`  | `{ expectedVersion }`                         | Updated document                    |
+
+All four endpoints return 200 on success and require a Microsoft bearer token.
+Unknown fields, client-selected storage locations, and malformed identifiers are rejected.
+Metadata responses omit bucket, key, checksum, and S3 version identifiers. A signed
+URL necessarily contains its storage destination and must be treated as a credential.
+
+Listing defaults to page 1, 25 items (maximum 100), and `filter=current`.
+Current includes verified available files; `removed` includes removed files; `all`
+combines them. Pending, failed, expired, and cancelled upload attempts are excluded.
+Staff only see available documents on assigned cases; removed rows and counts remain
+hidden even with `all`, and their `removed` results are empty. Administrators see all
+permitted lifecycle states. Ordering is creation time descending, then document ID
+descending. Visibility, counts, and page rows share one database snapshot. Inaccessible
+cases return 404 rather than an empty page. Archived-case reads remain available.
+
+Downloads require an available document. The API checks the saved S3 object version,
+signs that exact version for at most 60 seconds, then rechecks current access, status,
+and document version under the permission lock before returning the URL. Storage work
+runs outside database transactions. Files download as attachments with encoded original
+filenames, validated content types, and `Cache-Control: private, no-store`.
+Use the returned GET URL directly without a Microsoft bearer token. There is no fallback
+to a newer S3 object version. Storage/signing failures return safe 503 responses.
+
+A successful authorization commits `document.download_authorized` with the actor,
+document, case, document version, and expiry. It records permission to download, not
+proof of a completed transfer. Signed URLs and credentials are never included in audit
+records. Removed files require restoration before a new link can be issued. Invisible
+or mismatched IDs return 404; visible unavailable documents return `409 DOCUMENT_UNAVAILABLE`.
+
+Removal, disablement, or assignment revocation blocks new authorizations. Previously
+issued links may remain usable until their short expiry, and a transfer started before
+expiry may finish afterward. Downloaded files cannot be recalled. Neither S3 tag-based
+revocation nor API file streaming is implemented.
+
+### Document removal and restoration
+
+Only active Admin/Super Admin users can remove or restore documents on current cases.
+Restore an archived case first. Removal changes available documents to removed and stores
+the actor/time; restoration clears the current removal fields and makes the same saved
+version available again. Files, upload sessions, original metadata, assignments, and
+history are preserved. Neither action copies or deletes S3 objects or releases quota.
+
+Both actions require the current positive integer `expectedVersion`. They lock the case
+and document, recheck administrative access, and atomically commit the state change with
+`document.removed` or `document.restored` audit history. Changed records increment version
+and update time. Stale requests return `409 DOCUMENT_CONFLICT`, even if the requested
+state already matches. A matching-version no-op leaves timestamps, version, and audit
+history unchanged. Pending documents return `409 DOCUMENT_UNAVAILABLE`; archived cases
+return `409 CASE_ARCHIVED`.
+
+Apply the additive migration with `npm run db:migrate` before running the updated API.
+It adds private permission-checked functions and preserves existing data, indexes, and
+RLS policies. It does not reset the database, seed documents, or grant direct runtime writes.
 
 ### Verification and consistency
 
@@ -392,7 +460,8 @@ Supabase Data API with RLS-controlled reads.
   after access is revoked. Signed URLs must be treated as temporary credentials.
 - Original keys follow
   `{environment}/cases/{case-id}/documents/{document-id}/original/{filename}`.
-  Availability pins a version; removal/restoration and processed outputs remain later work.
+  Availability pins a version; removal/restoration preserve that version. Processed
+  outputs remain later work.
 - Ten files per selection and two simultaneous browser uploads are reserved UI
   limits. Cancellation, scheduled expiry, orphan cleanup, and quota reclamation
   remain later work. Do not release reservations by deleting metadata manually.

@@ -147,3 +147,13 @@ export const documentUploadAuthorizationSchema = documentUploadResultSchema.exte
 });
 
 export const documentUploadCompleteSchema = z.strictObject({});
+
+export const documentDownloadRequestSchema = z.strictObject({});
+
+export const downloadAuthorizationSchema = z.strictObject({
+  method: z.literal('GET'),
+  url: z.url().refine((value) => new URL(value).protocol === 'https:'),
+  expiresAt: z.iso.datetime(),
+});
+
+export type DownloadAuthorization = z.infer<typeof downloadAuthorizationSchema>;

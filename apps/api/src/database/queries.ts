@@ -11,7 +11,13 @@ import {
   setCaseArchived,
 } from './cases.js';
 
-import { executeDocumentUpload } from './documents.js';
+import {
+  executeDocumentUpload,
+  listDocuments,
+  getDocumentDownload,
+  authorizeDocumentDownload,
+  setDocumentRemoved,
+} from './documents.js';
 
 export const userColumns = 'id, display_name as "displayName", role, active';
 
@@ -97,6 +103,19 @@ export async function executeOperation(
     case Operation.AssignCase:
     case Operation.UnassignCase:
       return setCaseAssignment(client, input, operation === Operation.AssignCase);
+
+    case Operation.ListDocuments:
+      return listDocuments(client, input);
+
+    case Operation.GetDocumentDownload:
+      return getDocumentDownload(client, input);
+
+    case Operation.AuthorizeDocumentDownload:
+      return authorizeDocumentDownload(client, input);
+
+    case Operation.RemoveDocument:
+    case Operation.RestoreDocument:
+      return setDocumentRemoved(client, input, operation === Operation.RemoveDocument);
 
     case Operation.StartDocumentUpload:
     case Operation.CheckDocumentUpload:
