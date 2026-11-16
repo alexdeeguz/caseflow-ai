@@ -1,15 +1,3 @@
-.queue {
-  border: 1px solid var(--brand-line);
-  border-radius: var(--radius-control);
-  background: var(--brand-white);
-  margin-bottom: 1.5rem;
-  overflow: hidden;
-}
-.queue .queueHint {
-  margin: 0.5rem 0 0;
-  font-size: 0.8125rem;
-  color: var(--brand-muted);
-}
 .dropzone {
   padding: 2rem 1rem;
   border: 1px dashed var(--brand-muted);
@@ -46,13 +34,13 @@
   background: var(--brand-cream);
 }
 .selection,
-.queueList {
+.progressList {
   list-style: none;
   padding: 0;
   margin: 1rem 0;
 }
 .selection li,
-.queueList li {
+.progressList li {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -126,43 +114,29 @@ button.footerButton {
   padding: 0.5rem 1rem;
   font-size: 0.8125rem;
 }
-.queue {
-  border-top: 3px solid var(--brand-navy);
-}
-.queueToggle {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  width: 100%;
-  gap: 0.75rem;
-  padding: 1rem 1.25rem;
-  color: var(--brand-navy);
-  cursor: pointer;
-  text-align: left;
-}
-.queueToggle > span {
-  font-size: 0.8125rem;
-}
-.queueToggle > span:last-child {
-  margin-left: auto;
-  font-weight: 650;
-}
-.queueTitle {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-.queue .queueHint {
-  padding: 0 1.25rem;
-  margin: 0;
-}
-.queueList {
-  padding: 0 1.25rem;
+
+.progressList {
+  margin: 0.25rem 0 0;
   max-height: 22rem;
   overflow-y: auto;
   overscroll-behavior: contain;
 }
-.queueActions {
+.progressList li {
+  align-items: center;
+  padding: 0.75rem 0;
+}
+.progressList li:first-child {
+  border-top: 0;
+}
+.overall {
+  padding: 0.75rem 0.875rem;
+  border-radius: var(--radius-control);
+  background: var(--brand-paper);
+}
+.overall .progressRow {
+  max-width: none;
+}
+.itemActions {
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
@@ -204,14 +178,11 @@ button.footerButton {
   background: var(--brand-navy);
 }
 @media (max-width: 600px) {
-  .queueList li {
-    flex-direction: column;
-    gap: 0.25rem;
+  .progressList li {
+    flex-wrap: wrap;
   }
-  .queueList .fileInfo {
+  .itemActions {
     width: 100%;
-  }
-  .queueActions {
-    align-self: flex-end;
+    justify-content: flex-end;
   }
 }

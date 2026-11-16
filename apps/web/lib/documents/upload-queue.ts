@@ -216,7 +216,8 @@ export function createUploadQueue(initialRequest: AuthRequest, transport: Upload
     setRequest(next: AuthRequest) {
       request = next;
     },
-    add(files: readonly File[], target: UploadCase) {
+    /** Queues a batch of files and returns its batch ID. */
+    add(files: readonly File[], target: UploadCase): string {
       if (
         !files.length ||
         files.length > DocumentLimits.FilesPerBatch ||
@@ -248,6 +249,7 @@ export function createUploadQueue(initialRequest: AuthRequest, transport: Upload
       });
       publish();
       queueMicrotask(pump);
+      return batchId;
     },
     stop(id: string) {
       const item = snapshot.find((value) => value.id === id);

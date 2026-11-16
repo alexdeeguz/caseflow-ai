@@ -10,7 +10,12 @@ import {
 import type { AuthRequest } from '../hooks/use-authentication';
 import { ApiError } from '../lib/api';
 import { createUploadQueue, withUploadAccessChecks } from '../lib/documents/upload-queue';
-import { UploadPhase, UploadRetry, type UploadTransport } from '../lib/documents/upload-types';
+import {
+  UploadPhase,
+  UploadRetry,
+  overallUploadProgress,
+  type UploadTransport,
+} from '../lib/documents/upload-types';
 import { validateFile } from '../lib/documents/file-validation';
 import { browserUploadTransport } from '../lib/documents/upload-transport';
 import { documentActions } from '../lib/documents/actions';
@@ -129,8 +134,14 @@ test('limits full pipelines to two, including verification, and keeps their orig
       },
     },
   );
-  queue.add([file(), file()], target);
-  queue.add([file()], other);
+  const firstBatch = queue.add([file(), file()], target);
+  const secondBatch = queue.add([file()], other);
+  // Each batch ID identifies exactly the files queued together, so the modal can follow its own.
+  assert.notEqual(firstBatch, secondBatch);
+  assert.deepEqual(
+    queue.getSnapshot().map((item) => item.batchId),
+    [firstBatch, firstBatch, secondBatch],
+  );
   await until(
     () => queue.getSnapshot().filter((item) => item.phase === UploadPhase.Verifying).length === 2,
   );
@@ -385,4 +396,25 @@ test('stopped transfers remain retryable and reconcile remote success without an
   queue.retry(id);
   await until(() => queue.getSnapshot()[0]?.phase === UploadPhase.Uploaded);
   assert.equal(puts, 1);
+});
+
+test('overall upload progress weights transfers by size and counts finished transfers in full', () => {
+  const item = (phase: UploadPhase, progress: number, sizeBytes: number) => ({
+    phase,
+    progress,
+    sizeBytes,
+  });
+  assert.equal(overallUploadProgress([]), 0);
+  assert.equal(
+    overallUploadProgress([item(UploadPhase.Uploading, 50, 300), item(UploadPhase.Queued, 0, 100)]),
+    38,
+  );
+  assert.equal(
+    overallUploadProgress([
+      item(UploadPhase.Verifying, 100, 100),
+      item(UploadPhase.Uploaded, 100, 100),
+    ]),
+    100,
+  );
+  assert.equal(overallUploadProgress([item(UploadPhase.Failed, 40, 100)]), 0);
 });

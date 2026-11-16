@@ -61,3 +61,25 @@ export function isUploadRunning(phase: UploadPhase) {
 export function isUploadUnfinished(item: UploadItem) {
   return item.phase !== UploadPhase.Uploaded && item.retry !== UploadRetry.None;
 }
+
+/**
+ * Overall progress for a set of uploads, weighted by file size: transfers count by bytes sent,
+ * and files that finished transferring (verifying or uploaded) count in full.
+ */
+export function overallUploadProgress(
+  items: readonly Pick<UploadItem, 'phase' | 'progress' | 'sizeBytes'>[],
+): number {
+  const total = items.reduce((sum, item) => sum + item.sizeBytes, 0);
+  if (!total) {
+    return 0;
+  }
+  const sent = items.reduce((sum, item) => {
+    if (item.phase === UploadPhase.Uploaded || item.phase === UploadPhase.Verifying) {
+      return sum + item.sizeBytes;
+    }
+    return item.phase === UploadPhase.Uploading
+      ? sum + (item.sizeBytes * item.progress) / 100
+      : sum;
+  }, 0);
+  return Math.round((sent / total) * 100);
+}

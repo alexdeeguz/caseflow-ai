@@ -34,6 +34,8 @@ import { isSearchable } from '../../../lib/search/resources';
 import searchStyles from '../search/search.module.css';
 import { FactExtractionActionButton } from './fact-extraction-action-button';
 import { useReviewTotals } from './use-review-totals';
+import { useUploads } from './upload-provider';
+import { UploadPhase, isUploadRunning } from '../../../lib/documents/upload-types';
 import type { ReviewTotals } from '../../../lib/documents/state';
 import styles from './documents.module.css';
 
@@ -91,6 +93,14 @@ export function DocumentLibrary({
   }, [denied, error, onAccessRejected]);
 
   const [uploadOpen, setUploadOpen] = useState(false);
+  const { items: uploadItems } = useUploads();
+  const caseUploads = uploadItems.filter((item) => item.case.id === caseId);
+  const uploadsActive = caseUploads.filter(
+    (item) => isUploadRunning(item.phase) || item.phase === UploadPhase.Queued,
+  ).length;
+  const uploadsNeedAttention = caseUploads.some(
+    (item) => item.phase === UploadPhase.Failed || item.phase === UploadPhase.Stopped,
+  );
   const heading = useRef<HTMLHeadingElement>(null);
   const errorSummary = useRef<HTMLDivElement>(null);
   const uploadButton = useRef<HTMLButtonElement>(null);
@@ -232,7 +242,11 @@ export function DocumentLibrary({
               onClick={() => setUploadOpen((value) => !value)}
             >
               <UploadIcon />
-              Upload files
+              {uploadsActive
+                ? `Uploading ${uploadsActive}…`
+                : uploadsNeedAttention
+                  ? 'Uploads need attention'
+                  : 'Upload files'}
             </Button>
           )}
         </>

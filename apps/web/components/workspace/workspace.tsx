@@ -9,7 +9,6 @@ import { createResourceClient, withResourceInvalidation } from '../../lib/resour
 import { createUploadQueue, withUploadAccessChecks } from '../../lib/documents/upload-queue';
 import { browserUploadTransport } from '../../lib/documents/upload-transport';
 import { UploadProvider } from './documents/upload-provider';
-import { UploadQueuePanel } from './documents/upload-queue-panel';
 import { RoleBadge } from './role-badge';
 import { Profile } from './profile';
 import { Cases } from './cases/cases';
@@ -123,7 +122,6 @@ function WorkspaceContent({ user, request, signOut, refreshProfile }: WorkspaceP
         />
       )}
     >
-      <UploadQueuePanel />
       <span role="status" className="sr-only">
         {pendingTab ? `Opening ${tabLabels[pendingTab]}…` : pending ? 'Loading…' : ''}
       </span>
