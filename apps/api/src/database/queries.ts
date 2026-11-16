@@ -1,5 +1,11 @@
-import { getFactExtraction, requestFactExtraction, listFacts } from './fact-extraction.js';
-import { ErrorCode, Role, type Audit, type User } from '@caseflow/schemas';
+import {
+  getReviewedFact,
+  listReviewedFacts,
+  reviewFact,
+  listFactReviewHistory,
+} from './fact-review.js';
+import { getFactExtraction, requestFactExtraction } from './fact-extraction.js';
+import { ErrorCode, Role, FactReviewAction, type Audit, type User } from '@caseflow/schemas';
 import type { PoolClient } from 'pg';
 import { AppError } from '../errors.js';
 import { Operation, operationRequiresAdmin } from './operations.js';
@@ -44,10 +50,30 @@ export async function executeOperation(
   switch (operation) {
     case Operation.GetFactExtraction:
       return getFactExtraction(client, input);
+
     case Operation.RequestFactExtraction:
       return requestFactExtraction(client, input);
+
     case Operation.ListFacts:
-      return listFacts(client, input);
+      return listReviewedFacts(client, input);
+
+    case Operation.GetFact:
+      return getReviewedFact(client, input);
+
+    case Operation.ListFactReviewHistory:
+      return listFactReviewHistory(client, input);
+
+    case Operation.CorrectFact:
+      return reviewFact(client, input, FactReviewAction.Correct);
+
+    case Operation.ApproveFact:
+      return reviewFact(client, input, FactReviewAction.Approve);
+
+    case Operation.RejectFact:
+      return reviewFact(client, input, FactReviewAction.Reject);
+
+    case Operation.ReopenFact:
+      return reviewFact(client, input, FactReviewAction.Reopen);
     case Operation.GetProfile:
       return actor;
 

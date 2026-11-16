@@ -1,4 +1,9 @@
-import { factExtractionSummarySchema, factPageSchema, type FactCategory } from '@caseflow/schemas';
+import {
+  factExtractionSummarySchema,
+  reviewedFactPageSchema,
+  type FactReviewStatus,
+  type FactCategory,
+} from '@caseflow/schemas';
 
 export function factExtractionResource(caseId: string, documentId: string) {
   return {
@@ -12,13 +17,17 @@ export function factsResource(
   documentId: string,
   page: number,
   category?: FactCategory,
+  reviewStatus?: FactReviewStatus,
 ) {
   const params = new URLSearchParams({ page: String(page) });
   if (category) {
     params.set('category', category);
   }
+  if (reviewStatus) {
+    params.set('reviewStatus', reviewStatus);
+  }
   return {
     path: `/cases/${caseId}/documents/${documentId}/facts?${params}`,
-    schema: factPageSchema,
+    schema: reviewedFactPageSchema,
   };
 }

@@ -71,6 +71,11 @@ export async function apiRequest<T>(
     }
 
     const documentMessages: Partial<Record<ErrorCode, string>> = {
+      [ErrorCode.FactReviewConflict]:
+        'This fact changed. Your draft is kept; reload the latest revision before trying again.',
+      [ErrorCode.FactReviewLocked]:
+        'Approved facts must be reopened. Correct rejected facts before approving them.',
+
       [ErrorCode.ProcessingConflict]:
         'Processing changed. Review the latest status before trying again.',
       [ErrorCode.DocumentConflict]:

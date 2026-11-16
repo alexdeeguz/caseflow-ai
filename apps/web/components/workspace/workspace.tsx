@@ -22,6 +22,8 @@ import { WorkspaceTab, tabLabels } from './navigation';
 import { useWorkspaceNavigation } from '../../hooks/use-workspace-navigation';
 import { ToastProvider } from '../ui/toast-provider';
 import { StatusMessage } from '../ui/status-message';
+import { FactDraftProvider } from './fact-review/fact-draft-provider';
+import { createFactDraftStore, withFactDraftAccessChecks } from '../../lib/fact-review/drafts';
 import { CaseDraftProvider } from './cases/case-draft-provider';
 import { createCaseDraftStore, withDraftAccessChecks } from '../../lib/case-drafts';
 import styles from './workspace.module.css';
@@ -35,15 +37,19 @@ interface WorkspaceProps {
 
 export function Workspace(props: WorkspaceProps) {
   const [client] = useState(createResourceClient);
+  const [factDrafts] = useState(createFactDraftStore);
   const [drafts] = useState(createCaseDraftStore);
   const [uploads] = useState(() => createUploadQueue(props.request, browserUploadTransport));
   const request = useMemo(
     () =>
       withResourceInvalidation(
         client,
-        withUploadAccessChecks(withDraftAccessChecks(props.request, drafts), uploads),
+        withUploadAccessChecks(
+          withFactDraftAccessChecks(withDraftAccessChecks(props.request, drafts), factDrafts),
+          uploads,
+        ),
       ),
-    [client, props.request, drafts, uploads],
+    [client, props.request, drafts, uploads, factDrafts],
   );
 
   useEffect(() => uploads.setRequest(request), [uploads, request]);
@@ -56,15 +62,18 @@ export function Workspace(props: WorkspaceProps) {
       <ToastProvider>
         <UploadProvider store={uploads}>
           <CaseDraftProvider store={drafts}>
-            <WorkspaceContent
-              {...props}
-              request={request}
-              signOut={() => {
-                uploads.clear();
-                drafts.clear();
-                return props.signOut();
-              }}
-            />
+            <FactDraftProvider store={factDrafts}>
+              <WorkspaceContent
+                {...props}
+                request={request}
+                signOut={() => {
+                  uploads.clear();
+                  drafts.clear();
+                  factDrafts.clear();
+                  return props.signOut();
+                }}
+              />
+            </FactDraftProvider>
           </CaseDraftProvider>
         </UploadProvider>
       </ToastProvider>

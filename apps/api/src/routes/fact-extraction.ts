@@ -2,8 +2,8 @@ import {
   factExtractionQuerySchema,
   factExtractionRequestSchema,
   factExtractionSummarySchema,
-  factQuerySchema,
-  factPageSchema,
+  reviewedFactQuerySchema,
+  reviewedFactPageSchema,
 } from '@caseflow/schemas';
 import { Operation } from '../database/operations.js';
 import type { RegisterProtectedRoute } from './protected-route.js';
@@ -27,8 +27,8 @@ export function registerFactExtractionRoutes(route: RegisterProtectedRoute) {
   route({
     method: 'GET',
     url: '/cases/:caseId/documents/:documentId/facts',
-    query: factQuerySchema,
-    output: factPageSchema,
+    query: reviewedFactQuerySchema,
+    output: reviewedFactPageSchema,
     operation: Operation.ListFacts,
   });
 }

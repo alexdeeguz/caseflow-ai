@@ -83,3 +83,10 @@ The API processing routes are separate from the background SQS dispatcher.
 The processing-ready document routes support latest extraction status, administrative start/retry,
 and paginated category-filtered facts with evidence. See [fact extraction](fact-extraction.md#api-and-ui)
 for request semantics, permissions, public fields, and error behavior.
+
+## Human review
+
+Fact lists now return effective values, immutable originals/evidence, review metadata, and counts.
+The feature adds single-fact reads, versioned corrections, approval/rejection/reopening, and
+paginated history under `/cases/:caseId/documents/:documentId/facts/:factId`.
+See [human review](human-review.md#api) for exact routes, bodies, permissions, and conflict behavior.

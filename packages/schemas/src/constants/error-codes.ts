@@ -1,4 +1,6 @@
 export const ErrorCode = {
+  FactReviewConflict: 'FACT_REVIEW_CONFLICT',
+  FactReviewLocked: 'FACT_REVIEW_LOCKED',
   FactExtractionConflict: 'FACT_EXTRACTION_CONFLICT',
   Unauthenticated: 'UNAUTHENTICATED',
   AccountDisabled: 'ACCOUNT_DISABLED',

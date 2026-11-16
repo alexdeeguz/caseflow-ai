@@ -1,3 +1,4 @@
+import { registerFactReviewRoutes } from './routes/fact-review.js';
 import { DispatchTarget } from './processing/store.js';
 import { registerFactExtractionRoutes } from './routes/fact-extraction.js';
 import Fastify from 'fastify';
@@ -107,6 +108,7 @@ export async function buildApp(
   registerAuditRoutes(route);
   registerProcessingRoutes(route);
   registerFactExtractionRoutes(route);
+  registerFactReviewRoutes(route);
   registerDocumentRoutes(
     route,
     store,

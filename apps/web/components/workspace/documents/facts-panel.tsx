@@ -9,7 +9,9 @@ import {
   factCategoryLabels,
   factExtractionFailureMessages,
   type DocumentListItem,
-  type ExtractedFact,
+  FactReviewStatus,
+  factReviewStatusLabels,
+  type Role,
 } from '@caseflow/schemas';
 import type { AuthRequest } from '../../../hooks/use-authentication';
 import { factsResource } from '../../../lib/fact-extraction/resources';
@@ -20,48 +22,29 @@ import { Pagination } from '../../ui/pagination';
 import { FactExtractionBadge } from './fact-extraction-status';
 import { DocumentDate } from './document-details';
 import styles from './facts.module.css';
-
-function FactCard({ fact }: { fact: ExtractedFact }) {
-  const qualifiers = [
-    fact.negated ? 'Negated' : null,
-    fact.dateMeaning,
-    fact.datePrecision,
-    fact.treatmentStatus,
-    fact.findingStatus,
-    fact.qualifier,
-  ].filter(Boolean);
-  return (
-    <li className={styles.fact}>
-      <div className={styles.factHeader}>
-        <span className={styles.category}>{factCategoryLabels[fact.category]}</span>
-        <span className={styles.unreviewed}>Unreviewed</span>
-      </div>
-      <h4>{fact.value}</h4>
-      {fact.dateValue && <p>{fact.dateValue}</p>}
-      {qualifiers.length > 0 && <p className={styles.qualifiers}>{qualifiers.join(' · ')}</p>}
-      {fact.evidence.map((evidence) => (
-        <figure key={evidence.id} className={styles.evidence}>
-          <figcaption>Source · Page {evidence.page}</figcaption>
-          <blockquote>{evidence.quote}</blockquote>
-        </figure>
-      ))}
-    </li>
-  );
-}
+import reviewStyles from '../fact-review/review.module.css';
+import { FactReviewCard } from '../fact-review/fact-review-card';
+import { useFactDrafts } from '../fact-review/fact-draft-provider';
 
 export function FactsPanel({
   document,
+  role,
+  archived,
   request,
   onAccessRejected,
   onDownload,
   disabled,
 }: {
   document: DocumentListItem;
+  role: Role;
+  archived: boolean;
   request: AuthRequest;
   onAccessRejected: (message: string) => void;
   onDownload: () => void;
   disabled: boolean;
 }) {
+  const { store } = useFactDrafts();
+  const [reviewStatus, setReviewStatus] = useState<FactReviewStatus | undefined>();
   const [page, setPage] = useState(1);
   const [category, setCategory] = useState<FactCategory | undefined>();
   const id = useId();
@@ -69,7 +52,10 @@ export function FactsPanel({
   const available = document.status === DocumentStatus.Available;
   const completed = summary.status === FactExtractionStatus.Completed;
   const query = useQuery({
-    ...resourceOptions(request, factsResource(document.caseId, document.id, page, category)),
+    ...resourceOptions(
+      request,
+      factsResource(document.caseId, document.id, page, category, reviewStatus),
+    ),
     enabled: available && completed && !disabled,
     networkMode: 'online',
     refetchOnReconnect: 'always',
@@ -78,9 +64,15 @@ export function FactsPanel({
   const unavailable = query.error instanceof ApiError && query.error.status === 409;
   useEffect(() => {
     if (state.denied && state.error) {
+      store.clear();
       onAccessRejected(state.error);
     }
-  }, [state.denied, state.error, onAccessRejected]);
+  }, [state.denied, state.error, onAccessRejected, store]);
+  useEffect(() => {
+    if (!available || unavailable) {
+      store.clear();
+    }
+  }, [available, unavailable, store]);
   return (
     <section className={styles.panel} aria-labelledby={`${id}-heading`}>
       <header className={styles.heading}>
@@ -126,6 +118,24 @@ export function FactsPanel({
                 </option>
               ))}
             </select>
+            <label htmlFor={`${id}-review`}>Review status</label>
+            <select
+              id={`${id}-review`}
+              value={reviewStatus ?? ''}
+              onChange={(event) => {
+                setReviewStatus(
+                  event.target.value ? (event.target.value as FactReviewStatus) : undefined,
+                );
+                setPage(1);
+              }}
+            >
+              <option value="">All review states</option>
+              {Object.values(FactReviewStatus).map((value) => (
+                <option key={value} value={value}>
+                  {factReviewStatusLabels[value]}
+                </option>
+              ))}
+            </select>
             <button type="button" onClick={onDownload} disabled={disabled || !!state.error}>
               Download source
             </button>
@@ -139,14 +149,33 @@ export function FactsPanel({
             <p role="alert">{state.error}</p>
           ) : state.data ? (
             <>
+              <dl className={reviewStyles.counts} aria-label="Review counts for this category">
+                {Object.values(FactReviewStatus).map((status) => (
+                  <div key={status}>
+                    <dt>{factReviewStatusLabels[status]}</dt>
+                    <dd>{state.data!.counts[status]}</dd>
+                  </div>
+                ))}
+              </dl>
               {state.data.items.length ? (
                 <ul className={styles.facts}>
                   {state.data.items.map((fact) => (
-                    <FactCard key={fact.id} fact={fact} />
+                    <FactReviewCard
+                      key={fact.id}
+                      fact={fact}
+                      caseId={document.caseId}
+                      documentId={document.id}
+                      role={role}
+                      archived={archived}
+                      disabled={disabled || !!state.error || query.fetchStatus === 'paused'}
+                      request={request}
+                      refresh={() => query.refetch()}
+                      onAccessRejected={onAccessRejected}
+                    />
                   ))}
                 </ul>
               ) : (
-                <p>No facts in this category.</p>
+                <p>No facts match these filters.</p>
               )}
               {(state.data.total > state.data.pageSize || page > 1) && (
                 <Pagination {...state.data} onPage={setPage} />

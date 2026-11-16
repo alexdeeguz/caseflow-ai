@@ -15,7 +15,7 @@ scheduled fact recovery default to disabled.
 | ------------------------------------------ | ---------------------------------------------------------------------------- |
 | `packages/schemas`                         | Strict public contracts, constants, and cross-language queue fixtures        |
 | `apps/api/src/routes/fact-extraction.ts`   | Protected status, start/retry, and fact-list routes                          |
-| `apps/api/src/database/fact-extraction.ts` | Parameterized queries and public metadata projections                        |
+| `apps/api/src/database/fact-extraction.ts` | Parameterized extraction lifecycle queries                                   |
 | `apps/api/src/processing`                  | Shared bounded outbox dispatcher with a separate fact target                 |
 | `services/fact-extractor`                  | Python SQS handler, extraction service, and storage/database/OpenAI adapters |
 | `services/document-processor`              | Existing text/OCR services and optional scheduled fact reconciliation        |
@@ -46,7 +46,7 @@ See [model documentation](https://developers.openai.com/api/docs/models/gpt-5.4-
 The application supplies document/result IDs and evidence offsets. Every quotation must occur
 exactly in its checkpointed page text. Offsets count Unicode code points and are end-exclusive.
 Dates retain year/month/day precision. Recommended and performed treatments, suspected and confirmed
-findings, negation, and conflicting statements remain distinct. All facts remain Unreviewed.
+findings, negation, and conflicting statements remain distinct. Newly extracted facts start Unreviewed. [Human review](human-review.md) adds versioned corrections and approval while preserving the original extraction.
 A matching quotation proves source location; it does not by itself prove the model interpreted it
 correctly. Fixture evaluation and human review are still required.
 
@@ -93,11 +93,11 @@ does not restart work. Completed facts and audit history are preserved.
 
 All routes require a valid bearer token and return uncached, validated responses.
 
-| Route                                                       | Behavior                                      |
-| ----------------------------------------------------------- | --------------------------------------------- |
-| `GET /cases/:caseId/documents/:documentId/fact-extraction`  | Latest safe state, or Not extracted           |
-| `POST /cases/:caseId/documents/:documentId/fact-extraction` | `{ expectedJobId }`; returns HTTP 200         |
-| `GET /cases/:caseId/documents/:documentId/facts`            | Paginated facts with optional category filter |
+| Route                                                       | Behavior                                              |
+| ----------------------------------------------------------- | ----------------------------------------------------- |
+| `GET /cases/:caseId/documents/:documentId/fact-extraction`  | Latest safe state, or Not extracted                   |
+| `POST /cases/:caseId/documents/:documentId/fact-extraction` | `{ expectedJobId }`; returns HTTP 200                 |
+| `GET /cases/:caseId/documents/:documentId/facts`            | Paginated reviewed facts with category/status filters |
 
 Initial requests use `expectedJobId: null`. A retry names the latest failed/cancelled job. Identical
 requests return the same resulting job; stale requests conflict. Completed runs cannot be rerun.
@@ -108,8 +108,7 @@ The document list includes the latest summary in its existing query, without one
 The UI separates text processing from fact extraction, confirms the document and provider before
 submission, and reports that work was queued. It polls visible active work every five seconds and
 stops when hidden, offline, or terminal. Transient failures retain verified content and pause actions;
-authorization rejection clears protected content. Detail cards include categories, Unreviewed
-badges, quotations, page references, and the existing authorized source download.
+authorization rejection clears protected content. Detail cards include categories, review states, immutable quotations, page references, and the existing authorized source download. [Human review](human-review.md) defines corrections, approvals, and revision history; its queries live in the separate fact-review database module.
 
 ## Usage allowance
 

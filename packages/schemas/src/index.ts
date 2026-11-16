@@ -15,3 +15,7 @@ export * from './constants/processing.js';
 export * from './contracts/processing.js';
 export * from './constants/fact-extraction.js';
 export * from './contracts/fact-extraction.js';
+
+export * from './constants/fact-review.js';
+export * from './contracts/fact-review.js';
+export * from './contracts/fact-values.js';

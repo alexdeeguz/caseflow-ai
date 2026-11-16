@@ -10,6 +10,10 @@ import { Pagination } from '../ui/pagination';
 import { auditListResource } from '../../lib/workspace-resources';
 
 const labels: Readonly<Record<string, string>> = {
+  [AuditAction.FactCorrected]: 'Fact corrected',
+  [AuditAction.FactApproved]: 'Fact approved',
+  [AuditAction.FactRejected]: 'Fact rejected',
+  [AuditAction.FactReopened]: 'Fact reopened',
   [AuditAction.FactExtractionQueued]: 'Fact extraction queued',
   [AuditAction.FactExtractionCompleted]: 'Fact extraction completed',
   [AuditAction.FactExtractionFailed]: 'Fact extraction failed',

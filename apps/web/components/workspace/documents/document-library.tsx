@@ -304,6 +304,8 @@ export function DocumentLibrary({
                   <FactsPanel
                     key={document.id}
                     document={document}
+                    role={role}
+                    archived={archived}
                     request={request}
                     onAccessRejected={onAccessRejected}
                     disabled={!canAct}

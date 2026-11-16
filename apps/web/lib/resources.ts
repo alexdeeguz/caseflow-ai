@@ -54,6 +54,23 @@ export function withResourceInvalidation(client: QueryClient, request: AuthReque
       if (mutation) {
         const documents = /^\/cases\/([^/]+)\/(documents|document-uploads)(?:\/|$)/.exec(path);
         if (documents) {
+          const review =
+            /^(\/cases\/[^/]+\/documents\/[^/]+\/facts)\/[^/]+(?:\/(approve|reject|reopen))?$/.exec(
+              path,
+            );
+          if (review) {
+            void client.invalidateQueries({
+              predicate: ({ queryKey }) => {
+                const key = String(queryKey[0]);
+                return (
+                  key.startsWith(`${review[1]}?`) ||
+                  key.startsWith(`${review[1]}/`) ||
+                  key.startsWith('/admin/audit')
+                );
+              },
+            });
+            return result;
+          }
           // Starting uploads and authorizing downloads do not change the library.
           const libraryChanged = /\/(complete|remove|restore|processing|fact-extraction)$/.test(
             path,

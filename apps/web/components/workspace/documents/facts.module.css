@@ -4,7 +4,6 @@
   background: var(--brand-paper);
 }
 .heading,
-.factHeader,
 .toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -49,62 +48,6 @@
   padding: 0;
   margin: 0;
 }
-.fact {
-  border: 1px solid var(--brand-line);
-  border-radius: var(--radius-control);
-  padding: 1.25rem;
-  background: var(--brand-white);
-  overflow-wrap: anywhere;
-}
-.factHeader {
-  justify-content: space-between;
-  margin-bottom: 0.875rem;
-}
-.category {
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--brand-muted);
-  font-size: 0.6875rem;
-  font-weight: 600;
-}
-.unreviewed {
-  border-radius: 999px;
-  background: var(--brand-cream);
-  color: var(--brand-navy);
-  padding: 0.3rem 0.65rem;
-  font-size: 0.75rem;
-  font-weight: 600;
-}
-.fact h4 {
-  color: var(--brand-navy);
-  font-size: 1rem;
-  font-weight: 650;
-  line-height: 1.6;
-}
-.qualifiers {
-  color: var(--brand-ink-soft);
-  font-size: 0.8125rem;
-  line-height: 1.6;
-  margin: 0.5rem 0;
-}
-.evidence {
-  border-left: 3px solid var(--brand-navy);
-  background: var(--brand-paper);
-  margin: 1rem 0 0;
-  padding: 0.875rem 1rem;
-}
-.evidence figcaption {
-  color: var(--brand-muted);
-  font-size: 0.6875rem;
-  margin-bottom: 0.5rem;
-  font-weight: 600;
-}
-.evidence blockquote {
-  white-space: pre-wrap;
-  color: var(--brand-ink-soft);
-  font-size: 0.875rem;
-  line-height: 1.7;
-}
 .failure {
   border-left: 3px solid var(--brand-danger);
   padding-left: 0.75rem;
@@ -123,8 +66,5 @@
   }
   .toolbar button {
     margin-left: 0;
-  }
-  .fact {
-    padding: 1rem;
   }
 }

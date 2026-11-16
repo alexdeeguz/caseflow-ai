@@ -1,0 +1,235 @@
+.card {
+  padding: 1.25rem;
+  background: var(--brand-white);
+  border: 1px solid var(--brand-line);
+  border-radius: var(--radius-control);
+  overflow-wrap: anywhere;
+}
+.heading,
+.actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+.heading {
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+.heading h4 {
+  font-size: 0.875rem;
+  font-weight: 650;
+}
+.actions {
+  margin-top: 0.75rem;
+}
+.badge,
+.corrected {
+  padding: 0.3rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.unreviewed {
+  background: var(--brand-cream);
+  color: var(--brand-navy);
+}
+.approved {
+  background: var(--brand-navy);
+  color: var(--brand-white);
+}
+.rejected {
+  border: 1px solid var(--brand-danger);
+  color: var(--brand-danger);
+}
+.corrected {
+  border: 1px solid var(--brand-line);
+  color: var(--brand-muted);
+}
+.category {
+  color: var(--brand-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.6875rem;
+  font-weight: 650;
+}
+.value {
+  font-size: 1rem;
+  font-weight: 650;
+  color: var(--brand-navy);
+  white-space: pre-wrap;
+}
+.values {
+  line-height: 1.7;
+}
+.qualifiers,
+.muted {
+  color: var(--brand-muted);
+  font-size: 0.8125rem;
+  line-height: 1.65;
+}
+.original {
+  padding: 0.75rem;
+  border: 1px solid var(--brand-line);
+  border-radius: var(--radius-control);
+  margin-top: 0.75rem;
+}
+.original summary {
+  cursor: pointer;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  min-height: 32px;
+}
+.evidence {
+  margin: 1rem 0;
+  border-left: 3px solid var(--brand-navy);
+  background: var(--brand-paper);
+  padding: 0.875rem 1rem;
+}
+.evidence figcaption {
+  font-size: 0.6875rem;
+  color: var(--brand-muted);
+  font-weight: 650;
+  margin-bottom: 0.5rem;
+}
+.evidence blockquote {
+  white-space: pre-wrap;
+  line-height: 1.7;
+  font-size: 0.875rem;
+  color: var(--brand-ink-soft);
+}
+.form {
+  padding: 1.25rem 0;
+  border-block: 1px solid var(--brand-line);
+  margin-top: 1rem;
+}
+.form fieldset {
+  border: 0;
+  padding: 0;
+  min-width: 0;
+}
+.form legend {
+  font-weight: 650;
+  margin-bottom: 0.5rem;
+}
+.fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 1rem 0;
+}
+.form input:not([type='checkbox']),
+.form select,
+.form textarea,
+.reasonInput {
+  width: 100%;
+  border: 1px solid var(--brand-muted);
+  border-radius: var(--radius-control);
+  background: var(--brand-white);
+  color: var(--brand-ink);
+  min-height: 44px;
+  padding: 0.6rem 0.75rem;
+  font: inherit;
+  font-size: 0.875rem;
+}
+.form textarea,
+.reasonInput {
+  resize: vertical;
+}
+.form input[aria-invalid='true'],
+.form textarea[aria-invalid='true'] {
+  border-color: var(--brand-danger);
+}
+.form :disabled {
+  opacity: 0.65;
+}
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-height: 44px;
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+}
+.checkbox input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--brand-navy);
+}
+.error,
+.notice {
+  border-left: 3px solid var(--brand-danger);
+  padding: 0.875rem;
+  background: var(--brand-paper);
+  margin: 0.75rem 0;
+  font-size: 0.875rem;
+}
+.error a {
+  text-decoration: underline;
+}
+.history {
+  margin-top: 1.25rem;
+  border-top: 1px solid var(--brand-line);
+  padding-top: 1rem;
+}
+.history h5 {
+  font-size: 0.875rem;
+  font-weight: 650;
+}
+.history ol {
+  list-style: none;
+  padding: 0;
+}
+.history li {
+  border-bottom: 1px solid var(--brand-line);
+  padding: 1rem 0;
+}
+.reason {
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
+  white-space: pre-wrap;
+}
+.counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 1rem 0;
+}
+.counts div {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  border: 1px solid var(--brand-line);
+  border-radius: var(--radius-control);
+  background: var(--brand-white);
+  padding: 0.625rem 0.875rem;
+}
+.counts dt {
+  color: var(--brand-muted);
+  font-size: 0.75rem;
+}
+.counts dd {
+  color: var(--brand-navy);
+  font-size: 1rem;
+  font-weight: 650;
+  margin: 0;
+}
+@media (max-width: 640px) {
+  .fields {
+    grid-template-columns: 1fr;
+  }
+  .card {
+    padding: 1rem;
+  }
+}
+
+.actions > button {
+  width: auto;
+  min-height: 44px;
+  padding: 10px 16px;
+}
+@media (max-width: 640px) {
+  .actions > button {
+    flex: 1 1 auto;
+  }
+}

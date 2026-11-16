@@ -15,6 +15,14 @@ const inputErrorCodes: ReadonlySet<string> = new Set([
 ]);
 
 const applicationErrors: Partial<Record<ErrorCode, { status: number; message: string }>> = {
+  [ErrorCode.FactReviewConflict]: {
+    status: 409,
+    message: 'This fact changed. Reload the latest revision before trying again.',
+  },
+  [ErrorCode.FactReviewLocked]: {
+    status: 409,
+    message: 'Approved facts must be reopened; rejected facts must be corrected before approval.',
+  },
   [ErrorCode.FactExtractionConflict]: {
     status: 409,
     message: 'Fact extraction changed. Refresh before trying again.',

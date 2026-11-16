@@ -1,4 +1,8 @@
 export const AuditAction = {
+  FactCorrected: 'fact.corrected',
+  FactApproved: 'fact.approved',
+  FactRejected: 'fact.rejected',
+  FactReopened: 'fact.reopened',
   FactExtractionQueued: 'document.facts_queued',
   FactExtractionCompleted: 'document.facts_completed',
   FactExtractionFailed: 'document.facts_failed',

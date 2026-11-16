@@ -1,4 +1,11 @@
 export const Operation = {
+  GetFact: 'fact.get',
+  ListFactReviewHistory: 'fact.history',
+  CorrectFact: 'fact.correct',
+  ApproveFact: 'fact.approve',
+  RejectFact: 'fact.reject',
+  ReopenFact: 'fact.reopen',
+
   GetFactExtraction: 'document.facts.get',
   RequestFactExtraction: 'document.facts.request',
   ListFacts: 'document.facts.list',
@@ -32,6 +39,13 @@ export const Operation = {
 export type Operation = (typeof Operation)[keyof typeof Operation];
 
 export const operationRequiresAdmin: Readonly<Record<Operation, boolean>> = {
+  [Operation.GetFact]: false,
+  [Operation.ListFactReviewHistory]: false,
+  [Operation.CorrectFact]: false,
+  [Operation.ApproveFact]: true,
+  [Operation.RejectFact]: false,
+  [Operation.ReopenFact]: true,
+
   [Operation.GetFactExtraction]: false,
   [Operation.RequestFactExtraction]: true,
   [Operation.ListFacts]: false,

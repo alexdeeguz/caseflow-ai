@@ -14,7 +14,7 @@ import {
   userSchema,
   caseSchema,
   factExtractionSummarySchema,
-  factPageSchema,
+  reviewedFactPageSchema,
   documentPageSchema,
 } from '@caseflow/schemas';
 import { buildApp } from '../../src/app.js';
@@ -226,7 +226,7 @@ test('fact extraction API permissions, lifecycle, evidence, and atomic requests'
         for (const subject of ['staff', 'admin', 'super']) {
           const response = await call('GET', d.facts, subject);
           assert.equal(response.statusCode, 200, response.body);
-          const page = factPageSchema.parse(response.json());
+          const page = reviewedFactPageSchema.parse(response.json());
           assert.equal(page.total, 1);
           assert.equal(page.items[0]!.reviewStatus, 'unreviewed');
           assert.equal(page.items[0]!.evidence[0]!.documentId, d.id);
