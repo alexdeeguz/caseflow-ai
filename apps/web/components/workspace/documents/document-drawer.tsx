@@ -28,8 +28,12 @@ export function DocumentDrawer({
   onClose,
   onExited,
   request,
+  lead,
+  title,
+  placeholder,
 }: {
-  document: DocumentListItem;
+  /** Null while a standalone drawer loads its document; `placeholder` fills the body meanwhile. */
+  document: DocumentListItem | null;
   open: boolean;
   role: Role;
   archived: boolean;
@@ -42,56 +46,73 @@ export function DocumentDrawer({
   onClose: () => void;
   onExited: () => void;
   request: AuthRequest;
+  /** Shown first in the side rail, e.g. the search passage that led here. */
+  lead?: ReactNode;
+  /** Title before the document has loaded. */
+  title?: string;
+  placeholder?: ReactNode;
 }) {
+  // One Drawer whether or not the document has loaded, so it opens and animates only once.
   return (
     <Drawer
       open={open}
-      title={document.filename}
-      description={`${documentTypeLabels[document.contentType]} · ${formatFileSize(document.sizeBytes)}`}
+      title={document?.filename ?? title ?? 'Document'}
+      description={
+        document
+          ? `${documentTypeLabels[document.contentType]} · ${formatFileSize(document.sizeBytes)}`
+          : undefined
+      }
       actions={
-        <DocumentActions
-          document={document}
-          role={role}
-          archived={archived}
-          busy={busy}
-          disabled={disabled}
-          onAction={onAction}
-        />
+        document && (
+          <DocumentActions
+            document={document}
+            role={role}
+            archived={archived}
+            busy={busy}
+            disabled={disabled}
+            onAction={onAction}
+          />
+        )
       }
       onClose={onClose}
       onExited={onExited}
     >
-      <DocumentInspector
-        aside={
-          <>
-            <DocumentDetails document={document} />
-            <ProcessingDetails
-              document={document}
-              action={
-                <>
-                  <ProcessingActionButton
-                    document={document}
-                    role={role}
-                    archived={archived}
-                    disabled={disabled}
-                    busy={processingBusy}
-                    onProcess={onProcess}
-                  />
-                  <SearchIndexAction
-                    document={document}
-                    role={role}
-                    archived={archived}
-                    disabled={disabled}
-                    request={request}
-                  />
-                </>
-              }
-            />
-          </>
-        }
-      >
-        {renderFacts(document)}
-      </DocumentInspector>
+      {!document ? (
+        placeholder
+      ) : (
+        <DocumentInspector
+          aside={
+            <>
+              {lead}
+              <DocumentDetails document={document} />
+              <ProcessingDetails
+                document={document}
+                action={
+                  <>
+                    <ProcessingActionButton
+                      document={document}
+                      role={role}
+                      archived={archived}
+                      disabled={disabled}
+                      busy={processingBusy}
+                      onProcess={onProcess}
+                    />
+                    <SearchIndexAction
+                      document={document}
+                      role={role}
+                      archived={archived}
+                      disabled={disabled}
+                      request={request}
+                    />
+                  </>
+                }
+              />
+            </>
+          }
+        >
+          {renderFacts(document)}
+        </DocumentInspector>
+      )}
     </Drawer>
   );
 }

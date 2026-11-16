@@ -22,7 +22,7 @@ import { CaseSectionLayout } from '../case-section-layout';
 import { Pagination } from '../../ui/pagination';
 import { DocumentIcon } from './document-icon';
 import { UploadIcon } from './document-icons';
-import { ConfirmDialog } from '../../ui/confirm-dialog';
+import { RemoveDocumentConfirmation } from './remove-document-confirmation';
 import { StatusMessage } from '../../ui/status-message';
 import { UploadModal } from './upload-modal';
 import { useDocumentActions } from './use-document-actions';
@@ -257,26 +257,7 @@ export function DocumentLibrary({
           <StatusMessage tone="error">{actionError}</StatusMessage>
         </div>
       )}
-      <ConfirmDialog
-        open={actions.removing !== null}
-        title="Remove document?"
-        confirmLabel="Remove document"
-        cancelLabel="Keep document"
-        busy={actions.busy !== null}
-        confirmDisabled={!canAct}
-        onCancel={actions.cancel}
-        onConfirm={actions.confirm}
-      >
-        <p>
-          <strong className={styles.filename}>{actions.removing?.filename}</strong>
-        </p>
-        <p>
-          The file and its history are retained. An administrator can restore it later. Previously
-          issued download links may work for up to 60 seconds.
-        </p>
-        {!canAct && <p>Reconnect and refresh the documents before continuing.</p>}
-        {actions.error && <StatusMessage tone="error">{actions.error}</StatusMessage>}
-      </ConfirmDialog>
+      <RemoveDocumentConfirmation actions={actions} canAct={canAct} />
       <FactExtractionConfirmation
         action={facts}
         role={role}

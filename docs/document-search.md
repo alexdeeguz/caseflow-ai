@@ -1,7 +1,9 @@
 # Document search
 
 Document search finds passages in processed document text across the cases a user can access.
-Results show the case, file, page, and a highlighted snippet, and open the document's details.
+Results show the case, file, page, and a highlighted snippet. Selecting a result opens the same
+document details drawer as the Documents tab (file details, processing, and extracted facts with
+review) without leaving search, along with the matched passage and a link to the case.
 
 - **Smart search** (default) blends exact-word matches with meaning-based matches, so "treatment
   after the accident" also finds therapy notes that use different words.

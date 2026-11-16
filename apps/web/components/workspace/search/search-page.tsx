@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   CaseArchiveFilter,
@@ -8,6 +9,7 @@ import {
   SearchMode,
   caseArchiveLabels,
   type DocumentSearchResult,
+  type Role,
 } from '@caseflow/schemas';
 import type { AuthRequest } from '../../../hooks/use-authentication';
 import type { WorkspaceNavigate } from '../../../hooks/use-workspace-navigation';
@@ -26,7 +28,9 @@ import { LoadingRegion } from '../../ui/loading-region';
 import { Pagination } from '../../ui/pagination';
 import { SegmentedControl } from '../../ui/segmented-control';
 import { StatusMessage } from '../../ui/status-message';
+import { StandaloneDocumentDrawer } from '../documents/standalone-document-drawer';
 import { SearchField } from './search-field';
+import { SearchMatchPanel } from './search-match-panel';
 import { SearchResults } from './search-results';
 import styles from './search.module.css';
 
@@ -59,8 +63,10 @@ export function SearchPage({
   location,
   navigate,
   pendingLocation,
+  role,
 }: {
   request: AuthRequest;
+  role: Role;
   location: WorkspaceLocation;
   navigate: WorkspaceNavigate;
   pendingLocation: WorkspaceLocation | null;
@@ -86,6 +92,15 @@ export function SearchPage({
   const { data, error } = documentLibraryState(query);
   const apply = (changes: Partial<WorkspaceLocation>) =>
     void navigate({ ...location, ...changes, searchPage: 1 }, { replace: true });
+  // The drawer keeps showing its result while it animates closed.
+  const [selected, setSelected] = useState<DocumentSearchResult | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [accessError, setAccessError] = useState<string | null>(null);
+  const openResult = (result: DocumentSearchResult) => {
+    setSelected(result);
+    setAccessError(null);
+    setDrawerOpen(true);
+  };
 
   return (
     <section className={styles.page} aria-labelledby="search-heading">
@@ -145,6 +160,7 @@ export function SearchPage({
         </div>
       </header>
 
+      {accessError && <StatusMessage tone="error">{accessError}</StatusMessage>}
       {!searchable ? (
         <SearchTips />
       ) : !data ? (
@@ -170,11 +186,7 @@ export function SearchPage({
               </Callout>
             )}
             {data.items.length ? (
-              <SearchResults
-                items={data.items}
-                showCase
-                onOpen={(result) => void navigate(documentLocation(location, result))}
-              />
+              <SearchResults items={data.items} showCase onOpen={openResult} />
             ) : (
               <StatusMessage>
                 No matches.{' '}
@@ -193,6 +205,31 @@ export function SearchPage({
             )}
           </div>
         </LoadingRegion>
+      )}
+      {selected && (
+        <StandaloneDocumentDrawer
+          key={selected.documentId}
+          caseId={selected.caseId}
+          documentId={selected.documentId}
+          filename={selected.filename}
+          archived={selected.caseArchived}
+          role={role}
+          request={request}
+          open={drawerOpen}
+          lead={
+            <SearchMatchPanel
+              result={selected}
+              onOpenInCase={() => void navigate(documentLocation(location, selected))}
+            />
+          }
+          onClose={() => setDrawerOpen(false)}
+          onExited={() => setSelected(null)}
+          onAccessRejected={(message) => {
+            setAccessError(message);
+            setDrawerOpen(false);
+            void query.refetch();
+          }}
+        />
       )}
     </section>
   );

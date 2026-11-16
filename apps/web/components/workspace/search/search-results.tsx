@@ -4,15 +4,22 @@ import { DocumentIcon } from '../documents/document-icon';
 import { ChevronRightIcon } from '../documents/document-icons';
 import styles from './search.module.css';
 
-const matchLabels: Record<SearchMatch, string> = {
+export const matchLabels: Record<SearchMatch, string> = {
   [SearchMatch.Keyword]: 'Exact words',
   [SearchMatch.Semantic]: 'Similar meaning',
   [SearchMatch.Both]: 'Exact + meaning',
 };
 
-function Snippet({ result }: { result: DocumentSearchResult }) {
+/** Passage text with the server's highlight ranges rendered as <mark>. */
+export function Snippet({
+  result,
+  className = styles.snippet,
+}: {
+  result: DocumentSearchResult;
+  className?: string;
+}) {
   return (
-    <p className={styles.snippet}>
+    <p className={className}>
       {highlightSegments(result.snippet, result.highlights).map((segment, index) =>
         segment.highlighted ? <mark key={index}>{segment.text}</mark> : segment.text,
       )}
@@ -52,7 +59,7 @@ export function SearchResults({
               onClick={() => onOpen(result)}
             >
               <span className={styles.filename}>{result.filename}</span>
-              <span className={styles.page}>p. {result.page}</span>
+              <span className={styles.pageTag}>p. {result.page}</span>
               <span className="sr-only">, open document</span>
             </button>
             <Snippet result={result} />

@@ -271,7 +271,7 @@
 .result:hover .resultTitle {
   color: var(--brand-navy);
 }
-.page {
+.pageTag {
   flex-shrink: 0;
   white-space: nowrap;
   padding: 0 0.375rem;
@@ -392,4 +392,49 @@
 .caseSearch {
   flex: 1 1 18rem;
   max-width: 24rem;
+}
+
+/* ── Search match (document drawer) ────────────────────────── */
+.matchCase {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+  margin: 0 0 0.375rem;
+  color: var(--brand-ink-soft);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+.matchCase .caseNumber {
+  font-size: 0.6875rem;
+}
+p.matchPage {
+  margin: 0 0 0.375rem;
+  color: var(--brand-muted);
+  font-size: 0.75rem;
+  font-weight: 650;
+}
+p.matchSnippet {
+  margin: 0;
+  padding: 0.5rem 0.625rem;
+  border-left: 2px solid var(--brand-yellow);
+  background: var(--brand-paper);
+  color: var(--brand-ink);
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+button.openCase {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin-top: 0.625rem;
+  padding: 0.25rem 0;
+  color: var(--brand-navy);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+button.openCase:hover {
+  text-decoration: underline;
 }

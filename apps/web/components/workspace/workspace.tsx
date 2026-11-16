@@ -142,6 +142,7 @@ function WorkspaceContent({ user, request, signOut, refreshProfile }: WorkspaceP
       {tab === WorkspaceTab.Search && (
         <SearchPage
           request={request}
+          role={user.role}
           location={location}
           navigate={navigate}
           pendingLocation={pending?.tab === WorkspaceTab.Search ? pending : null}
