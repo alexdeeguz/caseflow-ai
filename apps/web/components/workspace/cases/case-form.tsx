@@ -47,6 +47,8 @@ export function CreateCaseModal({
     setValues(emptyCaseValues);
     setError('');
     setConfirmDiscard(false);
+    setBusy(false);
+    submitting.current = false;
   }
 
   function requestClose() {
@@ -73,18 +75,16 @@ export function CreateCaseModal({
         body: JSON.stringify(input),
       });
       notify('Case created.');
+      // Stay busy, with the entered details showing, until the new case opens and replaces this
+      // modal; clearing or re-enabling the form here would flash it and allow a duplicate create.
       if (live.current) {
-        reset();
         onCreated(record);
       }
     } catch (cause) {
-      if (live.current) {
-        setError(cause instanceof Error ? cause.message : 'The case could not be created.');
-      }
-    } finally {
       submitting.current = false;
       if (live.current) {
         setBusy(false);
+        setError(cause instanceof Error ? cause.message : 'The case could not be created.');
       }
     }
   }
