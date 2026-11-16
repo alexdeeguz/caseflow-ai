@@ -1,13 +1,6 @@
 'use client';
 
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useRef,
-  useSyncExternalStore,
-  type ReactNode,
-} from 'react';
+import { createContext, useContext, useEffect, useSyncExternalStore, type ReactNode } from 'react';
 import type { UploadQueue } from '../../../lib/documents/upload-queue';
 import {
   UploadPhase,
@@ -21,7 +14,6 @@ const UploadContext = createContext<UploadQueue | null>(null);
 export function UploadProvider({ store, children }: { store: UploadQueue; children: ReactNode }) {
   const items = useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot);
   const toast = useToast();
-  const notified = useRef(new Map<string, number>());
   const unfinished = items.some(isUploadUnfinished);
 
   useEffect(() => () => store.clear(), [store]);
@@ -39,26 +31,24 @@ export function UploadProvider({ store, children }: { store: UploadQueue; childr
   }, [unfinished]);
 
   useEffect(() => {
-    const batches = new Set(items.map((item) => item.batchId));
-    for (const key of notified.current.keys()) {
-      if (!batches.has(key)) {
-        notified.current.delete(key);
-      }
-    }
-    for (const id of batches) {
+    for (const id of new Set(items.map((item) => item.batchId))) {
       const batch = items.filter((item) => item.batchId === id);
       if (batch.some((item) => isUploadRunning(item.phase) || item.phase === UploadPhase.Queued)) {
         continue;
       }
-      const count = batch.filter((item) => item.phase === UploadPhase.Uploaded).length;
-      if (count && count > (notified.current.get(id) ?? 0)) {
-        toast(
-          `${count} of ${batch.length} ${batch.length === 1 ? 'file' : 'files'} uploaded and verified.`,
-        );
-        notified.current.set(id, count);
+      const uploaded = batch.filter((item) => item.phase === UploadPhase.Uploaded);
+      if (!uploaded.length) {
+        continue;
       }
+      toast(
+        batch.length === 1
+          ? `${uploaded[0]!.filename} uploaded and verified.`
+          : `${uploaded.length} of ${batch.length} files uploaded and verified.`,
+      );
+      // The toast confirms success, so the panel keeps only uploads that still need attention.
+      uploaded.forEach((item) => store.dismiss(item.id));
     }
-  }, [items, toast]);
+  }, [items, store, toast]);
 
   return <UploadContext value={store}>{children}</UploadContext>;
 }
