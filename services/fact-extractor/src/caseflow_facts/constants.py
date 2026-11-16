@@ -23,3 +23,11 @@ class FailureCode(StrEnum):
     BUDGET_EXCEEDED = 'budget_exceeded'
     ATTEMPTS_EXHAUSTED = 'attempts_exhausted'
     INTERNAL_ERROR = 'internal_error'
+
+
+class EvidenceFailureReason(StrEnum):
+    SCHEMA_INVALID = 'schema_invalid'
+    UNKNOWN_SOURCE = 'unknown_source'
+    QUOTE_NOT_FOUND = 'quote_not_found'
+    AMBIGUOUS_QUOTE = 'ambiguous_quote'
+    PAGE_MISMATCH = 'page_mismatch'

@@ -1,12 +1,15 @@
+import logging
 from collections.abc import Callable
 from time import monotonic
 
 from ..constants import MAX_INPUT_TOKENS, FailureCode
-from ..errors import ExtractionFailure, RetryableError
+from ..errors import ExtractionFailure, InvalidEvidence, RetryableError
 from ..models import Claim, DeniedReservation, IgnoredClaim, QueueMessage
 from ..ports import Checkpoint, FactProvider, JobStore, TextStorage
 from .chunks import prepare_chunks, split_chunk
 from .evidence import validate_evidence
+
+logger = logging.getLogger(__name__)
 
 
 class Extractor:
@@ -32,6 +35,13 @@ class Extractor:
         try:
             self._process(claim, deadline)
         except ExtractionFailure as failure:
+            if isinstance(failure, InvalidEvidence):
+                logger.warning(
+                    'fact_evidence_rejected job_id=%s task_id=%s reason=%s',
+                    claim.job_id,
+                    claim.task_id,
+                    failure.reason.value,
+                )
             self._store.fail(claim, failure.code)
             self._metric('FailedJobs', 1)
 

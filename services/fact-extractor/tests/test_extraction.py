@@ -12,13 +12,14 @@ from pydantic import ValidationError
 
 from caseflow_facts.adapters.openai import OpenAIFactProvider
 from caseflow_facts.adapters.storage import S3TextStorage
-from caseflow_facts.constants import FailureCode
-from caseflow_facts.errors import ExtractionFailure, RetryableError
+from caseflow_facts.constants import EvidenceFailureReason, FailureCode
+from caseflow_facts.errors import ExtractionFailure, InvalidEvidence, RetryableError
 from caseflow_facts.handlers.extraction import consume_batch
 from caseflow_facts.models import (
     Claim,
     DeniedReservation,
     IgnoredClaim,
+    ProposedFacts,
     ProviderResult,
     QueueMessage,
     Reservation,
@@ -256,3 +257,89 @@ def test_unrecordable_or_malformed_deliveries_remain_retryable(caplog):
         'batchItemFailures': [{'itemIdentifier': 'test-1'}]
     }
     assert 'private content' not in caplog.text
+
+
+@pytest.mark.parametrize(
+    ('category', 'allowed_fields'),
+    [
+        ('date', {'dateValue', 'datePrecision', 'dateMeaning'}),
+        ('provider', set()),
+        ('treatment', {'treatmentStatus'}),
+        ('finding', {'findingStatus'}),
+    ],
+)
+def test_provider_schema_enforces_category_fields(category, allowed_fields):
+    schema = ProposedFacts.model_json_schema(by_alias=True)
+    variants = [
+        schema['$defs'][item['$ref'].split('/')[-1]]
+        for item in schema['properties']['facts']['items']['anyOf']
+    ]
+    variant = next(item for item in variants if item['properties']['category']['const'] == category)
+    fields = {'dateValue', 'datePrecision', 'dateMeaning', 'treatmentStatus', 'findingStatus'}
+    assert variant['additionalProperties'] is False
+    assert set(variant['required']) == set(variant['properties'])
+    for field in fields:
+        field_schema = variant['properties'][field]
+        assert field_schema['type'] == ('string' if field in allowed_fields else 'null')
+    # The model receives the same category rules that application validation enforces.
+    assert {item['properties']['category']['const'] for item in variants} == {
+        'date',
+        'provider',
+        'treatment',
+        'finding',
+    }
+
+
+@pytest.mark.parametrize(
+    ('mutation', 'reason'),
+    [
+        ('schema', EvidenceFailureReason.SCHEMA_INVALID),
+        ('source', EvidenceFailureReason.UNKNOWN_SOURCE),
+        ('quote', EvidenceFailureReason.QUOTE_NOT_FOUND),
+        ('whitespace', EvidenceFailureReason.QUOTE_NOT_FOUND),
+        ('ambiguous', EvidenceFailureReason.AMBIGUOUS_QUOTE),
+        ('page', EvidenceFailureReason.PAGE_MISMATCH),
+    ],
+)
+def test_evidence_failures_have_safe_reasons_without_relaxing_matching(mutation, reason):
+    fixture = json.loads(json.dumps(FIXTURES[0]))
+    text = fixture['text']
+    span = make_span(1, 0, text)
+    fact = fixture['expected']['facts'][0]
+    citation = fact['evidence'][0]
+    pages = {1: text}
+    if mutation == 'schema':
+        fact['treatmentStatus'] = 'unspecified'
+    elif mutation == 'source':
+        citation['sourceId'] = 'unknown'
+    elif mutation == 'quote':
+        citation['quote'] = 'private unsupported quotation'
+    elif mutation == 'whitespace':
+        citation['quote'] = citation['quote'].replace(' ', '  ')
+    elif mutation == 'ambiguous':
+        span = make_span(1, 0, text + text)
+        citation['sourceId'] = span.source_id
+        pages = {1: span.text}
+    else:
+        pages = {1: 'different saved page'}
+    with pytest.raises(InvalidEvidence) as error:
+        validate_evidence(json.dumps({'facts': [fact]}), [span], pages)
+    assert error.value.reason == reason
+    assert str(error.value) == 'invalid_evidence'
+    assert 'private' not in str(error.value)
+
+
+def test_invalid_evidence_logs_reason_and_persists_failure_without_content(caplog):
+    extractor, store, provider, claim = make_extractor()
+    provider.extract.return_value = ProviderResult(
+        status='completed',
+        text='private invalid response',
+        usage=Usage(input_tokens=1000, output_tokens=20),
+    )
+    run(extractor, claim)
+    store.settle.assert_called_once()
+    store.fail.assert_called_once_with(claim, FailureCode.INVALID_EVIDENCE)
+    store.complete.assert_not_called()
+    assert 'reason=schema_invalid' in caplog.text
+    assert claim.job_id in caplog.text
+    assert 'private invalid response' not in caplog.text

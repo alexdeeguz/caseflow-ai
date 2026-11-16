@@ -5,9 +5,23 @@ Super Admin requests extraction for an available document in a current case. The
 unreviewed dates, providers, treatments, and findings with exact source quotations. It does not
 approve facts, generate summaries, or process historical documents automatically.
 
-The implementation is prepared for review. Hosted migrations, deployment, credentials, live model
-evaluation, and activation are separate release steps. New queue consumption, API dispatch, and
-scheduled fact recovery default to disabled.
+New deployments default to disabled queue consumption, API dispatch, and scheduled fact recovery.
+Enable each only after reviewing its configuration and verifying the live workflow. Extraction
+remains an explicit administrator action even when the dispatcher and queue consumer are enabled.
+
+## Verified development deployment
+
+On November 15, 2026, controlled native PDF, scanned PDF, and image runs completed with 8, 10, and
+13 source-linked facts respectively. The image run exercised the continuous API dispatcher and
+Lambda queue trigger from the application request through publication and visible review records.
+The fact consumer and local API dispatcher are enabled; the API must remain running to dispatch
+new database tasks. Scheduled fact recovery remains deferred to a separate deployment and check.
+
+The facts endpoint also requires the human-review migration, `20261116011952_human_review.sql`.
+It initializes review records for existing facts without changing their original values or evidence.
+A completed extraction count alone does not verify that this read-path prerequisite is installed.
+All newly published facts remain Unreviewed; these checks do not establish complete extraction recall.
+No historical documents are automatically submitted for extraction.
 
 ## Components and request flow
 
@@ -42,6 +56,11 @@ Responses requests, strict structured output, and `store: false`. This disables 
 it does not promise zero provider retention. Document text is explicitly treated as untrusted data.
 See [model documentation](https://developers.openai.com/api/docs/models/gpt-5.4-mini) and
 [conversation-state documentation](https://developers.openai.com/api/docs/guides/conversation-state).
+
+The structured-output schema uses a separate branch for each fact category. Date fields are
+required only for dates, treatment status for treatments, and finding status for findings; unrelated
+fields must be null. This gives the provider the same category constraints enforced by application
+validation. Invalid schema and citation failures remain terminal and never publish partial facts.
 
 The application supplies document/result IDs and evidence offsets. Every quotation must occur
 exactly in its checkpointed page text. Offsets count Unicode code points and are end-exclusive.

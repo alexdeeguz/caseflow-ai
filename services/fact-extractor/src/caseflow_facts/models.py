@@ -129,8 +129,44 @@ class FactValues(Model):
         return self
 
 
-class ProposedFact(FactValues):
+class CitedFact(FactValues):
     evidence: Annotated[list[Citation], Field(min_length=1, max_length=8)]
+
+
+class ProposedDate(CitedFact):
+    category: Literal['date']
+    date_value: str
+    date_precision: Literal['year', 'month', 'day']
+    date_meaning: Annotated[str, Field(min_length=1, max_length=200)]
+    treatment_status: None
+    finding_status: None
+
+
+class NonDateFact(CitedFact):
+    date_value: None
+    date_precision: None
+    date_meaning: None
+
+
+class ProposedProvider(NonDateFact):
+    category: Literal['provider']
+    treatment_status: None
+    finding_status: None
+
+
+class ProposedTreatment(NonDateFact):
+    category: Literal['treatment']
+    treatment_status: Literal['recommended', 'performed', 'unspecified']
+    finding_status: None
+
+
+class ProposedFinding(NonDateFact):
+    category: Literal['finding']
+    treatment_status: None
+    finding_status: Literal['suspected', 'confirmed', 'unspecified']
+
+
+ProposedFact = ProposedDate | ProposedProvider | ProposedTreatment | ProposedFinding
 
 
 class ProposedFacts(Model):
