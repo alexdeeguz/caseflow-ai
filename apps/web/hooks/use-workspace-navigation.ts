@@ -77,6 +77,15 @@ export function useWorkspaceNavigation(
       }
 
       const resources = locationResources(next, role);
+      const paths = (list: { path: string }[]) => list.map(({ path }) => path).join('\n');
+
+      // Same data as the current view (e.g. opening a modal or closing a drawer): switch at once
+      // rather than waiting to revalidate what is already on screen.
+      if (paths(resources) === paths(locationResources(location, role))) {
+        router[replace ? 'replace' : 'push'](workspaceHref(next), { scroll: false });
+        void refreshProfile();
+        return;
+      }
 
       await Promise.all([
         refreshProfile(),

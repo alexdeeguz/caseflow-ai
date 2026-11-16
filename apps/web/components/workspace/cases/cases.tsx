@@ -84,6 +84,12 @@ export function Cases({ request, user, location, navigate, pendingLocation }: Ca
 function CaseBrowser({ request, user, location, navigate, pendingLocation }: CasesProps) {
   const { data, error } = useResource(request, caseListResource(location));
   const listLocation = { ...location, case: null, mode: undefined };
+  // Only a different list query (search, filter, page) reloads the list; opening or closing the
+  // create-case modal does not.
+  const reloading =
+    !!pendingLocation &&
+    !pendingLocation.case &&
+    caseListResource(pendingLocation).path !== caseListResource(location).path;
   const filtered = Boolean(
     location.search.trim() || location.status || location.archive !== CaseArchiveFilter.Current,
   );
@@ -115,7 +121,7 @@ function CaseBrowser({ request, user, location, navigate, pendingLocation }: Cas
       {!data ? (
         <LoadState error={error} />
       ) : (
-        <LoadingRegion loading={!!pendingLocation && !pendingLocation.case}>
+        <LoadingRegion loading={reloading}>
           {!data.items.length ? (
             <StatusMessage>
               {filtered

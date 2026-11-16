@@ -175,7 +175,13 @@ export function workspaceHref(location: WorkspaceLocation): string {
 /**
  * True when navigating replaces the whole page (another tab, case, or editor mode). Otherwise the
  * change is in-place (a case section, filter or page) and the affected region shows its own loading.
+ * Opening or closing the create-case modal keeps the case list on screen, so it is in-place too.
  */
 export function isPageNavigation(from: WorkspaceLocation, to: WorkspaceLocation): boolean {
+  const listView = (location: WorkspaceLocation) =>
+    location.tab === WorkspaceTab.Cases && (!location.case || location.case === CaseView.New);
+  if (to.tab === from.tab && to.mode === from.mode && listView(from) && listView(to)) {
+    return false;
+  }
   return to.tab !== from.tab || to.case !== from.case || to.mode !== from.mode;
 }

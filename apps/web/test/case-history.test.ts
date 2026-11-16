@@ -8,7 +8,7 @@ import {
   caseReviewedSummaryQuerySchema,
 } from '@caseflow/schemas';
 import { isPageNavigation, parseWorkspaceLocation, workspaceHref } from '../lib/workspace-location';
-import { CaseMode, CaseSection, WorkspaceTab } from '../lib/constants/navigation';
+import { CaseMode, CaseSection, CaseView, WorkspaceTab } from '../lib/constants/navigation';
 import { locationResources } from '../components/workspace/navigation';
 import {
   CARE_GAP_DAYS,
@@ -296,6 +296,11 @@ test('only tab, case or editor changes count as page navigation', () => {
   assert.equal(isPageNavigation(base, { ...base, case: null }), true);
   assert.equal(isPageNavigation(base, { ...base, mode: CaseMode.Edit }), true);
   assert.equal(isPageNavigation(base, { ...base, tab: WorkspaceTab.Profile }), true);
+  // The create-case modal opens over the case list without a page change.
+  const list = parseWorkspaceLocation(new URLSearchParams('tab=cases&search=avery'));
+  assert.equal(isPageNavigation(list, { ...list, case: CaseView.New }), false);
+  assert.equal(isPageNavigation({ ...list, case: CaseView.New }, list), false);
+  assert.equal(isPageNavigation({ ...list, case: CaseView.New }, { ...list, case: caseId }), true);
 });
 
 const dated = (
