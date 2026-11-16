@@ -17,6 +17,7 @@ import {
   reviewedFactSchema,
   factReviewHistorySchema,
   factValuesSchema,
+  documentPageSchema,
 } from '@caseflow/schemas';
 import { buildApp } from '../../src/app.js';
 import { createTokenVerifier } from '../../src/auth.js';
@@ -188,6 +189,88 @@ test('human review signed API, immutable provenance and transactional permission
     return { ...d, fact, url: `${d.facts}/${fact.id}` };
   };
   try {
+    await t.test('document counts follow current reviews, visibility and pagination', async () => {
+      const d = await fixture();
+      const path = `/cases/${d.caseId}/documents`;
+      const count = async (subject = 'admin', query = '') => {
+        const response = await call('GET', path + query, subject);
+        assert.equal(response.statusCode, 200, response.body);
+        const page = documentPageSchema.parse(response.json());
+        assert.equal(page.total, 1);
+        return page.items[0]!.unreviewedFactCount;
+      };
+      for (const subject of ['staff', 'admin', 'super']) {
+        assert.equal(await count(subject), 1);
+      }
+      assert.equal((await call('GET', path, 'outsider')).statusCode, 404);
+      assert.equal((await call('GET', path, 'missing')).statusCode, 401);
+      assert.equal(
+        documentPageSchema.parse((await call('GET', path + '?page=2&pageSize=1')).json()).items
+          .length,
+        0,
+      );
+      assert.equal(
+        (await call('POST', `${d.url}/approve`, 'admin', { expectedVersion: 1 })).statusCode,
+        200,
+      );
+      assert.equal(await count(), 0);
+      assert.equal(
+        (
+          await call('POST', `${d.url}/reopen`, 'super', {
+            expectedVersion: 2,
+            reason: 'Check source',
+          })
+        ).statusCode,
+        200,
+      );
+      assert.equal(await count(), 1);
+      assert.equal(
+        (
+          await call('POST', `${d.url}/reject`, 'staff', {
+            expectedVersion: 3,
+            reason: 'Unsupported finding',
+          })
+        ).statusCode,
+        200,
+      );
+      assert.equal(await count(), 0);
+      assert.equal(
+        (
+          await call('PATCH', d.url, 'staff', {
+            expectedVersion: 4,
+            values: d.fact.original,
+            reason: 'Reconsider source',
+          })
+        ).statusCode,
+        200,
+      );
+      assert.equal(await count(), 1);
+      await execute('admin', Operation.RemoveDocument, {
+        caseId: d.caseId,
+        documentId: d.id,
+        expectedVersion: 1,
+      });
+      assert.equal(await count('admin', '?filter=removed'), 0);
+      assert.equal(
+        documentPageSchema.parse((await call('GET', path + '?filter=all', 'staff')).json()).total,
+        0,
+      );
+      await execute('admin', Operation.RestoreDocument, {
+        caseId: d.caseId,
+        documentId: d.id,
+        expectedVersion: 2,
+      });
+      assert.equal(await count('staff'), 1);
+      await execute('admin', Operation.ArchiveCase, { id: d.caseId, expectedVersion: 1 });
+      assert.equal(await count('staff'), 1);
+      await execute('admin', Operation.UpdateAccess, { id: users.get('staff'), active: false });
+      try {
+        assert.equal((await call('GET', path, 'staff')).statusCode, 403);
+      } finally {
+        await execute('admin', Operation.UpdateAccess, { id: users.get('staff'), active: true });
+      }
+    });
+
     await t.test(
       'Staff correction/rejection, Admin approval/reopening, versioning and original evidence',
       async () => {

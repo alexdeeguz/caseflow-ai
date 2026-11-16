@@ -152,7 +152,7 @@ test('fact extraction API permissions, lifecycle, evidence, and atomic requests'
         (await call('POST', d.path, 'admin', { expectedJobId: null, model: 'forged' })).statusCode,
         400,
       );
-      assert.equal((await call('GET', d.path, 'staff')).json().status, 'not_extracted');
+      assert.equal((await call('GET', d.path, 'staff')).json().status, 'queued');
       const responses = await Promise.all([call('POST', d.path), call('POST', d.path, 'super')]);
       for (const response of responses) {
         assert.equal(response.statusCode, 200, response.body);
@@ -281,13 +281,18 @@ test('fact extraction API permissions, lifecycle, evidence, and atomic requests'
         }
       }
     });
-    await t.test('audit rejection rolls back creation', async () => {
+    await t.test('audit rejection rolls back manual retry creation', async () => {
       const d = await document();
+      const initial = (await call('GET', d.path)).json().job.id;
+      await db.owner.query(
+        "select caseflow.end_fact_extraction($1,'failed','provider_unavailable')",
+        [initial],
+      );
       await db.owner
         .query(`create function caseflow.reject_fact_audit() returns trigger language plpgsql as $$ begin raise exception 'private failure'; end $$;
         create trigger reject_fact_audit before insert on caseflow.audit_events for each row execute function caseflow.reject_fact_audit()`);
       try {
-        const response = await call('POST', d.path);
+        const response = await call('POST', d.path, 'admin', { expectedJobId: initial });
         assert.equal(response.statusCode, 503);
         assert.doesNotMatch(response.body, /private failure/);
         assert.equal(
@@ -297,7 +302,7 @@ test('fact extraction API permissions, lifecycle, evidence, and atomic requests'
               [d.id],
             )
           ).rows[0].n,
-          0,
+          1,
         );
       } finally {
         await db.owner.query(

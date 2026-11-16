@@ -166,9 +166,10 @@ test('approved case timeline and summary through signed API requests', async (t)
     ).rows[0].id;
     const job = (
       await db.owner.query(
-        `insert into caseflow.fact_extraction_jobs(document_id,processing_result_id,requested_by,status,chunk_count,completed_chunks,fact_count,finished_at)
-       values($1,$2,$3,'completed',1,1,$4,now()) returning id`,
-        [d.id, processing, users.get('admin'), values.length],
+        `update caseflow.fact_extraction_jobs
+         set status='completed',chunk_count=1,completed_chunks=1,fact_count=$2,finished_at=now()
+         where document_id=$1 returning id`,
+        [d.id, values.length],
       )
     ).rows[0].id;
     const ids: string[] = [];

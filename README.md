@@ -18,9 +18,9 @@ Use fictional data for demonstrations and testing.
 
 Native PDF extraction, Textract OCR, bounded recovery, and monitoring are implemented and verified in the hosted development environment. Queue consumers and scheduled recovery run in AWS; continuous dispatch runs with the API. New deployments start with triggers disabled and follow the [verification and activation guide](docs/processing-verification.md). File previews and extracted-text viewing remain outside this phase.
 
-- **Fact extraction:** OpenAI-only, manually requested unreviewed facts with exact source
-  quotations, a shared daily allowance, and separate queue/worker infrastructure. Prepared for
-  review; live evaluation and activation remain pending. See [fact extraction](docs/fact-extraction.md).
+- **Fact extraction:** OpenAI-only unreviewed facts, queued automatically when document processing
+  reaches Ready, with exact source quotations and a shared daily allowance. Retries and human
+  review remain manual. The development consumer and dispatcher are enabled. See [fact extraction](docs/fact-extraction.md).
 
 - **Human review:** versioned fact corrections, Staff rejection, administrator approval/reopening,
   immutable evidence, and protected review history. See [human review](docs/human-review.md).
@@ -36,7 +36,7 @@ Native PDF extraction, Textract OCR, bounded recovery, and monitoring are implem
 | [apps/api](apps/api)                                       | Fastify API with PostgreSQL authorization, S3 storage, and an SQS dispatcher |
 | [services/document-processor](services/document-processor) | Python workers for native text, Textract starts, and OCR completion          |
 | [services/fact-extractor](services/fact-extractor)         | Python worker for OpenAI structured facts and evidence validation            |
-| [infra/fact-extraction](infra/fact-extraction)             | Disabled fact queue/worker, secrets, and monitoring definitions              |
+| [infra/fact-extraction](infra/fact-extraction)             | Fact queue/worker, secrets, and monitoring definitions                       |
 | [infra/document-processing](infra/document-processing)     | SAM template, isolated validation tooling, and container builds              |
 | [packages/schemas](packages/schemas)                       | Handwritten shared Zod contracts, constants, and TypeScript types            |
 | [supabase](supabase)                                       | PostgreSQL migrations, local configuration, and fictional seed data          |

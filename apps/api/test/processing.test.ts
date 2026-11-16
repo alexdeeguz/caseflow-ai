@@ -115,7 +115,14 @@ test('public summaries enforce job/result consistency and reject private fields'
     removedBy: null,
     processing: queued,
     factExtraction: { status: 'not_extracted', job: null },
+    unreviewedFactCount: 0,
   };
   documentListItemSchema.parse(document);
+  for (const count of [undefined, -1, 1.5, '7']) {
+    assert.equal(
+      documentListItemSchema.safeParse({ ...document, unreviewedFactCount: count }).success,
+      false,
+    );
+  }
   assert.equal(documentListItemSchema.safeParse({ ...document, id: randomUUID() }).success, false);
 });

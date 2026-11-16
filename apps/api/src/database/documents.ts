@@ -125,7 +125,11 @@ export async function listDocuments(client: PoolClient, input: Record<string, un
   const result = await client.query<{
     visible: boolean;
     total: number;
-    items: (Document & { processing: ProcessingRecord; factJob: FactExtractionSummary['job'] })[];
+    items: (Document & {
+      processing: ProcessingRecord;
+      factJob: FactExtractionSummary['job'];
+      unreviewedFactCount: number;
+    })[];
   }>(
     `with matching as materialized (
       select d.* from caseflow.documents d
@@ -134,11 +138,22 @@ export async function listDocuments(client: PoolClient, input: Record<string, un
           or ($2 = 'removed' and d.status = 'removed'))
     ), page_documents as (
       select * from matching order by created_at desc, id desc limit $3 offset $4
+    ), review_counts as (
+      select j.document_id, count(*)::int as unreviewed_count
+      from page_documents d
+      join caseflow.fact_extraction_jobs j on j.document_id = d.id
+      join caseflow.extracted_facts f on f.extraction_job_id = j.id
+      join caseflow.fact_reviews r on r.fact_id = f.id
+      where d.status = 'available' and j.status = 'completed' and r.status = 'unreviewed'
+      group by j.document_id
     ), paged as (
       select ${documentProjection} || jsonb_build_object('processing',
-        jsonb_build_object('job', processing.job, 'result', processing.result), 'factJob', extraction.job) as document,
+        jsonb_build_object('job', processing.job, 'result', processing.result),
+        'factJob', extraction.job,
+        'unreviewedFactCount', coalesce(reviews.unreviewed_count, 0)) as document,
         d.created_at, d.id
       from page_documents d ${processingSummaryJoin} ${factExtractionJoin}
+      left join review_counts reviews on reviews.document_id = d.id
     )
     select exists(select 1 from caseflow.cases where id = $1) as visible,
       (select count(*)::int from matching) as total,
@@ -151,10 +166,11 @@ export async function listDocuments(client: PoolClient, input: Record<string, un
     throw new AppError(ErrorCode.NotFound, 404, 'Case not found.');
   }
 
-  const items = row.items.map(({ processing, factJob, ...document }) => ({
+  const items = row.items.map(({ processing, factJob, unreviewedFactCount, ...document }) => ({
     ...serializeDocument(document),
     processing: serializeProcessing(processing),
     factExtraction: serializeFactExtraction(factJob),
+    unreviewedFactCount,
   }));
 
   return { items, total: row.total, page, pageSize };

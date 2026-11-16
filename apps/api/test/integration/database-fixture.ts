@@ -40,7 +40,7 @@ export async function createTestDatabase(
 
     for (const file of migrations) {
       await owner.query(await readFile(new URL(file, directory), 'utf8'));
-      if (file.endsWith(afterMigration)) {
+      if (file.replace(/^\d+_/, '') === afterMigration) {
         await beforeUpgrade?.(owner);
       }
     }

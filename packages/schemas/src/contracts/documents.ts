@@ -135,6 +135,7 @@ export const documentListItemSchema = documentSchema
   .safeExtend({
     processing: processingSummarySchema,
     factExtraction: factExtractionSummarySchema,
+    unreviewedFactCount: z.number().int().min(0),
   })
   .refine(
     (document) =>

@@ -1,13 +1,15 @@
 # OpenAI fact extraction
 
-Fact extraction is a separate stage after document text processing reaches Ready. An Admin or
-Super Admin requests extraction for an available document in a current case. The feature creates
-unreviewed dates, providers, treatments, and findings with exact source quotations. It does not
-approve facts, generate summaries, or process historical documents automatically.
+Fact extraction is a separate stage queued automatically when document text processing reaches
+Ready for an available document in a current case, including assigned Staff uploads. The feature
+creates unreviewed dates, providers, treatments, and findings with exact source quotations. Human
+review remains manual. Admin/Super Admin can explicitly retry failed or cancelled extraction and
+start extraction for historical Ready documents; historical documents are not backfilled.
 
 New deployments default to disabled queue consumption, API dispatch, and scheduled fact recovery.
-Enable each only after reviewing its configuration and verifying the live workflow. Extraction
-remains an explicit administrator action even when the dispatcher and queue consumer are enabled.
+Enable each only after reviewing its configuration and verifying the live workflow. Automatic
+creation uses the same persisted outbox as manual requests; actual dispatch requires the API
+dispatcher and queue consumer to be running.
 
 ## Verified development deployment
 
@@ -23,6 +25,11 @@ A completed extraction count alone does not verify that this read-path prerequis
 All newly published facts remain Unreviewed; these checks do not establish complete extraction recall.
 No historical documents are automatically submitted for extraction.
 
+The automatic-handoff migration is applied to the hosted development database. Disposable
+PostgreSQL tests cover native/OCR completion, assigned Staff uploads, duplicate completion,
+manual retries, cancellation, and atomic rollback. Hosted read-only checks verified the enabled
+trigger and document-list review counts through restricted API credentials.
+
 ## Components and request flow
 
 | Component                                  | Responsibility                                                               |
@@ -35,7 +42,9 @@ No historical documents are automatically submitted for extraction.
 | `services/document-processor`              | Existing text/OCR services and optional scheduled fact reconciliation        |
 | `infra/fact-extraction`                    | SAM resources and isolated Linux build checks                                |
 
-1. The API commits an extraction job, preparation task, dispatch record, and audit event together.
+1. A database trigger commits the first extraction job, preparation task, dispatch record, and
+   service audit event in the same transaction that publishes the processing result as Ready.
+   Explicit administrator starts and retries reuse the same internal creation function.
 2. The fact dispatcher sends only `{ schemaVersion: 1, taskId }` to the dedicated SQS queue.
 3. The worker claims a fenced lease and reads the exact saved processing text artifact version.
    It verifies the checksum and source identity, then checkpoints deterministic page-aware chunks.
@@ -92,6 +101,14 @@ versioned model prices, daily usage/reservations, facts, and evidence. Existing 
 documents, assignments, processing results, and audit history are preserved. It does not backfill
 extraction jobs or create login passwords.
 
+Migration `20261116031252_automatic_fact_extraction.sql` adds the Ready-transition trigger and a
+private shared creation function. It does not change existing rows or grant new table-write
+permissions. Duplicate completion, a no-op Ready update, or an existing extraction job cannot
+create another automatic job. Failed/cancelled jobs therefore remain terminal until an explicit
+administrator retry. The shared permission lock serializes the handoff with removal and archival.
+Automatic audit events identify `document_processor` as the service; `requested_by` retains the
+originating processing requester for provenance.
+
 | Role                       | Allowed operations                                                           |
 | -------------------------- | ---------------------------------------------------------------------------- |
 | `caseflow_runtime`         | Authorized start/retry and RLS-filtered public reads                         |
@@ -123,9 +140,15 @@ requests return the same resulting job; stale requests conflict. Completed runs 
 Unknown fields and forged identifiers are rejected. Inaccessible resources return 404. Public
 responses omit provider identifiers, storage locations, leases, credentials, and model responses.
 
-The document list includes the latest summary in its existing query, without one query per document.
-The UI separates text processing from fact extraction, confirms the document and provider before
-submission, and reports that work was queued. It polls visible active work every five seconds and
+The document list includes the latest extraction summary and required integer
+`unreviewedFactCount` in its existing query, without one query per document. The count includes
+only published facts whose current review status is Unreviewed. Approved/rejected facts do not
+contribute; corrections and reopening follow the persisted review status. Documents without
+visible published facts, including removed documents, return zero. Counts follow the caller
+identity/RLS and share the list response snapshot.
+
+The UI separates text processing from fact extraction. Explicit administrator starts/retries
+confirm the document and provider before submission and report that work was queued. It polls visible active work every five seconds and
 stops when hidden, offline, or terminal. Transient failures retain verified content and pause actions;
 authorization rejection clears protected content. Detail cards include categories, review states, immutable quotations, page references, and the existing authorized source download. [Human review](human-review.md) defines corrections, approvals, and revision history; its queries live in the separate fact-review database module.
 

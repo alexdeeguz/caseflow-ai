@@ -68,6 +68,10 @@ Unknown fields and forged provenance are rejected. Inaccessible or mismatched re
 to administrators, but its fact collection returns `409 DOCUMENT_UNAVAILABLE`; individual facts
 and their history return 404. Archived writes return `409 CASE_ARCHIVED`.
 
+The document-library response includes `unreviewedFactCount` for each document, independent of
+its total extracted fact count. This count follows current review states and excludes removed
+document content; it does not grant review or approval permissions.
+
 ## Database and organization
 
 Migration `20261116011952_human_review.sql` is additive. It preserves extracted facts, evidence,

@@ -79,15 +79,19 @@ test('processor database: restricted leases, OCR reservations, results and cance
       [id],
     );
 
-  async function newJob(contentType = 'application/pdf') {
+  async function newJob(contentType = 'application/pdf', uploader = 'admin') {
     const record = caseSchema.parse(
       await execute('admin', Operation.CreateCase, {
         title: 'Processor fixture',
         clientName: 'Fictional Client',
       }),
     );
+    if (uploader === 'staff') {
+      const staff = userSchema.parse(await execute('staff', Operation.GetProfile));
+      await execute('admin', Operation.AssignCase, { id: record.id, userId: staff.id });
+    }
     const upload = parseUploadRecord(
-      await execute('admin', Operation.StartDocumentUpload, {
+      await execute(uploader, Operation.StartDocumentUpload, {
         caseId: record.id,
         requestId: randomUUID(),
         filename: contentType === 'application/pdf' ? 'fixture.pdf' : 'fixture.png',
@@ -102,8 +106,8 @@ test('processor database: restricted leases, OCR reservations, results and cance
     try {
       await client.query('begin');
       await client.query(
-        "select set_config('caseflow.tenant_id',$1,true), set_config('caseflow.subject','admin',true)",
-        [tenantId],
+        "select set_config('caseflow.tenant_id',$1,true), set_config('caseflow.subject',$2,true)",
+        [tenantId, uploader],
       );
       await client.query('select caseflow.complete_document_upload($1,$2,$3)', [
         record.id,
@@ -143,6 +147,108 @@ test('processor database: restricted leases, OCR reservations, results and cance
     assert.equal((await processor.query('select current_user')).rows[0].current_user, login);
 
     await t.test(
+      'Ready atomically queues one first extraction for native, OCR and Staff uploads',
+      async () => {
+        for (const [method, uploader] of [
+          ['native', 'admin'],
+          ['ocr', 'admin'],
+          ['native', 'staff'],
+        ] as const) {
+          const job = await newJob(method === 'native' ? 'application/pdf' : 'image/png', uploader);
+          let current = await claim(job.id);
+          if (method === 'ocr') {
+            await prepare(job.id, current.leaseToken, 1);
+            const providerId = randomUUID();
+            await bind(job.id, current.leaseToken, providerId);
+            current = await collect(job.id, providerId);
+          }
+          assert.equal(
+            await complete(job.id, current.leaseToken, method, method === 'ocr' ? 1 : 2),
+            true,
+          );
+          const extraction = (
+            await db.owner.query(
+              'select * from caseflow.fact_extraction_jobs where document_id=$1',
+              [job.documentId],
+            )
+          ).rows[0];
+          assert.equal(extraction.status, 'queued');
+          assert.equal(extraction.processing_result_id, job.id);
+          assert.equal(extraction.requested_by, uploader === 'staff' ? staff.id : admin.id);
+          const dispatch = await db.owner.query(
+            `select t.ordinal, d.status from caseflow.fact_extraction_tasks t
+           join caseflow.fact_dispatches d on d.task_id=t.id where t.job_id=$1`,
+            [extraction.id],
+          );
+          assert.deepEqual(dispatch.rows, [{ ordinal: 0, status: 'pending' }]);
+          const audit = (
+            await db.owner.query(
+              "select actor_id,service_name,after_value from caseflow.audit_events where target_id=$1 and action='document.facts_queued'",
+              [job.documentId],
+            )
+          ).rows[0];
+          assert.equal(audit.actor_id, null);
+          assert.equal(audit.service_name, 'document_processor');
+          assert.equal(audit.after_value.trigger, 'processing_ready');
+          assert.equal(
+            await complete(job.id, current.leaseToken, method, method === 'ocr' ? 1 : 2),
+            false,
+          );
+          await db.owner.query(
+            "update caseflow.document_processing_jobs set status='ready' where id=$1",
+            [job.id],
+          );
+          const manual = (await execute('admin', Operation.RequestFactExtraction, {
+            caseId: job.caseId,
+            documentId: job.documentId,
+            expectedJobId: null,
+          })) as { job: { id: string } };
+          assert.equal(manual.job.id, extraction.id);
+          assert.equal(
+            (
+              await db.owner.query(
+                "select count(*)::int n from caseflow.audit_events where target_id=$1 and action='document.facts_queued'",
+                [job.documentId],
+              )
+            ).rows[0].n,
+            1,
+          );
+          await db.owner.query(
+            "select caseflow.end_fact_extraction($1,'failed','budget_exceeded')",
+            [extraction.id],
+          );
+          assert.equal(
+            await complete(job.id, current.leaseToken, method, method === 'ocr' ? 1 : 2),
+            false,
+          );
+          assert.equal(
+            (
+              await db.owner.query(
+                'select count(*)::int n from caseflow.fact_extraction_jobs where document_id=$1',
+                [job.documentId],
+              )
+            ).rows[0].n,
+            1,
+          );
+          await assert.rejects(
+            execute('staff', Operation.RequestFactExtraction, {
+              caseId: job.caseId,
+              documentId: job.documentId,
+              expectedJobId: extraction.id,
+            }),
+            /permission/,
+          );
+          const retry = (await execute('admin', Operation.RequestFactExtraction, {
+            caseId: job.caseId,
+            documentId: job.documentId,
+            expectedJobId: extraction.id,
+          })) as { job: { id: string } };
+          assert.notEqual(retry.job.id, extraction.id);
+        }
+      },
+    );
+
+    await t.test(
       'claims serialize and fence stale leases without trusting application identity',
       async () => {
         const job = await newJob();
@@ -179,8 +285,12 @@ test('processor database: restricted leases, OCR reservations, results and cance
           `${first.artifactPrefix}${result.artifact_set_id}/text.json`,
         );
         assert.equal(
-          (await db.owner.query('select count(*)::int n from caseflow.processing_ocr_reservations'))
-            .rows[0].n,
+          (
+            await db.owner.query(
+              'select count(*)::int n from caseflow.processing_ocr_reservations where job_id=$1',
+              [job.id],
+            )
+          ).rows[0].n,
           0,
         );
       },
@@ -432,6 +542,15 @@ test('processor database: restricted leases, OCR reservations, results and cance
           await blocker.query('commit');
           assert.equal(await pending, false);
           assert.equal((await savedJob(job.id)).status, 'cancelled');
+          assert.equal(
+            (
+              await db.owner.query(
+                'select count(*)::int n from caseflow.fact_extraction_jobs where document_id=$1',
+                [job.documentId],
+              )
+            ).rows[0].n,
+            0,
+          );
         } finally {
           await blocker.query('rollback');
           blocker.release();
@@ -485,7 +604,7 @@ test('processor database: restricted leases, OCR reservations, results and cance
         const current = await claim(job.id);
         await db.owner
           .query(`create function caseflow.reject_processor_audit() returns trigger language plpgsql as $$
-        begin if new.service_name is not null then raise exception 'audit rollback fixture'; end if; return new; end $$;
+        begin if new.service_name is not null and new.action <> 'document.facts_queued' then raise exception 'audit rollback fixture'; end if; return new; end $$;
         create trigger reject_processor_audit before insert on caseflow.audit_events
         for each row execute function caseflow.reject_processor_audit()`);
         try {
@@ -502,6 +621,15 @@ test('processor database: restricted leases, OCR reservations, results and cance
             execute('admin', Operation.ArchiveCase, { id: job.caseId, expectedVersion: 1 }),
           );
           assert.equal((await savedJob(job.id)).status, 'processing');
+          assert.equal(
+            (
+              await db.owner.query(
+                'select count(*)::int n from caseflow.fact_extraction_jobs where document_id=$1',
+                [job.documentId],
+              )
+            ).rows[0].n,
+            0,
+          );
           assert.equal(
             (
               await db.owner.query(
@@ -645,6 +773,8 @@ test('processor database: restricted leases, OCR reservations, results and cance
           'select * from caseflow.processing_ocr_reservations',
           'select * from caseflow.processing_dispatches',
           'update caseflow.document_processing_jobs set attempt_count=0',
+          'select caseflow.enqueue_fact_extraction(null,null,null,null,true)',
+          'select caseflow.queue_facts_after_processing()',
           'select caseflow.lock_processing_job(null)',
           'select caseflow.end_processing_job(null,null,null)',
           'select caseflow.cancel_document_processing_jobs(null)',
@@ -656,6 +786,8 @@ test('processor database: restricted leases, OCR reservations, results and cance
           await assert.rejects(processor.query(sql), /permission denied/);
         }
         for (const sql of [
+          'select caseflow.enqueue_fact_extraction(null,null,null,null,true)',
+          'select caseflow.queue_facts_after_processing()',
           'select caseflow.claim_document_processing(null)',
           'select caseflow.prepare_document_ocr(null,null,1,null,null)',
           'select * from caseflow.document_processing_results',
