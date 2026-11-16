@@ -296,7 +296,7 @@ def test_provider_schema_enforces_category_fields(category, allowed_fields):
         ('schema', EvidenceFailureReason.SCHEMA_INVALID),
         ('source', EvidenceFailureReason.UNKNOWN_SOURCE),
         ('quote', EvidenceFailureReason.QUOTE_NOT_FOUND),
-        ('whitespace', EvidenceFailureReason.QUOTE_NOT_FOUND),
+        ('word-boundary', EvidenceFailureReason.QUOTE_NOT_FOUND),
         ('ambiguous', EvidenceFailureReason.AMBIGUOUS_QUOTE),
         ('page', EvidenceFailureReason.PAGE_MISMATCH),
     ],
@@ -314,8 +314,8 @@ def test_evidence_failures_have_safe_reasons_without_relaxing_matching(mutation,
         citation['sourceId'] = 'unknown'
     elif mutation == 'quote':
         citation['quote'] = 'private unsupported quotation'
-    elif mutation == 'whitespace':
-        citation['quote'] = citation['quote'].replace(' ', '  ')
+    elif mutation == 'word-boundary':
+        citation['quote'] = citation['quote'].replace(' ', '')
     elif mutation == 'ambiguous':
         span = make_span(1, 0, text + text)
         citation['sourceId'] = span.source_id

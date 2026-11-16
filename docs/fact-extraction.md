@@ -71,8 +71,12 @@ required only for dates, treatment status for treatments, and finding status for
 fields must be null. This gives the provider the same category constraints enforced by application
 validation. Invalid schema and citation failures remain terminal and never publish partial facts.
 
-The application supplies document/result IDs and evidence offsets. Every quotation must occur
-exactly in its checkpointed page text. Offsets count Unicode code points and are end-exclusive.
+The application supplies document/result IDs and evidence offsets. Exact quotation matches take
+precedence. If a quotation differs only in whitespace runs, a unique match may restore the original
+line breaks or spacing from the checkpointed page. Matching never changes words, punctuation, case,
+or word boundaries; ambiguous matches remain invalid. The persisted quotation always equals its
+exact source slice, stays within the quotation limit, and never crosses a page or chunk boundary.
+Offsets count Unicode code points and are end-exclusive.
 Dates retain year/month/day precision. Recommended and performed treatments, suspected and confirmed
 findings, negation, and conflicting statements remain distinct. Newly extracted facts start Unreviewed. [Human review](human-review.md) adds versioned corrections and approval while preserving the original extraction.
 A matching quotation proves source location; it does not by itself prove the model interpreted it
