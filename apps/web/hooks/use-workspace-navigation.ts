@@ -99,6 +99,12 @@ export function useWorkspaceNavigation(
     [client, location, refreshProfile, request, role, router, serialized],
   );
 
+  // Any URL change ends the pending navigation (and cancels it, above). Clear it here, or returning
+  // to the page it started from (e.g. reopening the same case) would show it as loading again.
+  if (pendingNavigation && pendingNavigation.from !== serialized) {
+    setPending(null);
+  }
+
   const pending = pendingNavigation?.from === serialized ? pendingNavigation.destination : null;
 
   return { location, pending, navigate };
