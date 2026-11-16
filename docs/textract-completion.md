@@ -2,7 +2,7 @@
 
 [Back to README](../README.md)
 
-The completion worker in `apps/document-processor` collects real Textract results through
+The completion worker in `services/document-processor` collects real Textract results through
 SNS and SQS. Verification covers local AWS stubs, bounded HTTP retries, disposable PostgreSQL
 databases, and the hosted development workflow. See [workflow verification](processing-verification.md)
 for deployment evidence and activation requirements.

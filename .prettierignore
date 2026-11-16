@@ -13,4 +13,8 @@ __pycache__/
 .ruff_cache/
 .mypy_cache/
 *.egg-info/
-apps/document-processor/uv.lock
+services/document-processor/uv.lock
+
+services/fact-extractor/.venv/
+services/fact-extractor/uv.lock
+services/fact-extractor/.mypy_cache/

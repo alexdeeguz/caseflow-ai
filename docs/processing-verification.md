@@ -64,11 +64,11 @@ npm run typecheck
 npm run build
 npm run format:check
 npm audit --audit-level=low
-uv run --project apps/document-processor --locked pytest apps/document-processor/tests --require-database
-uv run --project apps/document-processor --locked ruff check apps/document-processor infra/document-processing
-uv run --project apps/document-processor --locked ruff format --check apps/document-processor infra/document-processing
-uv run --project apps/document-processor --locked mypy apps/document-processor/src --strict
-uv run --project apps/document-processor --locked pip-audit --progress-spinner off
+uv run --project services/document-processor --locked pytest services/document-processor/tests --require-database
+uv run --project services/document-processor --locked ruff check services/document-processor infra/document-processing
+uv run --project services/document-processor --locked ruff format --check services/document-processor infra/document-processing
+uv run --project services/document-processor --locked mypy services/document-processor/src --strict
+uv run --project services/document-processor --locked pip-audit --progress-spinner off
 ```
 
 The Python integration suite requires `PROCESSOR_TEST_DATABASE_URL` for the disposable local

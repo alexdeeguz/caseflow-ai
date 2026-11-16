@@ -179,7 +179,7 @@ Use an operator-only S3 version inventory and a database export of published art
 Compare `(bucket, key, versionId)`, not keys alone. Preserve every version referenced by
 `caseflow.document_processing_results.artifacts`, even if a newer version exists. Exclude any
 active job or artifact younger than seven days. The helper
-`apps/document-processor/scripts/report_unreferenced_artifacts.py` creates a local JSON candidate report from those two
+`services/document-processor/scripts/report_unreferenced_artifacts.py` creates a local JSON candidate report from those two
 exports; it makes no network calls and deletes nothing. Its `--help` describes the input formats.
 Export references for the same bucket with an operator query, saving the result privately:
 

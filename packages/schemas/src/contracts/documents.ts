@@ -1,3 +1,4 @@
+import { factExtractionSummarySchema } from './fact-extraction.js';
 import { z } from 'zod';
 import {
   DocumentContentType,
@@ -133,6 +134,7 @@ export const documentVersionSchema = z.strictObject({
 export const documentListItemSchema = documentSchema
   .safeExtend({
     processing: processingSummarySchema,
+    factExtraction: factExtractionSummarySchema,
   })
   .refine(
     (document) =>

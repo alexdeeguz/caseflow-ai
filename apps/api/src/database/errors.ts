@@ -15,6 +15,10 @@ const inputErrorCodes: ReadonlySet<string> = new Set([
 ]);
 
 const applicationErrors: Partial<Record<ErrorCode, { status: number; message: string }>> = {
+  [ErrorCode.FactExtractionConflict]: {
+    status: 409,
+    message: 'Fact extraction changed. Refresh before trying again.',
+  },
   [ErrorCode.Unauthenticated]: { status: 401, message: 'Sign in to continue.' },
   [ErrorCode.AccountDisabled]: {
     status: 403,

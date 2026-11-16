@@ -9,6 +9,7 @@ export interface ApiConfig {
   databaseUrl: string;
   storage?: StorageConfig;
   dispatcher?: DispatcherConfig;
+  factDispatcher?: DispatcherConfig;
 }
 
 const guid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -53,6 +54,7 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
 
   const storage = readStorageConfig(env);
   const dispatcher = readDispatcherConfig(env, databaseUrl);
+  const factDispatcher = readDispatcherConfig(env, databaseUrl, 'facts');
 
   return {
     clientId,
@@ -61,5 +63,6 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
     databaseUrl,
     ...(storage ? { storage } : {}),
     ...(dispatcher ? { dispatcher } : {}),
+    ...(factDispatcher ? { factDispatcher } : {}),
   };
 }

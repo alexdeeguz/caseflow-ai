@@ -1,3 +1,4 @@
+import { isFactExtractionActive } from '../fact-extraction/presentation';
 import { queryOptions } from '@tanstack/react-query';
 import { processingSummarySchema, type DocumentListItem } from '@caseflow/schemas';
 import type { AuthRequest } from '../../hooks/use-authentication';
@@ -23,7 +24,12 @@ export function processingPollInterval(
   data: { items: DocumentListItem[] } | undefined,
   error: Error | null,
 ): number | false {
-  if (accessRejected(error) || !data?.items.some((item) => isProcessingActive(item.processing))) {
+  if (
+    accessRejected(error) ||
+    !data?.items.some(
+      (item) => isProcessingActive(item.processing) || isFactExtractionActive(item.factExtraction),
+    )
+  ) {
     return false;
   }
   return processingRefreshInterval;

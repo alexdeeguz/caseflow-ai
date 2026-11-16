@@ -33,9 +33,10 @@
     "operator:role": "npm run operator:role -w @caseflow/api --",
     "db:configure": "npm run db:configure -w @caseflow/api",
     "db:seed": "supabase db query --file supabase/seed.sql",
-    "test:processor": "uv run --project apps/document-processor --locked pytest apps/document-processor/tests -m \"not integration\"",
-    "format:python": "uv run --project apps/document-processor --locked ruff format apps/document-processor",
-    "format:python:check": "uv run --project apps/document-processor --locked ruff format --check apps/document-processor"
+    "test:processor": "uv run --project services/document-processor --locked pytest services/document-processor/tests -m \"not integration\"",
+    "format:python": "uv run --project services/document-processor --locked ruff format services infra",
+    "format:python:check": "uv run --project services/document-processor --locked ruff format --check services infra",
+    "test:facts": "uv run --project services/fact-extractor --locked pytest services/fact-extractor/tests -m \"not integration\""
   },
   "devDependencies": {
     "@eslint/js": "9.39.5",

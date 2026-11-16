@@ -80,6 +80,7 @@ def test_both_consumers_are_disabled_bounded_and_isolated():
 def test_recovery_is_disabled_uses_shared_capacity_and_has_separate_credentials():
     resources = TEMPLATE['Resources']
     assert TEMPLATE['Parameters']['EnableRecoverySchedule']['Default'] == 'false'
+    assert TEMPLATE['Parameters']['EnableFactRecovery']['Default'] == 'false'
     schedule = resources['RecoverySchedule']['Properties']
     assert schedule['ScheduleExpression'] == 'rate(5 minutes)'
     assert schedule['State'] == {'Fn::If': ['RecoverJobs', 'ENABLED', 'DISABLED']}
@@ -90,6 +91,7 @@ def test_recovery_is_disabled_uses_shared_capacity_and_has_separate_credentials(
     assert function['EventInvokeConfig']['MaximumRetryAttempts'] == 0
     assert function['Environment']['Variables'] == {
         'RECOVERY_DATABASE_SECRET_ARN': {'Ref': 'RecoveryDatabaseSecretArn'},
+        'FACT_EXTRACTION_RECOVERY_ENABLED': {'Ref': 'EnableFactRecovery'},
     }
     assert (
         'PROCESSOR_DATABASE_SECRET_ARN'

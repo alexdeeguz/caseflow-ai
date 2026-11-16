@@ -1,3 +1,5 @@
+import { factExtractionJoin, serializeFactExtraction } from './fact-extraction.js';
+import type { FactExtractionSummary } from '@caseflow/schemas';
 import type { PoolClient } from 'pg';
 import { z } from 'zod';
 import {
@@ -123,7 +125,7 @@ export async function listDocuments(client: PoolClient, input: Record<string, un
   const result = await client.query<{
     visible: boolean;
     total: number;
-    items: (Document & { processing: ProcessingRecord })[];
+    items: (Document & { processing: ProcessingRecord; factJob: FactExtractionSummary['job'] })[];
   }>(
     `with matching as materialized (
       select d.* from caseflow.documents d
@@ -134,9 +136,9 @@ export async function listDocuments(client: PoolClient, input: Record<string, un
       select * from matching order by created_at desc, id desc limit $3 offset $4
     ), paged as (
       select ${documentProjection} || jsonb_build_object('processing',
-        jsonb_build_object('job', processing.job, 'result', processing.result)) as document,
+        jsonb_build_object('job', processing.job, 'result', processing.result), 'factJob', extraction.job) as document,
         d.created_at, d.id
-      from page_documents d ${processingSummaryJoin}
+      from page_documents d ${processingSummaryJoin} ${factExtractionJoin}
     )
     select exists(select 1 from caseflow.cases where id = $1) as visible,
       (select count(*)::int from matching) as total,
@@ -149,9 +151,10 @@ export async function listDocuments(client: PoolClient, input: Record<string, un
     throw new AppError(ErrorCode.NotFound, 404, 'Case not found.');
   }
 
-  const items = row.items.map(({ processing, ...document }) => ({
+  const items = row.items.map(({ processing, factJob, ...document }) => ({
     ...serializeDocument(document),
     processing: serializeProcessing(processing),
+    factExtraction: serializeFactExtraction(factJob),
   }));
 
   return { items, total: row.total, page, pageSize };

@@ -80,18 +80,28 @@ jobs:
           "$RUNNER_TEMP/processor-tools/bin/pip" install uv==0.13.8
           echo "$RUNNER_TEMP/processor-tools/bin" >> "$GITHUB_PATH"
       - name: Install locked processor dependencies
-        run: uv sync --project apps/document-processor --locked
+        run: uv sync --project services/document-processor --locked
       - name: Check Python code
         run: |
-          uv run --project apps/document-processor --locked ruff check apps/document-processor
-          uv run --project apps/document-processor --locked ruff format --check apps/document-processor
-          uv run --project apps/document-processor --locked mypy apps/document-processor/src --strict
+          uv run --project services/document-processor --locked ruff check services/document-processor
+          uv run --project services/document-processor --locked ruff format --check services/document-processor
+          uv run --project services/document-processor --locked mypy services/document-processor/src --strict
       - name: Run processor unit and PostgreSQL tests
         env:
           PROCESSOR_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
-        run: uv run --project apps/document-processor --locked pytest apps/document-processor/tests --require-database
+        run: uv run --project services/document-processor --locked pytest services/document-processor/tests --require-database
+      - name: Check fact extraction service
+        env:
+          FACT_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: |
+          uv sync --project services/fact-extractor --locked
+          uv run --project services/fact-extractor --locked ruff check services/fact-extractor
+          uv run --project services/fact-extractor --locked ruff format --check services/fact-extractor
+          uv run --project services/fact-extractor --locked mypy services/fact-extractor/src --strict
+          uv run --project services/fact-extractor --locked pytest services/fact-extractor/tests
+          uv run --project services/fact-extractor --locked pip-audit --skip-editable
       - name: Build the processor package
-        run: uv build --project apps/document-processor
+        run: uv build --project services/document-processor
 
   lambda:
     name: Validate & Build Lambda Packages
@@ -110,16 +120,23 @@ jobs:
       - name: Install locked validation dependencies
         run: |
           uv sync --project infra/document-processing --locked
-          uv sync --project apps/document-processor --locked
+          uv sync --project services/document-processor --locked
       - name: Check infrastructure scripts
         run: |
-          uv run --project apps/document-processor --locked ruff check infra/document-processing
-          uv run --project apps/document-processor --locked ruff format --check infra/document-processing
+          uv run --project services/document-processor --locked ruff check infra/document-processing infra/fact-extraction
+          uv run --project services/document-processor --locked ruff format --check infra/document-processing infra/fact-extraction
       - name: Validate SAM and security rules
         run: |
           uv run --project infra/document-processing --locked sam validate --lint --region us-east-2 --template-file infra/document-processing/template.yaml
           uv run --project infra/document-processing --locked python infra/document-processing/scripts/validate_security.py
           uv run --project infra/document-processing --locked pytest infra/document-processing/tests
+      - name: Validate fact extraction infrastructure
+        run: |
+          uv sync --project services/fact-extractor --locked
+          uv run --project infra/document-processing --locked sam validate --lint --region us-east-2 --template-file infra/fact-extraction/template.yaml
+          uv run --project infra/document-processing --locked pytest infra/fact-extraction/tests
+          uv run --project infra/document-processing --locked python infra/fact-extraction/scripts/build.py
+          uv run --project infra/document-processing --locked python infra/fact-extraction/scripts/verify_build.py
       - name: Build Linux Lambda functions
         run: uv run --project infra/document-processing --locked python infra/document-processing/scripts/build.py
       - name: Verify packaged dependencies and certificate

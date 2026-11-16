@@ -77,3 +77,9 @@ The API processing routes are separate from the background SQS dispatcher.
 - [Authentication](authentication.md)
 - [Users and cases](users-and-cases.md)
 - [Verification](development.md#verification)
+
+## Fact extraction
+
+The processing-ready document routes support latest extraction status, administrative start/retry,
+and paginated category-filtered facts with evidence. See [fact extraction](fact-extraction.md#api-and-ui)
+for request semantics, permissions, public fields, and error behavior.

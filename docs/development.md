@@ -97,7 +97,7 @@ When the application uses hosted Supabase, follow [local tests and switching env
 
 - `apps/web`: Next.js, React, and Tailwind frontend with Microsoft sign-in.
 - `apps/api`: Fastify API with database-enforced user and case permissions.
-- `apps/document-processor`: Python extraction worker; [setup and verification](python-processor.md).
+- `services/document-processor`: Python extraction worker; [setup and verification](python-processor.md).
 - `packages/schemas`: shared strict Zod request/response contracts and TypeScript types.
 
 Shared domain values live in `packages/schemas/src/constants` (roles, case statuses, archive filters and limits, error codes,
@@ -151,3 +151,18 @@ Use `npm run format:python` for the processor and `npm run format:python:check` 
 check it without changes. The root `format` and `format:check` commands include both
 Prettier and Ruff. See [Python setup and style](python-processor.md#formatting-and-readability)
 for the required uv environment and editor integration.
+
+## Python services
+
+Independently deployed Python workloads live under `services/`: `document-processor` handles
+native text/OCR and `fact-extractor` handles OpenAI facts. Each has its own `pyproject.toml`, pinned
+`uv.lock`, adapters, services, handlers, and tests. JavaScript workspaces remain under `apps/` and
+`packages/`; Python environments are not npm workspaces.
+
+After moving an existing checkout, recreate its virtual environment or run
+`uv sync --project services/document-processor --locked --reinstall` to refresh executable paths.
+Formatting uses Ruff with four spaces, single quotes, and 100-character lines. Prettier continues
+to format TypeScript, CSS, JSON, and Markdown.
+
+See [fact extraction](fact-extraction.md) for the new service's database tests, provider evaluation,
+and disabled deployment configuration. Live provider tests are never part of CI.

@@ -1,4 +1,7 @@
 export const Operation = {
+  GetFactExtraction: 'document.facts.get',
+  RequestFactExtraction: 'document.facts.request',
+  ListFacts: 'document.facts.list',
   GetProfile: 'me',
   UpdateProfile: 'profile',
   ListUsers: 'users',
@@ -29,6 +32,9 @@ export const Operation = {
 export type Operation = (typeof Operation)[keyof typeof Operation];
 
 export const operationRequiresAdmin: Readonly<Record<Operation, boolean>> = {
+  [Operation.GetFactExtraction]: false,
+  [Operation.RequestFactExtraction]: true,
+  [Operation.ListFacts]: false,
   [Operation.GetProfile]: false,
   [Operation.UpdateProfile]: false,
   [Operation.ListUsers]: true,

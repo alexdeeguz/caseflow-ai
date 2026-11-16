@@ -1,3 +1,5 @@
+import { DispatchTarget } from './processing/store.js';
+import { registerFactExtractionRoutes } from './routes/fact-extraction.js';
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import { z } from 'zod';
@@ -104,6 +106,7 @@ export async function buildApp(
   registerCaseRoutes(route);
   registerAuditRoutes(route);
   registerProcessingRoutes(route);
+  registerFactExtractionRoutes(route);
   registerDocumentRoutes(
     route,
     store,
@@ -112,6 +115,12 @@ export async function buildApp(
   );
 
   registerProcessingDispatcher(app, config.dispatcher, dispatcher);
+  registerProcessingDispatcher(
+    app,
+    config.factDispatcher,
+    undefined,
+    DispatchTarget.FactExtraction,
+  );
 
   return app;
 }

@@ -1,4 +1,5 @@
 export const ErrorCode = {
+  FactExtractionConflict: 'FACT_EXTRACTION_CONFLICT',
   Unauthenticated: 'UNAUTHENTICATED',
   AccountDisabled: 'ACCOUNT_DISABLED',
   Forbidden: 'FORBIDDEN',

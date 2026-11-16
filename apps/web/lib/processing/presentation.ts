@@ -1,3 +1,4 @@
+import { factStatusLabels } from '../fact-extraction/presentation';
 import {
   DocumentContentType,
   DocumentStatus,
@@ -80,14 +81,16 @@ export function processingRequestFeedback(summary: ProcessingSummary): string {
 }
 
 export function processingChanges(previous: DocumentListItem[], current: DocumentListItem[]) {
-  const prior = new Map(previous.map((document) => [document.id, document.processing]));
+  const prior = new Map(previous.map((document) => [document.id, document]));
   return current.filter((document) => {
     const before = prior.get(document.id);
     return (
       before &&
-      (before.job?.id !== document.processing.job?.id ||
-        before.status !== document.processing.status ||
-        before.job?.stage !== document.processing.job?.stage)
+      (before.processing.job?.id !== document.processing.job?.id ||
+        before.processing.status !== document.processing.status ||
+        before.processing.job?.stage !== document.processing.job?.stage ||
+        before.factExtraction.status !== document.factExtraction.status ||
+        before.factExtraction.job?.id !== document.factExtraction.job?.id)
     );
   });
 }
@@ -95,7 +98,10 @@ export function processingChanges(previous: DocumentListItem[], current: Documen
 export function processingAnnouncement(changed: DocumentListItem[]): string {
   const messages = changed
     .slice(0, 2)
-    .map((document) => `${document.filename}: ${processingLabel(document.processing)}.`);
+    .map(
+      (document) =>
+        `${document.filename}: text ${processingLabel(document.processing)}; facts ${factStatusLabels[document.factExtraction.status]}.`,
+    );
   if (changed.length > 2) {
     messages.push(`${changed.length - 2} more documents updated.`);
   }

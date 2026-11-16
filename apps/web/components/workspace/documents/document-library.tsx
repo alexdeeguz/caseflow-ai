@@ -1,6 +1,10 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useFactExtractionAction } from './use-fact-extraction-action';
+import { FactExtractionConfirmation } from './fact-extraction-confirmation';
+import { FactsPanel } from './facts-panel';
+import { DocumentAction } from '../../../lib/documents/actions';
 import { useQuery } from '@tanstack/react-query';
 import { DocumentFilter, Role } from '@caseflow/schemas';
 import type { AuthRequest } from '../../../hooks/use-authentication';
@@ -61,6 +65,15 @@ export function DocumentLibrary({
     onAccessRejected,
   });
 
+  const facts = useFactExtractionAction({
+    request,
+    role,
+    archived,
+    enabled: canAct,
+    refresh: () => query.refetch(),
+    onAccessRejected,
+  });
+
   useEffect(() => {
     if (denied && error) {
       onAccessRejected(error);
@@ -75,16 +88,17 @@ export function DocumentLibrary({
     request,
     () => query.refetch(),
     onAccessRejected,
-    canAct && !processing.busy,
+    canAct && !processing.busy && !facts.busy,
   );
-  const actionsDisabled = !canAct || actions.busy !== null || processing.busy;
-  const actionError = actions.error ?? processing.error;
-  const confirming = actions.removing !== null || processing.selected !== null;
+  const actionsDisabled = !canAct || actions.busy !== null || processing.busy || facts.busy;
+  const actionError = actions.error ?? processing.error ?? facts.error;
+  const confirming =
+    actions.removing !== null || processing.selected !== null || facts.selected !== null;
   useEffect(() => {
-    if (actions.completedAction || processing.completedAction) {
+    if (actions.completedAction || processing.completedAction || facts.completedAction) {
       heading.current?.focus();
     }
-  }, [actions.completedAction, processing.completedAction]);
+  }, [actions.completedAction, processing.completedAction, facts.completedAction]);
   useEffect(() => {
     if (actionError && !confirming) {
       errorSummary.current?.focus();
@@ -170,11 +184,17 @@ export function DocumentLibrary({
         {!canAct && <p>Reconnect and refresh the documents before continuing.</p>}
         {actions.error && <StatusMessage tone="error">{actions.error}</StatusMessage>}
       </ConfirmDialog>
+      <FactExtractionConfirmation
+        action={facts}
+        role={role}
+        archived={archived}
+        enabled={canAct && actions.busy === null && !processing.busy}
+      />
       <ProcessingConfirmation
         processing={processing}
         role={role}
         archived={archived}
-        enabled={canAct && actions.busy === null}
+        enabled={canAct && actions.busy === null && !facts.busy}
       />
       {(stale || !verified) && data && (
         <div className={processingStyles.notice}>
@@ -275,6 +295,21 @@ export function DocumentLibrary({
                 }}
                 disabled={actionsDisabled}
                 processingId={processing.busy ? (processing.selected?.id ?? null) : null}
+                onExtract={(document) => {
+                  actions.dismissError();
+                  processing.dismissError();
+                  facts.open(document);
+                }}
+                renderFacts={(document) => (
+                  <FactsPanel
+                    key={document.id}
+                    document={document}
+                    request={request}
+                    onAccessRejected={onAccessRejected}
+                    disabled={!canAct}
+                    onDownload={() => actions.act(document, DocumentAction.Download)}
+                  />
+                )}
                 onProcess={(document) => {
                   actions.dismissError();
                   processing.open(document);

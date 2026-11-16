@@ -111,6 +111,16 @@ def get_recovery_runtime() -> Reconciler:
     storage, textract = _aws_adapters()
     store = PostgresRecoveryStore(settings.database_url.get_secret_value())
     collector = Collector(settings, store, storage, TextractResults(textract))
+    recover_facts = os.environ.get('FACT_EXTRACTION_RECOVERY_ENABLED', 'false')
+    if recover_facts not in {'true', 'false'}:
+        raise ValueError('Invalid fact recovery configuration')
     return Reconciler(
-        store, TextractStatus(textract), collector, settings.bucket, settings.environment
+        store,
+        TextractStatus(textract),
+        collector,
+        settings.bucket,
+        settings.environment,
+        recover_facts=(lambda: store.recover_facts(settings.bucket, settings.environment))
+        if recover_facts == 'true'
+        else None,
     )

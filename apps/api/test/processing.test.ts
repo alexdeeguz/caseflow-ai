@@ -114,6 +114,7 @@ test('public summaries enforce job/result consistency and reject private fields'
     removedAt: null,
     removedBy: null,
     processing: queued,
+    factExtraction: { status: 'not_extracted', job: null },
   };
   documentListItemSchema.parse(document);
   assert.equal(documentListItemSchema.safeParse({ ...document, id: randomUUID() }).success, false);

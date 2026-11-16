@@ -2,7 +2,7 @@
 
 [Back to README](../README.md)
 
-The extraction worker is implemented in `apps/document-processor`. It consumes
+The extraction worker is implemented in `services/document-processor`. It consumes
 processing jobs, publishes native PDF text, and starts asynchronous Textract OCR.
 The completion worker also collects Textract results and publishes OCR artifacts.
 The hosted development deployment includes both consumers, scheduled reconciliation, processing
@@ -29,13 +29,13 @@ the full dependency graph and hashes. Python dependencies are separate from npm.
 From the repository root:
 
 ```sh
-uv sync --project apps/document-processor --locked
+uv sync --project services/document-processor --locked
 npm run test:processor
-uv run --project apps/document-processor --locked ruff check apps/document-processor
-uv run --project apps/document-processor --locked ruff format --check apps/document-processor
-uv run --project apps/document-processor --locked mypy apps/document-processor/src --strict
-uv build --project apps/document-processor
-uv run --project apps/document-processor --locked pip-audit --skip-editable
+uv run --project services/document-processor --locked ruff check services/document-processor
+uv run --project services/document-processor --locked ruff format --check services/document-processor
+uv run --project services/document-processor --locked mypy services/document-processor/src --strict
+uv build --project services/document-processor
+uv run --project services/document-processor --locked pip-audit --skip-editable
 ```
 
 Run database tests with `PROCESSOR_TEST_DATABASE_URL` set to an **operator connection
@@ -45,7 +45,7 @@ create a temporary restricted processor login, and remove both afterward. Never 
 hosted credentials. The local server must provide the standard Supabase roles.
 
 ```sh
-uv run --project apps/document-processor --locked pytest apps/document-processor/tests \
+uv run --project services/document-processor --locked pytest services/document-processor/tests \
   -m integration --require-database
 ```
 
@@ -163,7 +163,7 @@ step must inspect saved jobs; retrying a start cannot replace reconciliation.
 
 ## Configuration and activation prerequisites
 
-`apps/document-processor/.env.example` lists server-only settings. The handler does
+`services/document-processor/.env.example` lists server-only settings. The handler does
 not automatically load `.env` files. Supply values through the local process or
 deployment secret configuration; never commit credentials.
 

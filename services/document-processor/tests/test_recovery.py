@@ -11,6 +11,7 @@ from test_secrets import SECRET, SECRET_ARN, response
 from caseflow_processor.adapters.recovery import TextractStatus
 from caseflow_processor.adapters.secrets import DatabaseCredentials, RecoveryDatabaseSecret
 from caseflow_processor.config import RecoverySettings, Settings
+from caseflow_processor.errors import RetryableError
 from caseflow_processor.handlers import recovery
 from caseflow_processor.recovery.metrics import emit_health
 from caseflow_processor.recovery.models import RecoveryInspection, RecoveryResult
@@ -194,3 +195,22 @@ def test_schedule_requires_an_exact_integer_contract_version(monkeypatch, versio
     with pytest.raises(RuntimeError):
         recovery.handler({'schemaVersion': version, 'task': 'reconcile'}, Mock())
     factory.assert_not_called()
+
+
+def test_fact_recovery_is_opt_in_and_does_not_emit_success_after_failure(capsys):
+    reconciler, store, _, _ = service([])
+    callback = Mock(return_value={'redispatched': 1})
+    reconciler._recover_facts = callback
+    reconciler.run(lambda: 120_000)
+    callback.assert_called_once()
+    capsys.readouterr()
+    store.next_work.side_effect = None
+    store.next_work.return_value = None
+    callback.side_effect = RuntimeError('database unavailable')
+    with pytest.raises(RuntimeError):
+        reconciler.run(lambda: 120_000)
+    assert capsys.readouterr().out == ''
+    callback.reset_mock()
+    with pytest.raises(RetryableError):
+        reconciler.run(lambda: 10_000)
+    callback.assert_not_called()

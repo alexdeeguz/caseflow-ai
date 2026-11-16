@@ -16,11 +16,15 @@ export type DispatcherConfig = z.infer<typeof configSchema>;
 export function readDispatcherConfig(
   env: NodeJS.ProcessEnv,
   runtimeUrl: string,
+  purpose: 'processing' | 'facts' = 'processing',
 ): DispatcherConfig | undefined {
-  const enabled = env.PROCESSING_DISPATCHER_ENABLED ?? 'false';
+  const prefix = purpose === 'facts' ? 'FACT_EXTRACTION' : 'PROCESSING';
+  const login =
+    purpose === 'facts' ? 'caseflow_fact_dispatcher_login' : 'caseflow_dispatcher_login';
+  const enabled = env[`${prefix}_DISPATCHER_ENABLED`] ?? 'false';
 
   if (!['true', 'false'].includes(enabled)) {
-    throw new Error('PROCESSING_DISPATCHER_ENABLED must be true or false.');
+    throw new Error(`${prefix}_DISPATCHER_ENABLED must be true or false.`);
   }
 
   if (enabled === 'false') {
@@ -28,15 +32,15 @@ export function readDispatcherConfig(
   }
 
   const parsed = configSchema.safeParse({
-    databaseUrl: env.PROCESSING_DISPATCHER_DATABASE_URL,
-    queueUrl: env.PROCESSING_QUEUE_URL,
+    databaseUrl: env[`${prefix}_DISPATCHER_DATABASE_URL`],
+    queueUrl: env[`${prefix}_QUEUE_URL`],
     region: env.AWS_REGION,
     profile: env.AWS_PROFILE,
   });
 
   if (!parsed.success) {
     throw new Error(
-      'Set valid PROCESSING_DISPATCHER_DATABASE_URL, PROCESSING_QUEUE_URL, AWS_REGION, and an optional named AWS_PROFILE.',
+      `Set valid ${prefix}_DISPATCHER_DATABASE_URL, ${prefix}_QUEUE_URL, AWS_REGION, and an optional named AWS_PROFILE.`,
     );
   }
 
@@ -53,19 +57,21 @@ export function readDispatcherConfig(
     queue.hash ||
     !/^\/\d{12}\/[A-Za-z0-9_-]{1,80}$/.test(queue.pathname)
   ) {
-    throw new Error('PROCESSING_QUEUE_URL must identify a standard SQS queue in AWS_REGION.');
+    throw new Error(`${prefix}_QUEUE_URL must identify a standard SQS queue in AWS_REGION.`);
   }
 
-  const database = parseDatabaseUrl(config.databaseUrl, 'PROCESSING_DISPATCHER_DATABASE_URL');
+  if (purpose === 'facts' && config.queueUrl === env.PROCESSING_QUEUE_URL) {
+    throw new Error('Fact extraction must use its own queue.');
+  }
+
+  const database = parseDatabaseUrl(config.databaseUrl, `${prefix}_DISPATCHER_DATABASE_URL`);
   const runtime = parseDatabaseUrl(runtimeUrl);
   const pooled = database.hostname.endsWith('.pooler.supabase.com');
-  const expectedUser = pooled
-    ? `caseflow_dispatcher_login.${runtime.username.split('.')[1]}`
-    : 'caseflow_dispatcher_login';
+  const expectedUser = pooled ? `${login}.${runtime.username.split('.')[1]}` : login;
 
   if (database.username !== expectedUser) {
     throw new Error(
-      'PROCESSING_DISPATCHER_DATABASE_URL must use the caseflow_dispatcher_login role and the same project as DATABASE_URL.',
+      `${prefix}_DISPATCHER_DATABASE_URL must use the ${login} role and the same project as DATABASE_URL.`,
     );
   }
 

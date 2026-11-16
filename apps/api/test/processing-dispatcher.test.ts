@@ -291,3 +291,36 @@ test('Fastify starts dispatching only when listening and stops before shutdown',
   assert.deepEqual(unstarted.closed, ['queue', 'store']);
   assert.equal(unstarted.messages.length, 0);
 });
+
+test('fact dispatch uses a separate login and queue and remains disabled by default', () => {
+  const factEnv = {
+    ...env,
+    FACT_EXTRACTION_DISPATCHER_ENABLED: 'true',
+    FACT_EXTRACTION_DISPATCHER_DATABASE_URL:
+      'postgresql://caseflow_fact_dispatcher_login:test@127.0.0.1:54322/postgres',
+    FACT_EXTRACTION_QUEUE_URL:
+      'https://sqs.us-east-2.amazonaws.com/123456789012/caseflow-fact-extraction',
+  };
+  assert.equal(readDispatcherConfig(env, runtimeUrl, 'facts'), undefined);
+  assert.equal(
+    readDispatcherConfig(factEnv, runtimeUrl, 'facts')?.queueUrl,
+    factEnv.FACT_EXTRACTION_QUEUE_URL,
+  );
+  assert.throws(() =>
+    readDispatcherConfig(
+      { ...factEnv, FACT_EXTRACTION_QUEUE_URL: env.PROCESSING_QUEUE_URL },
+      runtimeUrl,
+      'facts',
+    ),
+  );
+  assert.throws(() =>
+    readDispatcherConfig(
+      {
+        ...factEnv,
+        FACT_EXTRACTION_DISPATCHER_DATABASE_URL: env.PROCESSING_DISPATCHER_DATABASE_URL,
+      },
+      runtimeUrl,
+      'facts',
+    ),
+  );
+});

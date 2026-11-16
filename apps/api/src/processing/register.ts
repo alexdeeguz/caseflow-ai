@@ -3,12 +3,13 @@ import type { DispatcherConfig } from './config.js';
 import { DispatchEvent } from './constants.js';
 import { createProcessingDispatcher, type ProcessingDispatcher } from './dispatcher.js';
 import { createProcessingQueue } from './queue.js';
-import { createDispatchStore } from './store.js';
+import { createDispatchStore, DispatchTarget } from './store.js';
 
 export function registerProcessingDispatcher(
   app: FastifyInstance,
   config?: DispatcherConfig,
   injectedDispatcher?: ProcessingDispatcher,
+  target: DispatchTarget = DispatchTarget.Processing,
 ) {
   if (!config) {
     return;
@@ -17,13 +18,17 @@ export function registerProcessingDispatcher(
   const dispatcher =
     injectedDispatcher ??
     createProcessingDispatcher({
-      store: createDispatchStore(config.databaseUrl, () => {
-        app.log.warn(
-          { event: DispatchEvent.ConnectionFailed },
-          'Processing dispatch connection unavailable.',
-        );
-      }),
-      queue: createProcessingQueue(config),
+      store: createDispatchStore(
+        config.databaseUrl,
+        () => {
+          app.log.warn(
+            { event: DispatchEvent.ConnectionFailed },
+            'Processing dispatch connection unavailable.',
+          );
+        },
+        target,
+      ),
+      queue: createProcessingQueue(config, target),
       logger: app.log,
     });
 

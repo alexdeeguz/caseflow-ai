@@ -85,17 +85,20 @@
   background: var(--brand-paper);
 }
 .table th:first-child {
-  width: 31%;
+  width: 26%;
   border-top-left-radius: var(--radius-control);
 }
 .table th:nth-child(2) {
-  width: 16%;
+  width: 13%;
 }
 .table th:nth-child(3) {
-  width: 15%;
+  width: 12%;
 }
 .table th:nth-child(4) {
-  width: 20%;
+  width: 14%;
+}
+.table th:nth-child(5) {
+  width: 17%;
 }
 .table th:last-child {
   width: 18%;
@@ -285,7 +288,7 @@
 }
 .skeletonMeta {
   height: 16px;
-  width: 15%;
+  width: 12%;
   margin-left: auto;
 }
 .mobileList {

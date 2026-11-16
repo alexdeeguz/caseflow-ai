@@ -75,7 +75,7 @@ for at most five minutes, and refreshed on a subsequent invocation. A failed ref
 never falls back to expired credentials. SDK clients are reused across warm invocations;
 credential-bearing application objects are rebuilt so rotated credentials take effect.
 
-The package includes [Supabase's public root CA](../apps/document-processor/src/caseflow_processor/certs/supabase-ca.crt).
+The package includes [Supabase's public root CA](../services/document-processor/src/caseflow_processor/certs/supabase-ca.crt).
 Its SHA-256 DER fingerprint is
 `AD:62:1A:B5:F1:62:31:97:13:A6:91:C7:3D:D0:52:C3:B4:CD:49:B6:02:49:96:2A:D8:B5:FB:6B:D1:A0:D4:B5`;
 it expires on April 26, 2031. Replace it through a reviewed source/build update if Supabase
@@ -131,7 +131,7 @@ Install Docker and uv 0.13.8. From the repository root:
 
 ```sh
 uv sync --project infra/document-processing --locked
-uv sync --project apps/document-processor --locked
+uv sync --project services/document-processor --locked
 uv run --project infra/document-processing --locked sam validate --lint --region us-east-2 --template-file infra/document-processing/template.yaml
 uv run --project infra/document-processing --locked python infra/document-processing/scripts/validate_security.py
 uv run --project infra/document-processing --locked pytest infra/document-processing/tests
@@ -140,7 +140,7 @@ uv run --project infra/document-processing --locked python infra/document-proces
 ```
 
 Use the build wrapper rather than calling `sam build` directly on the source template. It
-exports hash-pinned runtime requirements from `apps/document-processor/uv.lock` into a temporary
+exports hash-pinned runtime requirements from `services/document-processor/uv.lock` into a temporary
 source directory, copies only the Python package and public certificate, and builds all three
 functions using SAM's versioned Python 3.13 x86-64 Linux image. It excludes local environment
 files, tests, editor files, and development dependencies. SAM output is ignored under

@@ -18,17 +18,23 @@ Use fictional data for demonstrations and testing.
 
 Native PDF extraction, Textract OCR, bounded recovery, and monitoring are implemented and verified in the hosted development environment. Queue consumers and scheduled recovery run in AWS; continuous dispatch runs with the API. New deployments start with triggers disabled and follow the [verification and activation guide](docs/processing-verification.md). File previews and extracted-text viewing remain outside this phase.
 
+- **Fact extraction:** OpenAI-only, manually requested unreviewed facts with exact source
+  quotations, a shared daily allowance, and separate queue/worker infrastructure. Prepared for
+  review; live evaluation and activation remain pending. See [fact extraction](docs/fact-extraction.md).
+
 ## Stack and structure
 
-| Location                                               | Responsibility                                                               |
-| ------------------------------------------------------ | ---------------------------------------------------------------------------- |
-| [apps/web](apps/web)                                   | Next.js, React, and Tailwind frontend with Microsoft Entra authentication    |
-| [apps/api](apps/api)                                   | Fastify API with PostgreSQL authorization, S3 storage, and an SQS dispatcher |
-| [apps/document-processor](apps/document-processor)     | Python workers for native text, Textract starts, and OCR completion          |
-| [infra/document-processing](infra/document-processing) | SAM template, isolated validation tooling, and container builds              |
-| [packages/schemas](packages/schemas)                   | Handwritten shared Zod contracts, constants, and TypeScript types            |
-| [supabase](supabase)                                   | PostgreSQL migrations, local configuration, and fictional seed data          |
-| [docs](docs)                                           | Setup guides, feature behavior, and technical references                     |
+| Location                                                   | Responsibility                                                               |
+| ---------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| [apps/web](apps/web)                                       | Next.js, React, and Tailwind frontend with Microsoft Entra authentication    |
+| [apps/api](apps/api)                                       | Fastify API with PostgreSQL authorization, S3 storage, and an SQS dispatcher |
+| [services/document-processor](services/document-processor) | Python workers for native text, Textract starts, and OCR completion          |
+| [services/fact-extractor](services/fact-extractor)         | Python worker for OpenAI structured facts and evidence validation            |
+| [infra/fact-extraction](infra/fact-extraction)             | Disabled fact queue/worker, secrets, and monitoring definitions              |
+| [infra/document-processing](infra/document-processing)     | SAM template, isolated validation tooling, and container builds              |
+| [packages/schemas](packages/schemas)                       | Handwritten shared Zod contracts, constants, and TypeScript types            |
+| [supabase](supabase)                                       | PostgreSQL migrations, local configuration, and fictional seed data          |
+| [docs](docs)                                               | Setup guides, feature behavior, and technical references                     |
 
 The API connects to a private PostgreSQL schema using restricted credentials.
 Microsoft Entra provides authentication; S3 stores document bytes. The browser does
@@ -80,6 +86,7 @@ Run commands from the repository root.
 | `npm run dev`              | Start the frontend, API, and shared-schema watcher             |
 | `npm run build`            | Build all workspaces for production                            |
 | `npm run test:processor`   | Run Python unit tests (requires uv/Python setup)               |
+| `npm run test:facts`       | Run fact-extractor unit tests                                  |
 | `npm test`                 | Run unit tests                                                 |
 | `npm run test:integration` | Run PostgreSQL integration tests on disposable local databases |
 | `npm run lint`             | Check ESLint rules                                             |
@@ -97,6 +104,7 @@ individually, integration-test prerequisites, and dependency maintenance.
 | [Hosted database](docs/hosted-database.md)         | Migrations, TLS, Session pooler credentials, environment switching, and recovery      |
 | [Authentication](docs/authentication.md)           | Entra registration, token validation, session behavior, and sign-in verification      |
 | [Users and cases](docs/users-and-cases.md)         | Permission matrix, Super Admin setup, assignments, editing, and archiving             |
+| [Fact extraction](docs/fact-extraction.md)         | OpenAI facts, evidence, allowance controls, verification, and reviewed deployment     |
 | [API reference](docs/api.md)                       | Route organization, request/response contracts, pagination, and errors                |
 | [Document management](docs/document-management.md) | S3 configuration, uploads, library, downloads, removal, and consistency rules         |
 | [Document processing](docs/document-processing.md) | Job/dispatch records, dispatcher credentials, SQS permissions, and configuration      |

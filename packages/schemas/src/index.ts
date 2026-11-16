@@ -13,3 +13,5 @@ export * from './contracts/errors.js';
 export * from './contracts/documents.js';
 export * from './constants/processing.js';
 export * from './contracts/processing.js';
+export * from './constants/fact-extraction.js';
+export * from './contracts/fact-extraction.js';

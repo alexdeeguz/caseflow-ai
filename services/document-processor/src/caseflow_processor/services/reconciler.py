@@ -17,12 +17,14 @@ class Reconciler:
         collector: ResultCollector,
         bucket: str,
         environment: str,
+        recover_facts: Callable[[], dict[str, int]] | None = None,
     ) -> None:
         self._store = store
         self._provider = provider
         self._collector = collector
         self._bucket = bucket
         self._environment = environment
+        self._recover_facts = recover_facts
 
     def run(self, remaining_ms: Callable[[], int]) -> dict[str, int]:
         checks = errors = 0
@@ -59,6 +61,8 @@ class Reconciler:
                 )
         if remaining_ms() < 15_000:
             raise RetryableError('Insufficient time for recovery health check')
+        if self._recover_facts is not None:
+            self._recover_facts()
         metrics = self._store.health(self._bucket, self._environment)
         emit_health(
             self._environment,

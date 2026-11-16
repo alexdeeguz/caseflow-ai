@@ -26,6 +26,14 @@ class PostgresRecoveryStore(PostgresJobStore):
             is True
         )
 
+    def recover_facts(self, bucket: str, environment: str) -> dict[str, int]:
+        result = TypeAdapter(dict[str, int]).validate_python(
+            self._call('select caseflow.recover_fact_tasks(%s,%s,%s)', (25, bucket, environment))
+        )
+        if result.keys() != {'recovered', 'failed'}:
+            raise ValueError('Unexpected fact recovery fields')
+        return result
+
     def health(self, bucket: str, environment: str) -> dict[str, float]:
         metrics = health_adapter.validate_python(
             self._call('select caseflow.processing_health(%s,%s)', (bucket, environment))

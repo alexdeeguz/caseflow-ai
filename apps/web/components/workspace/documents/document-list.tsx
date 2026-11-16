@@ -1,6 +1,8 @@
 'use client';
 
-import { Fragment, useId, useState } from 'react';
+import { Fragment, useId, useState, type ReactNode } from 'react';
+import { FactExtractionBadge } from './fact-extraction-status';
+import { FactExtractionActionButton } from './fact-extraction-action-button';
 import { DocumentStatus, type Document, type DocumentListItem, type Role } from '@caseflow/schemas';
 import { documentTypeLabels, formatFileSize } from '../../../lib/documents/presentation';
 import { DocumentIcon } from './document-icon';
@@ -85,6 +87,8 @@ export function DocumentList({
   disabled,
   processingId,
   onProcess,
+  onExtract,
+  renderFacts,
 }: {
   items: DocumentListItem[];
   role: Role;
@@ -94,6 +98,8 @@ export function DocumentList({
   disabled: boolean;
   processingId: string | null;
   onProcess: (document: DocumentListItem) => void;
+  onExtract: (document: DocumentListItem) => void;
+  renderFacts: (document: DocumentListItem) => ReactNode;
 }) {
   const prefix = useId();
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -110,6 +116,7 @@ export function DocumentList({
               <th scope="col">Uploaded</th>
               <th scope="col">Availability</th>
               <th scope="col">Processing</th>
+              <th scope="col">Fact extraction</th>
               <th scope="col">
                 <span className="sr-only">Actions</span>
               </th>
@@ -145,6 +152,18 @@ export function DocumentList({
                       </div>
                     </td>
                     <td>
+                      <div className={processingStyles.statusCell}>
+                        <FactExtractionBadge summary={document.factExtraction} />
+                        <FactExtractionActionButton
+                          document={document}
+                          role={role}
+                          archived={archived}
+                          disabled={disabled}
+                          onExtract={onExtract}
+                        />
+                      </div>
+                    </td>
+                    <td>
                       <DocumentActions
                         document={document}
                         role={role}
@@ -162,11 +181,12 @@ export function DocumentList({
                     </td>
                   </tr>
                   <tr id={detailsId} hidden={!open}>
-                    <td colSpan={5} className={styles.detailCell}>
+                    <td colSpan={6} className={styles.detailCell}>
                       {open && (
                         <>
                           <DocumentDetails document={document} />
                           <ProcessingDetails document={document} />
+                          {renderFacts(document)}
                         </>
                       )}
                     </td>
@@ -202,6 +222,17 @@ export function DocumentList({
                 <span>Processing</span>
                 <ProcessingStatusBadge summary={document.processing} />
               </div>
+              <div className={processingStyles.cardStatus}>
+                <span>Fact extraction</span>
+                <FactExtractionBadge summary={document.factExtraction} />
+                <FactExtractionActionButton
+                  document={document}
+                  role={role}
+                  archived={archived}
+                  disabled={disabled}
+                  onExtract={onExtract}
+                />
+              </div>
               <div className={styles.documentActions}>
                 <ProcessingActionButton
                   document={document}
@@ -225,6 +256,7 @@ export function DocumentList({
                   <>
                     <DocumentDetails document={document} />
                     <ProcessingDetails document={document} />
+                    {renderFacts(document)}
                   </>
                 )}
               </div>

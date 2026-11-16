@@ -54,7 +54,16 @@ export function useProcessingUpdates(
     );
     void client.invalidateQueries({
       predicate: ({ queryKey }) =>
-        String(queryKey[0]).startsWith('/admin/audit') || paths.has(String(queryKey[0])),
+        String(queryKey[0]).startsWith('/admin/audit') ||
+        paths.has(String(queryKey[0])) ||
+        changed.some(
+          (document) =>
+            String(queryKey[0]).startsWith(
+              `/cases/${document.caseId}/documents/${document.id}/facts?`,
+            ) ||
+            String(queryKey[0]) ===
+              `/cases/${document.caseId}/documents/${document.id}/fact-extraction`,
+        ),
     });
   }, [key, data, stale, client]);
 

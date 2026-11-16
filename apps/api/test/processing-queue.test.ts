@@ -1,3 +1,4 @@
+import { DispatchTarget } from '../src/processing/store.js';
 import assert from 'node:assert/strict';
 import { createHash, randomUUID } from 'node:crypto';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
@@ -115,6 +116,40 @@ test('queue adapter rejects forged message fields and missing or invalid SQS ack
     for (messageId of [undefined, '', 'x'.repeat(129), 'invalid\nmessage']) {
       await assert.rejects(queue.send(message, signal));
     }
+  } finally {
+    queue.close();
+  }
+});
+
+test('fact queue receives only a task reference rather than an OCR job payload', async () => {
+  const client = new SQSClient({
+    region: 'us-east-2',
+    credentials: { accessKeyId: 'TEST', secretAccessKey: 'test' },
+  });
+  const queueUrl = 'https://sqs.us-east-2.amazonaws.com/123456789012/caseflow-fact-extraction';
+  const queue = createQueueAdapter(client, queueUrl, DispatchTarget.FactExtraction);
+  const taskId = randomUUID();
+  client.middlewareStack.add(
+    () => async (args) => {
+      const input = args.input as { QueueUrl: string; MessageBody: string };
+      assert.equal(input.QueueUrl, queueUrl);
+      assert.deepEqual(JSON.parse(input.MessageBody), { schemaVersion: 1, taskId });
+      return {
+        response: {},
+        output: {
+          $metadata: {},
+          MessageId: 'fact-message',
+          MD5OfMessageBody: createHash('md5').update(input.MessageBody).digest('hex'),
+        },
+      };
+    },
+    { step: 'finalizeRequest', name: 'fakeFactQueue', priority: 'low' },
+  );
+  try {
+    assert.equal(
+      await queue.send({ schemaVersion: 1, jobId: taskId }, new AbortController().signal),
+      'fact-message',
+    );
   } finally {
     queue.close();
   }

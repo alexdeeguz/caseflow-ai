@@ -10,7 +10,7 @@ import yaml
 
 INFRA = Path(__file__).resolve().parents[1]
 ROOT = INFRA.parents[1]
-APPLICATION = ROOT / 'apps' / 'document-processor'
+APPLICATION = ROOT / 'services' / 'document-processor'
 BUILD_IMAGE = 'public.ecr.aws/sam/build-python3.13:1.172.1-x86_64'
 BUILD_OUTPUT = ROOT / '.aws-sam' / 'document-processing'
 

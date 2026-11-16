@@ -1,3 +1,4 @@
+import { getFactExtraction, requestFactExtraction, listFacts } from './fact-extraction.js';
 import { ErrorCode, Role, type Audit, type User } from '@caseflow/schemas';
 import type { PoolClient } from 'pg';
 import { AppError } from '../errors.js';
@@ -41,6 +42,12 @@ export async function executeOperation(
   const offset = (page - 1) * pageSize;
 
   switch (operation) {
+    case Operation.GetFactExtraction:
+      return getFactExtraction(client, input);
+    case Operation.RequestFactExtraction:
+      return requestFactExtraction(client, input);
+    case Operation.ListFacts:
+      return listFacts(client, input);
     case Operation.GetProfile:
       return actor;
 

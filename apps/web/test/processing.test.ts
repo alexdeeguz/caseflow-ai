@@ -88,6 +88,7 @@ function document(status: ProcessingStatus = ProcessingStatus.NotProcessed): Doc
     removedAt: null,
     removedBy: null,
     processing: summary(status),
+    factExtraction: { status: 'not_extracted', job: null },
   });
 }
 
@@ -198,7 +199,10 @@ test('announcements describe meaningful changes and ignore repeated snapshots or
   assert.deepEqual(processingChanges([before], [timestampOnly]), []);
   const after = document(ProcessingStatus.Processing);
   assert.deepEqual(processingChanges([before], [after]), [after]);
-  assert.equal(processingAnnouncement([after]), 'Fictional report.pdf: Extracting text.');
+  assert.equal(
+    processingAnnouncement([after]),
+    'Fictional report.pdf: text Extracting text; facts Not extracted.',
+  );
   assert.equal(processingChanges([], [after]).length, 0);
   assert.match(processingAnnouncement([after, after, after]), /1 more documents updated/);
 });

@@ -6,6 +6,11 @@ Metadata:
   RecoveryDocumentation: ../../docs/processing-recovery.md
 
 Parameters:
+  EnableFactRecovery:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['false', 'true']
+    Description: Enable only after the fact extraction migration and workflow checks.
   Environment:
     Type: String
     Default: dev
@@ -280,7 +285,7 @@ Resources:
     Metadata:
       BuildMethod: makefile
     Properties:
-      CodeUri: ../../apps/document-processor
+      CodeUri: ../../services/document-processor
       Handler: caseflow_processor.handlers.processing.handler
       Role: { 'Fn::GetAtt': [ProcessorRole, Arn] }
       LoggingConfig:
@@ -308,7 +313,7 @@ Resources:
     Metadata:
       BuildMethod: makefile
     Properties:
-      CodeUri: ../../apps/document-processor
+      CodeUri: ../../services/document-processor
       Handler: caseflow_processor.handlers.completion.handler
       Role: { 'Fn::GetAtt': [CompletionRole, Arn] }
       Environment:
@@ -394,11 +399,12 @@ Resources:
       BuildMethod: makefile
       Purpose: Use shared concurrency; database locks and fenced leases coordinate overlapping recovery.
     Properties:
-      CodeUri: ../../apps/document-processor
+      CodeUri: ../../services/document-processor
       Handler: caseflow_processor.handlers.recovery.handler
       Role: { 'Fn::GetAtt': [RecoveryRole, Arn] }
       Environment:
         Variables:
+          FACT_EXTRACTION_RECOVERY_ENABLED: { Ref: EnableFactRecovery }
           RECOVERY_DATABASE_SECRET_ARN: { Ref: RecoveryDatabaseSecretArn }
       LoggingConfig:
         LogFormat: JSON

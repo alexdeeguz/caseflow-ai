@@ -1,3 +1,5 @@
+import { factExtractionMessageSchema } from '@caseflow/schemas';
+import { DispatchTarget } from './store.js';
 import { SendMessageCommand, SQSClient } from '@aws-sdk/client-sqs';
 import { fromIni } from '@aws-sdk/credential-providers';
 import { processingMessageSchema, type ProcessingMessage } from '@caseflow/schemas';
@@ -46,18 +48,29 @@ export function createProcessingQueueClient(config: DispatcherConfig): SQSClient
   });
 }
 
-export function createProcessingQueue(config: DispatcherConfig): ProcessingQueue {
-  return createQueueAdapter(createProcessingQueueClient(config), config.queueUrl);
+export function createProcessingQueue(
+  config: DispatcherConfig,
+  target: DispatchTarget = DispatchTarget.Processing,
+): ProcessingQueue {
+  return createQueueAdapter(createProcessingQueueClient(config), config.queueUrl, target);
 }
 
 export function createQueueAdapter(
   client: Pick<SQSClient, 'send' | 'destroy'>,
   queueUrl: string,
+  target: DispatchTarget = DispatchTarget.Processing,
 ): ProcessingQueue {
   return {
     async send(message, signal) {
       signal.throwIfAborted();
-      const body = processingMessageSchema.parse(message);
+      const validated = processingMessageSchema.parse(message);
+      const body =
+        target === DispatchTarget.FactExtraction
+          ? factExtractionMessageSchema.parse({
+              schemaVersion: validated.schemaVersion,
+              taskId: validated.jobId,
+            })
+          : validated;
       const result = await client.send(
         new SendMessageCommand({ QueueUrl: queueUrl, MessageBody: JSON.stringify(body) }),
         { abortSignal: signal },
