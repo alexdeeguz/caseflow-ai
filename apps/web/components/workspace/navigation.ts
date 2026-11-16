@@ -1,4 +1,4 @@
-import type { Role } from '@caseflow/schemas';
+import { CaseArchiveFilter, SearchMode, type Role } from '@caseflow/schemas';
 import {
   caseTimelineResource,
   caseReviewedSummaryResource,
@@ -14,6 +14,7 @@ import type { WorkspaceLocation } from '../../lib/workspace-location';
 import { CaseSection, CaseView, WorkspaceTab } from '../../lib/constants/navigation';
 
 import { documentLibraryQuery, documentListResource } from '../../lib/documents/resources';
+import { documentSearchResource, isSearchable } from '../../lib/search/resources';
 
 export { WorkspaceTab, tabLabels } from '../../lib/constants/navigation';
 
@@ -43,7 +44,32 @@ export function locationResources(location: WorkspaceLocation, role: Role): Reso
         ...(location.section === CaseSection.Documents && !location.mode
           ? [documentListResource(location.case, documentLibraryQuery(location, role))]
           : []),
+        ...(location.section === CaseSection.Documents &&
+        !location.mode &&
+        isSearchable(location.documentQuery)
+          ? [
+              documentSearchResource({
+                query: location.documentQuery,
+                mode: SearchMode.Hybrid,
+                caseId: location.case,
+                archive: CaseArchiveFilter.All,
+                page: location.documentQueryPage,
+              }),
+            ]
+          : []),
       ];
+    case WorkspaceTab.Search:
+      return isSearchable(location.query)
+        ? [
+            documentSearchResource({
+              query: location.query,
+              mode: location.searchMode,
+              caseId: location.searchCase,
+              archive: location.searchArchive,
+              page: location.searchPage,
+            }),
+          ]
+        : [];
     case WorkspaceTab.Users:
       return [userListResource()];
     case WorkspaceTab.Audit:

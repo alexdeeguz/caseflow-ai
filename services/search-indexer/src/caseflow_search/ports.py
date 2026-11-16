@@ -1,0 +1,36 @@
+from collections.abc import Callable
+from typing import Protocol
+
+from .constants import FailureCode
+from .models import (
+    Chunk,
+    Claim,
+    DeniedReservation,
+    Embedding,
+    EmbeddingResult,
+    IgnoredClaim,
+    PendingChunk,
+    Reservation,
+)
+
+Checkpoint = Callable[[], None]
+
+
+class JobStore(Protocol):
+    def claim(self, job_id: str) -> Claim | IgnoredClaim: ...
+    def check(self, claim: Claim) -> None: ...
+    def save_chunks(self, claim: Claim, chunks: list[Chunk]) -> None: ...
+    def pending(self, claim: Claim, limit: int) -> list[PendingChunk]: ...
+    def reserve(self, claim: Claim, input_tokens: int) -> Reservation | DeniedReservation: ...
+    def settle(self, reservation: Reservation, input_tokens: int) -> None: ...
+    def save_embeddings(self, claim: Claim, embeddings: list[Embedding]) -> bool: ...
+    def fail(self, claim: Claim, code: FailureCode) -> None: ...
+    def retry(self, claim: Claim) -> None: ...
+
+
+class TextStorage(Protocol):
+    def read(self, claim: Claim) -> dict[int, str]: ...
+
+
+class EmbeddingProvider(Protocol):
+    def embed(self, texts: list[str]) -> EmbeddingResult: ...

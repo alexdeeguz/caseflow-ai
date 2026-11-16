@@ -1,4 +1,5 @@
 import { factExtractionJoin, serializeFactExtraction } from './fact-extraction.js';
+import { searchIndexJoin, serializeSearchIndex } from './search-index.js';
 import type { FactExtractionSummary } from '@caseflow/schemas';
 import type { PoolClient } from 'pg';
 import { z } from 'zod';
@@ -129,6 +130,7 @@ export async function listDocuments(client: PoolClient, input: Record<string, un
       processing: ProcessingRecord;
       factJob: FactExtractionSummary['job'];
       unreviewedFactCount: number;
+      searchIndex: unknown;
     })[];
   }>(
     `with matching as materialized (
@@ -150,9 +152,10 @@ export async function listDocuments(client: PoolClient, input: Record<string, un
       select ${documentProjection} || jsonb_build_object('processing',
         jsonb_build_object('job', processing.job, 'result', processing.result),
         'factJob', extraction.job,
-        'unreviewedFactCount', coalesce(reviews.unreviewed_count, 0)) as document,
+        'unreviewedFactCount', coalesce(reviews.unreviewed_count, 0),
+        'searchIndex', search_index.summary) as document,
         d.created_at, d.id
-      from page_documents d ${processingSummaryJoin} ${factExtractionJoin}
+      from page_documents d ${processingSummaryJoin} ${factExtractionJoin} ${searchIndexJoin}
       left join review_counts reviews on reviews.document_id = d.id
     )
     select exists(select 1 from caseflow.cases where id = $1) as visible,
@@ -166,12 +169,15 @@ export async function listDocuments(client: PoolClient, input: Record<string, un
     throw new AppError(ErrorCode.NotFound, 404, 'Case not found.');
   }
 
-  const items = row.items.map(({ processing, factJob, unreviewedFactCount, ...document }) => ({
-    ...serializeDocument(document),
-    processing: serializeProcessing(processing),
-    factExtraction: serializeFactExtraction(factJob),
-    unreviewedFactCount,
-  }));
+  const items = row.items.map(
+    ({ processing, factJob, unreviewedFactCount, searchIndex, ...document }) => ({
+      ...serializeDocument(document),
+      processing: serializeProcessing(processing),
+      factExtraction: serializeFactExtraction(factJob),
+      unreviewedFactCount,
+      searchIndex: serializeSearchIndex(searchIndex),
+    }),
+  );
 
   return { items, total: row.total, page, pageSize };
 }

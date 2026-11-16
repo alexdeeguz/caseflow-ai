@@ -13,6 +13,7 @@ import { UploadQueuePanel } from './documents/upload-queue-panel';
 import { RoleBadge } from './role-badge';
 import { Profile } from './profile';
 import { Cases } from './cases/cases';
+import { SearchPage } from './search/search-page';
 import { Users } from './users';
 import { AuditHistory } from './audit';
 import { WorkspaceFrame } from './workspace-frame';
@@ -137,6 +138,14 @@ function WorkspaceContent({ user, request, signOut, refreshProfile }: WorkspaceP
       )}
       {user.role === Role.Staff && (tab === WorkspaceTab.Users || tab === WorkspaceTab.Audit) && (
         <StatusMessage tone="error">You do not have permission to view this page.</StatusMessage>
+      )}
+      {tab === WorkspaceTab.Search && (
+        <SearchPage
+          request={request}
+          location={location}
+          navigate={navigate}
+          pendingLocation={pending?.tab === WorkspaceTab.Search ? pending : null}
+        />
       )}
       {tab === WorkspaceTab.Profile && (
         <Profile user={user} request={request} onSaved={refreshProfile} />

@@ -13,14 +13,18 @@ const configSchema = z.strictObject({
 
 export type DispatcherConfig = z.infer<typeof configSchema>;
 
+const dispatcherIdentities = {
+  processing: { prefix: 'PROCESSING', login: 'caseflow_dispatcher_login' },
+  facts: { prefix: 'FACT_EXTRACTION', login: 'caseflow_fact_dispatcher_login' },
+  search: { prefix: 'SEARCH_INDEX', login: 'caseflow_search_dispatcher_login' },
+} as const;
+
 export function readDispatcherConfig(
   env: NodeJS.ProcessEnv,
   runtimeUrl: string,
-  purpose: 'processing' | 'facts' = 'processing',
+  purpose: 'processing' | 'facts' | 'search' = 'processing',
 ): DispatcherConfig | undefined {
-  const prefix = purpose === 'facts' ? 'FACT_EXTRACTION' : 'PROCESSING';
-  const login =
-    purpose === 'facts' ? 'caseflow_fact_dispatcher_login' : 'caseflow_dispatcher_login';
+  const { prefix, login } = dispatcherIdentities[purpose];
   const enabled = env[`${prefix}_DISPATCHER_ENABLED`] ?? 'false';
 
   if (!['true', 'false'].includes(enabled)) {
@@ -62,6 +66,13 @@ export function readDispatcherConfig(
 
   if (purpose === 'facts' && config.queueUrl === env.PROCESSING_QUEUE_URL) {
     throw new Error('Fact extraction must use its own queue.');
+  }
+
+  if (
+    purpose === 'search' &&
+    [env.PROCESSING_QUEUE_URL, env.FACT_EXTRACTION_QUEUE_URL].includes(config.queueUrl)
+  ) {
+    throw new Error('Search indexing must use its own queue.');
   }
 
   const database = parseDatabaseUrl(config.databaseUrl, `${prefix}_DISPATCHER_DATABASE_URL`);

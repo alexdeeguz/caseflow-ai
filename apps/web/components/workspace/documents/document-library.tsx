@@ -5,7 +5,7 @@ import { useFactExtractionAction } from './use-fact-extraction-action';
 import { FactExtractionConfirmation } from './fact-extraction-confirmation';
 import { FactsPanel } from './facts-panel';
 import { useQuery } from '@tanstack/react-query';
-import { DocumentFilter, Role } from '@caseflow/schemas';
+import { DocumentFilter, Role, type DocumentListItem } from '@caseflow/schemas';
 import type { AuthRequest } from '../../../hooks/use-authentication';
 import type { WorkspaceNavigate } from '../../../hooks/use-workspace-navigation';
 import type { WorkspaceLocation } from '../../../lib/workspace-location';
@@ -27,6 +27,11 @@ import { StatusMessage } from '../../ui/status-message';
 import { UploadModal } from './upload-modal';
 import { useDocumentActions } from './use-document-actions';
 import { DocumentList } from './document-list';
+import { DocumentDrawer } from './document-drawer';
+import { SearchField } from '../search/search-field';
+import { CaseDocumentSearch } from '../search/case-document-search';
+import { isSearchable } from '../../../lib/search/resources';
+import searchStyles from '../search/search.module.css';
 import { FactExtractionActionButton } from './fact-extraction-action-button';
 import { useReviewTotals } from './use-review-totals';
 import type { ReviewTotals } from '../../../lib/documents/state';
@@ -113,6 +118,66 @@ export function DocumentLibrary({
     setUploadOpen(false);
     uploadButton.current?.focus();
   };
+  // The drawer can be opened from a row, a search result, or a `document` link in the URL.
+  const [selectedId, setSelectedId] = useState<string | null>(location.document);
+  const [drawerOpen, setDrawerOpen] = useState(location.document !== null);
+  const [requested, setRequested] = useState(location.document);
+  if (location.document !== requested) {
+    setRequested(location.document);
+    if (location.document) {
+      setSelectedId(location.document);
+      setDrawerOpen(true);
+    }
+  }
+  const openDocument = (id: string) => {
+    setSelectedId(id);
+    setDrawerOpen(true);
+  };
+  const closeDocument = () => {
+    setDrawerOpen(false);
+    if (location.document) {
+      void navigate({ ...location, document: null }, { replace: true });
+    }
+  };
+  const listed = data?.items.find((document) => document.id === selectedId) ?? null;
+  const lookup = useQuery({
+    ...documentLibraryOptions(
+      request,
+      documentListResource(caseId, {
+        filter: role === Role.Staff ? DocumentFilter.Current : DocumentFilter.All,
+        page: 1,
+        pageSize: 100,
+      }),
+    ),
+    enabled: selectedId !== null && !!data && !listed,
+  });
+  const selected =
+    listed ?? lookup.data?.items.find((document) => document.id === selectedId) ?? null;
+  const searchingCase = isSearchable(location.documentQuery);
+  const renderFacts = (document: DocumentListItem) => (
+    <FactsPanel
+      key={document.id}
+      document={document}
+      role={role}
+      archived={archived}
+      request={request}
+      onAccessRejected={onAccessRejected}
+      disabled={!canAct}
+      action={
+        <FactExtractionActionButton
+          document={document}
+          role={role}
+          archived={archived}
+          disabled={actionsDisabled}
+          onExtract={(target) => {
+            actions.dismissError();
+            processing.dismissError();
+            facts.open(target);
+          }}
+        />
+      }
+    />
+  );
   const empty = documentEmptyState(filter, page);
   const navigating = pendingLocation !== null;
   const selectPage = (documentPage: number) =>
@@ -131,7 +196,20 @@ export function DocumentLibrary({
       summary={data && <DocumentsSummary total={data.total} review={review} />}
       actions={
         <>
-          {role !== Role.Staff && (
+          <div className={searchStyles.caseSearch}>
+            <SearchField
+              label="Search this case’s documents"
+              value={location.documentQuery}
+              placeholder="Search text in these documents"
+              onSearch={(documentQuery) =>
+                void navigate(
+                  { ...location, documentQuery, documentQueryPage: 1 },
+                  { replace: true },
+                )
+              }
+            />
+          </div>
+          {role !== Role.Staff && !searchingCase && (
             <SegmentedControl
               label="Document visibility"
               options={Object.values(DocumentFilter).map((value) => ({
@@ -232,7 +310,15 @@ export function DocumentLibrary({
           </button>
         </div>
       )}
-      {!data ? (
+      {searchingCase ? (
+        <CaseDocumentSearch
+          request={request}
+          caseId={caseId}
+          location={location}
+          navigate={navigate}
+          onOpen={openDocument}
+        />
+      ) : !data ? (
         !online ? (
           <div className={styles.empty}>
             <h3>You’re offline</h3>
@@ -290,45 +376,42 @@ export function DocumentLibrary({
                 role={role}
                 archived={archived}
                 busy={actions.busy}
+                disabled={actionsDisabled}
+                selectedId={drawerOpen ? selectedId : null}
+                onOpenDetails={openDocument}
                 onAction={(document, action) => {
                   processing.dismissError();
                   actions.act(document, action);
-                }}
-                disabled={actionsDisabled}
-                processingId={processing.busy ? (processing.selected?.id ?? null) : null}
-                renderFacts={(document) => (
-                  <FactsPanel
-                    key={document.id}
-                    document={document}
-                    role={role}
-                    archived={archived}
-                    request={request}
-                    onAccessRejected={onAccessRejected}
-                    disabled={!canAct}
-                    action={
-                      <FactExtractionActionButton
-                        document={document}
-                        role={role}
-                        archived={archived}
-                        disabled={actionsDisabled}
-                        onExtract={(target) => {
-                          actions.dismissError();
-                          processing.dismissError();
-                          facts.open(target);
-                        }}
-                      />
-                    }
-                  />
-                )}
-                onProcess={(document) => {
-                  actions.dismissError();
-                  processing.open(document);
                 }}
               />
             )}
           </div>
           {(data.total > data.pageSize || page > 1) && <Pagination {...data} onPage={selectPage} />}
         </>
+      )}
+      {selected && (
+        <DocumentDrawer
+          key={selected.id}
+          document={selected}
+          open={drawerOpen}
+          role={role}
+          archived={archived}
+          busy={actions.busy}
+          disabled={actionsDisabled}
+          processingBusy={processing.busy && processing.selected?.id === selected.id}
+          onAction={(document, action) => {
+            processing.dismissError();
+            actions.act(document, action);
+          }}
+          onProcess={(document) => {
+            actions.dismissError();
+            processing.open(document);
+          }}
+          renderFacts={renderFacts}
+          onClose={closeDocument}
+          onExited={() => setSelectedId(null)}
+          request={request}
+        />
       )}
       <span ref={announcement} className="sr-only" role="status" aria-atomic="true" />
     </CaseSectionLayout>

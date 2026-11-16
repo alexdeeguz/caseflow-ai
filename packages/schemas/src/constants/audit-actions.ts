@@ -8,6 +8,7 @@ export const AuditAction = {
   FactExtractionFailed: 'document.facts_failed',
   FactExtractionCancelled: 'document.facts_cancelled',
   FactExtractionRecovered: 'document.facts_recovered',
+  SearchIndexQueued: 'document.search_index_queued',
   DocumentUploadStarted: 'document.upload_started',
   DocumentProcessingQueued: 'document.processing_queued',
   DocumentProcessingRecovered: 'document.processing_recovered',

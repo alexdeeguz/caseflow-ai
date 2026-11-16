@@ -15,6 +15,7 @@ const resultSchema = z.tuple([z.strictObject({ applied: z.boolean() })]);
 export const DispatchTarget = {
   Processing: 'processing',
   FactExtraction: 'fact_extraction',
+  SearchIndexing: 'search_indexing',
 } as const;
 export type DispatchTarget = (typeof DispatchTarget)[keyof typeof DispatchTarget];
 
@@ -28,6 +29,11 @@ const dispatchFunctions = {
     claim: 'claim_fact_dispatches',
     finish: 'finish_fact_dispatch',
     retry: 'retry_fact_dispatch',
+  },
+  search_indexing: {
+    claim: 'claim_search_dispatches',
+    finish: 'finish_search_dispatch',
+    retry: 'retry_search_dispatch',
   },
 } as const;
 

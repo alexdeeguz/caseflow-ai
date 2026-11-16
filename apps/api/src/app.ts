@@ -2,6 +2,8 @@ import { registerCaseHistoryRoutes } from './routes/case-history.js';
 import { registerFactReviewRoutes } from './routes/fact-review.js';
 import { DispatchTarget } from './processing/store.js';
 import { registerFactExtractionRoutes } from './routes/fact-extraction.js';
+import { registerSearchRoutes } from './routes/search.js';
+import { createOpenAIQueryEmbedder, type QueryEmbedder } from './search/embeddings.js';
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import { z } from 'zod';
@@ -32,6 +34,7 @@ export async function buildApp(
   uploadStorage?: UploadStorage,
   downloadStorage?: DownloadStorage,
   dispatcher?: ProcessingDispatcher,
+  embedder: QueryEmbedder | null = config.search ? createOpenAIQueryEmbedder(config.search) : null,
 ) {
   const app = Fastify({
     bodyLimit: 16384,
@@ -111,6 +114,7 @@ export async function buildApp(
   registerProcessingRoutes(route);
   registerFactExtractionRoutes(route);
   registerFactReviewRoutes(route);
+  registerSearchRoutes(route, store, embedder);
   registerDocumentRoutes(
     route,
     store,
@@ -124,6 +128,12 @@ export async function buildApp(
     config.factDispatcher,
     undefined,
     DispatchTarget.FactExtraction,
+  );
+  registerProcessingDispatcher(
+    app,
+    config.searchDispatcher,
+    undefined,
+    DispatchTarget.SearchIndexing,
   );
 
   return app;

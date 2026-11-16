@@ -92,6 +92,7 @@ function document(status: ProcessingStatus = ProcessingStatus.NotProcessed): Doc
     processing: summary(status),
     factExtraction: { status: 'not_extracted', job: null },
     unreviewedFactCount: 0,
+    searchIndex: null,
   });
 }
 

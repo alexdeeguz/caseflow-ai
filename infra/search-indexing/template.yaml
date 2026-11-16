@@ -1,0 +1,372 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: CaseFlow document search indexing (text chunks and OpenAI embeddings) with
+  private queues, restricted credentials, and disabled consumption.
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedPattern: '[a-z][a-z0-9-]{0,31}'
+  DocumentBucketName:
+    Type: String
+    AllowedPattern: '[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]'
+  EnableConsumer:
+    Type: String
+    Default: 'false'
+    AllowedValues:
+      - 'false'
+      - 'true'
+  AlarmTopicArn:
+    Type: String
+    Default: ''
+    AllowedPattern: ^$|arn:aws:sns:us-east-2:[0-9]{12}:[A-Za-z0-9_-]+
+Rules:
+  OhioOnly:
+    Assertions:
+      - Assert:
+          Fn::Equals:
+            - Ref: AWS::Region
+            - us-east-2
+        AssertDescription: Deploy only in the selected Ohio Region.
+Conditions:
+  ConsumeJobs:
+    Fn::Equals:
+      - Ref: EnableConsumer
+      - 'true'
+  HasAlarmTopic:
+    Fn::Not:
+      - Fn::Equals:
+          - Ref: AlarmTopicArn
+          - ''
+Resources:
+  SearchDeadLetterQueue:
+    Type: AWS::SQS::Queue
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Retain failed deliveries for bounded operator recovery.
+        must: Do not purge automatically.
+    Properties:
+      QueueName:
+        Fn::Sub: ${AWS::StackName}-dlq
+      MessageRetentionPeriod: 1209600
+      SqsManagedSseEnabled: true
+      RedriveAllowPolicy:
+        redrivePermission: byQueue
+        sourceQueueArns:
+          - Fn::Sub: arn:${AWS::Partition}:sqs:${AWS::Region}:${AWS::AccountId}:${AWS::StackName}-jobs
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+  SearchQueue:
+    Type: AWS::SQS::Queue
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Isolate indexing work from processing and fact extraction traffic.
+        must: One job reference per message; no document text.
+    Properties:
+      QueueName:
+        Fn::Sub: ${AWS::StackName}-jobs
+      VisibilityTimeout: 720
+      MessageRetentionPeriod: 345600
+      ReceiveMessageWaitTimeSeconds: 20
+      SqsManagedSseEnabled: true
+      RedrivePolicy:
+        deadLetterTargetArn:
+          Fn::GetAtt:
+            - SearchDeadLetterQueue
+            - Arn
+        maxReceiveCount: 5
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+  QueueTransportPolicy:
+    Type: AWS::SQS::QueuePolicy
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Require TLS for queue access with one resource per SQS policy statement.
+        must: Keep the policy scoped to its attached queue.
+    Properties:
+      Queues:
+        - Ref: SearchQueue
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Deny
+            Principal: '*'
+            Action: sqs:*
+            Resource:
+              Fn::GetAtt:
+                - SearchQueue
+                - Arn
+            Condition:
+              Bool:
+                aws:SecureTransport: 'false'
+  DeadLetterQueueTransportPolicy:
+    Type: AWS::SQS::QueuePolicy
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Require TLS for queue access with one resource per SQS policy statement.
+        must: Keep the policy scoped to its attached queue.
+    Properties:
+      Queues:
+        - Ref: SearchDeadLetterQueue
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Deny
+            Principal: '*'
+            Action: sqs:*
+            Resource:
+              Fn::GetAtt:
+                - SearchDeadLetterQueue
+                - Arn
+            Condition:
+              Bool:
+                aws:SecureTransport: 'false'
+  DatabaseSecret:
+    Type: AWS::SecretsManager::Secret
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Keep runtime credentials separate from API and OCR credentials.
+        must: No secret values in templates, parameters, or outputs.
+    Properties:
+      Name:
+        Fn::Sub: ${AWS::StackName}/database
+      Description: Populate the required JSON value before enabling search indexing.
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+  OpenAISecret:
+    Type: AWS::SecretsManager::Secret
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Keep runtime credentials separate from API and OCR credentials.
+        must: No secret values in templates, parameters, or outputs.
+    Properties:
+      Name:
+        Fn::Sub: ${AWS::StackName}/openai
+      Description: Populate the required JSON value before enabling search indexing.
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+  IndexerLogGroup:
+    Type: AWS::Logs::LogGroup
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Bound log retention and enable safe operational metrics.
+        must: Never log text, search queries, embeddings, or credentials.
+    Properties:
+      LogGroupName:
+        Fn::Sub: /aws/lambda/${AWS::StackName}-indexer
+      RetentionInDays: 30
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+  IndexerRole:
+    Type: AWS::IAM::Role
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Read exact text versions and consume only the search queue.
+        must: No S3 writes, Textract, broad queue access, or direct database table
+          grants.
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: SearchRuntime
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - sqs:ReceiveMessage
+                  - sqs:DeleteMessage
+                  - sqs:GetQueueAttributes
+                Resource:
+                  Fn::GetAtt:
+                    - SearchQueue
+                    - Arn
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource:
+                  Fn::GetAtt:
+                    - IndexerLogGroup
+                    - Arn
+              - Effect: Allow
+                Action: secretsmanager:GetSecretValue
+                Resource:
+                  - Ref: DatabaseSecret
+                  - Ref: OpenAISecret
+              - Effect: Allow
+                Action: s3:GetObjectVersion
+                Resource:
+                  Fn::Sub: arn:${AWS::Partition}:s3:::${DocumentBucketName}/${Environment}/cases/*/documents/*/processed/*/*/text.json
+  IndexerFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Index one document per invocation; saved chunks make it keyword-searchable first.
+        must: Disabled until reviewed; use shared Lambda capacity.
+      BuildMethod: makefile
+    Properties:
+      FunctionName:
+        Fn::Sub: ${AWS::StackName}-indexer
+      Runtime: python3.13
+      Architectures:
+        - x86_64
+      CodeUri: ../../services/search-indexer
+      Handler: caseflow_search.handlers.indexing.lambda_handler
+      MemorySize: 1024
+      EphemeralStorage:
+        Size: 512
+      Timeout: 120
+      Role:
+        Fn::GetAtt:
+          - IndexerRole
+          - Arn
+      Environment:
+        Variables:
+          SEARCH_INDEXER_QUEUE_ARN:
+            Fn::GetAtt:
+              - SearchQueue
+              - Arn
+          SEARCH_INDEXER_STORAGE_BUCKET:
+            Ref: DocumentBucketName
+          SEARCH_INDEXER_STORAGE_ENVIRONMENT:
+            Ref: Environment
+          SEARCH_INDEXER_DATABASE_SECRET_ARN:
+            Ref: DatabaseSecret
+          SEARCH_INDEXER_OPENAI_SECRET_ARN:
+            Ref: OpenAISecret
+      Events:
+        Jobs:
+          Type: SQS
+          Properties:
+            Queue:
+              Fn::GetAtt:
+                - SearchQueue
+                - Arn
+            BatchSize: 1
+            MaximumBatchingWindowInSeconds: 0
+            FunctionResponseTypes:
+              - ReportBatchItemFailures
+            ScalingConfig:
+              MaximumConcurrency: 2
+            Enabled:
+              Fn::If:
+                - ConsumeJobs
+                - true
+                - false
+    DependsOn: IndexerLogGroup
+  DeadLetterAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Alert on stuck or exhausted indexing work.
+        must: Alert topic must have confirmed subscribers.
+    Properties:
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions:
+        - Name: QueueName
+          Value:
+            Fn::GetAtt:
+              - SearchDeadLetterQueue
+              - QueueName
+      Statistic: Maximum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - Ref: AlarmTopicArn
+    Condition: HasAlarmTopic
+  QueueAgeAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Alert on stuck or exhausted indexing work.
+        must: Alert topic must have confirmed subscribers.
+    Properties:
+      Namespace: AWS/SQS
+      MetricName: ApproximateAgeOfOldestMessage
+      Dimensions:
+        - Name: QueueName
+          Value:
+            Fn::GetAtt:
+              - SearchQueue
+              - QueueName
+      Statistic: Maximum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 900
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - Ref: AlarmTopicArn
+    Condition: HasAlarmTopic
+  FunctionErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Detect configuration and invocation failures.
+        must: Do not include document identifiers in metric dimensions.
+    Properties:
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Dimensions:
+        - Name: FunctionName
+          Value:
+            Ref: IndexerFunction
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - Ref: AlarmTopicArn
+    Condition: HasAlarmTopic
+  Dashboard:
+    Type: AWS::CloudWatch::Dashboard
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: Show operational health without document contents.
+        must: Only environment is a custom metric dimension.
+    Properties:
+      DashboardName:
+        Fn::Sub: ${AWS::StackName}-search
+      DashboardBody:
+        Fn::Sub: '{"widgets": [{"type": "metric", "width": 24, "height": 6, "properties":
+          {"region": "us-east-2", "title": "Search indexing work and allowance", "period":
+          300, "stat": "Sum", "metrics": [["CaseFlow/SearchIndexing", "IndexedDocuments",
+          "Environment", "${Environment}"], ["CaseFlow/SearchIndexing", "EmbeddedChunks",
+          "Environment", "${Environment}"], ["CaseFlow/SearchIndexing", "FailedJobs",
+          "Environment", "${Environment}"], ["CaseFlow/SearchIndexing", "Retries",
+          "Environment", "${Environment}"], ["CaseFlow/SearchIndexing", "AllowanceReservedNanodollars",
+          "Environment", "${Environment}"]]}}, {"type": "metric", "width": 24, "height":
+          6, "properties": {"region": "us-east-2", "title": "Embedding latency", "period":
+          300, "stat": "Average", "metrics": [["CaseFlow/SearchIndexing", "ProviderLatencyMs",
+          "Environment", "${Environment}"]]}}]}'
+Outputs:
+  QueueUrl:
+    Description: API dispatcher destination.
+    Value:
+      Ref: SearchQueue
+  QueueArn:
+    Description: Grant the API sender only SendMessage on this ARN.
+    Value:
+      Fn::GetAtt:
+        - SearchQueue
+        - Arn
+  DatabaseSecretArn:
+    Description: Populate restricted indexer database JSON.
+    Value:
+      Ref: DatabaseSecret
+  OpenAISecretArn:
+    Description: Populate OpenAI API key JSON.
+    Value:
+      Ref: OpenAISecret

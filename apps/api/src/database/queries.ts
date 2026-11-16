@@ -11,6 +11,8 @@ import type { PoolClient } from 'pg';
 import { AppError } from '../errors.js';
 import { Operation, operationRequiresAdmin } from './operations.js';
 import { getDocumentProcessing, requestDocumentProcessing } from './processing.js';
+import { searchDocuments } from './search.js';
+import { requestSearchIndex } from './search-index.js';
 import {
   createCase,
   getCase,
@@ -147,6 +149,12 @@ export async function executeOperation(
 
     case Operation.GetDocumentProcessing:
       return getDocumentProcessing(client, input);
+
+    case Operation.SearchDocuments:
+      return searchDocuments(client, input);
+
+    case Operation.RequestSearchIndex:
+      return requestSearchIndex(client, input);
 
     case Operation.RequestDocumentProcessing:
       return requestDocumentProcessing(client, input);

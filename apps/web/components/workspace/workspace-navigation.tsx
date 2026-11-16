@@ -2,11 +2,12 @@ import { Role } from '@caseflow/schemas';
 import type { ComponentType } from 'react';
 
 import { WorkspaceTab, tabLabels } from './navigation';
-import { AuditIcon, CasesIcon, ProfileIcon, UsersIcon } from './workspace-icons';
+import { AuditIcon, CasesIcon, ProfileIcon, UsersIcon, SearchIcon } from './workspace-icons';
 import styles from './workspace.module.css';
 
 const tabIcons: Readonly<Record<WorkspaceTab, ComponentType>> = {
   [WorkspaceTab.Cases]: CasesIcon,
+  [WorkspaceTab.Search]: SearchIcon,
   [WorkspaceTab.Profile]: ProfileIcon,
   [WorkspaceTab.Users]: UsersIcon,
   [WorkspaceTab.Audit]: AuditIcon,
@@ -27,8 +28,14 @@ export function WorkspaceNavigation({
 }: WorkspaceNavigationProps) {
   const tabs: WorkspaceTab[] =
     role === Role.Staff
-      ? [WorkspaceTab.Cases, WorkspaceTab.Profile]
-      : [WorkspaceTab.Cases, WorkspaceTab.Profile, WorkspaceTab.Users, WorkspaceTab.Audit];
+      ? [WorkspaceTab.Cases, WorkspaceTab.Search, WorkspaceTab.Profile]
+      : [
+          WorkspaceTab.Cases,
+          WorkspaceTab.Search,
+          WorkspaceTab.Profile,
+          WorkspaceTab.Users,
+          WorkspaceTab.Audit,
+        ];
 
   return (
     <nav aria-label="Workspace" className={styles.nav}>

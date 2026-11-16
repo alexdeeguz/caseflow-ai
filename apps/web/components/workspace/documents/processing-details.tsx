@@ -10,6 +10,7 @@ import { extractionMethodLabels, isPdf } from '../../../lib/processing/presentat
 import { Callout, DetailList, Panel } from '../../ui/panel';
 import { DocumentDate } from './document-details';
 import { ProcessingStatusBadge } from './processing-status';
+import { searchIndexLabel } from './search-index-status';
 import styles from './document-inspector.module.css';
 
 export function ProcessingLimitsNote({ document }: { document: DocumentListItem }) {
@@ -47,6 +48,7 @@ export function ProcessingDetails({
             value: result ? extractionMethodLabels[result.extractionMethod] : 'Not available yet',
           },
           { label: 'Pages processed', value: result ? result.pageCount : 'Not available yet' },
+          { label: 'Search', value: searchIndexLabel(document) },
           {
             label: 'Latest update',
             value: job ? <DocumentDate value={job.updatedAt} detailed /> : 'Not started',

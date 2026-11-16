@@ -2,6 +2,7 @@ import { QueryClient, queryOptions } from '@tanstack/react-query';
 import type { AuthRequest } from '../hooks/use-authentication';
 import { isCaseHistoryResource } from './case-history/resources';
 import { ApiError, type Parser, type ApiRequestOptions } from './api';
+import { isSearchResource } from './search/resources';
 
 export interface Resource<T> {
   path: string;
@@ -76,9 +77,8 @@ export function withResourceInvalidation(client: QueryClient, request: AuthReque
             return result;
           }
           // Starting uploads and authorizing downloads do not change the library.
-          const libraryChanged = /\/(complete|remove|restore|processing|fact-extraction)$/.test(
-            path,
-          );
+          const libraryChanged =
+            /\/(complete|remove|restore|processing|fact-extraction|search-index)$/.test(path);
           const processingPath = /^\/cases\/[^/]+\/documents\/[^/]+\/processing$/;
           const documentPath = path.replace(/\/(remove|restore|processing)$/, '/processing');
           void client.invalidateQueries({
@@ -87,6 +87,8 @@ export function withResourceInvalidation(client: QueryClient, request: AuthReque
               return (
                 key.startsWith('/admin/audit') ||
                 (/\/(remove|restore)$/.test(path) && isCaseHistoryResource(key, documents[1]!)) ||
+                // Removed or restored documents leave or rejoin search results.
+                (/\/(remove|restore)$/.test(path) && isSearchResource(key)) ||
                 (libraryChanged && key.startsWith(`/cases/${documents[1]}/documents?`)) ||
                 (libraryChanged &&
                   key.startsWith(

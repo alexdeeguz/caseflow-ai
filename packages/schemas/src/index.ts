@@ -20,3 +20,6 @@ export * from './constants/fact-review.js';
 export * from './contracts/fact-review.js';
 export * from './contracts/fact-values.js';
 export * from './contracts/case-history.js';
+export * from './constants/search.js';
+export * from './contracts/search-index.js';
+export * from './contracts/document-search.js';

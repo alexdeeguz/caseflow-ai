@@ -116,6 +116,7 @@ test('public summaries enforce job/result consistency and reject private fields'
     processing: queued,
     factExtraction: { status: 'not_extracted', job: null },
     unreviewedFactCount: 0,
+    searchIndex: null,
   };
   documentListItemSchema.parse(document);
   for (const count of [undefined, -1, 1.5, '7']) {

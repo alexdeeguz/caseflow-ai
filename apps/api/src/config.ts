@@ -1,6 +1,7 @@
 import { readDispatcherConfig, type DispatcherConfig } from './processing/config.js';
 import { readStorageConfig, type StorageConfig } from './storage/config.js';
 import { parseDatabaseUrl } from './database/connection-config.js';
+import { readSearchConfig } from './search/embeddings.js';
 
 export interface ApiConfig {
   clientId: string;
@@ -10,6 +11,9 @@ export interface ApiConfig {
   storage?: StorageConfig;
   dispatcher?: DispatcherConfig;
   factDispatcher?: DispatcherConfig;
+  searchDispatcher?: DispatcherConfig;
+  /** Enables semantic (embedding) matching for search queries. */
+  search?: { apiKey: string };
 }
 
 const guid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -55,6 +59,8 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
   const storage = readStorageConfig(env);
   const dispatcher = readDispatcherConfig(env, databaseUrl);
   const factDispatcher = readDispatcherConfig(env, databaseUrl, 'facts');
+  const searchDispatcher = readDispatcherConfig(env, databaseUrl, 'search');
+  const search = readSearchConfig(env);
 
   return {
     clientId,
@@ -64,5 +70,7 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
     ...(storage ? { storage } : {}),
     ...(dispatcher ? { dispatcher } : {}),
     ...(factDispatcher ? { factDispatcher } : {}),
+    ...(searchDispatcher ? { searchDispatcher } : {}),
+    ...(search ? { search } : {}),
   };
 }

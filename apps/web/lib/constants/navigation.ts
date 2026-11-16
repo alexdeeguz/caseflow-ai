@@ -1,5 +1,6 @@
 export const WorkspaceTab = {
   Cases: 'cases',
+  Search: 'search',
   Profile: 'profile',
   Users: 'users',
   Audit: 'audit',
@@ -9,6 +10,7 @@ export type WorkspaceTab = (typeof WorkspaceTab)[keyof typeof WorkspaceTab];
 
 export const tabLabels: Readonly<Record<WorkspaceTab, string>> = {
   [WorkspaceTab.Cases]: 'Cases',
+  [WorkspaceTab.Search]: 'Search',
   [WorkspaceTab.Profile]: 'Profile',
   [WorkspaceTab.Users]: 'Users',
   [WorkspaceTab.Audit]: 'Audit history',
@@ -46,4 +48,12 @@ export const WorkspaceParam = {
   TimelinePage: 'timelinePage',
   SummaryPage: 'summaryPage',
   SummaryCategory: 'summaryCategory',
+  Query: 'q',
+  SearchMode: 'searchMode',
+  SearchCase: 'searchCase',
+  SearchArchive: 'searchArchive',
+  SearchPage: 'searchPage',
+  DocumentQuery: 'documentQuery',
+  DocumentQueryPage: 'documentQueryPage',
+  Document: 'document',
 } as const;

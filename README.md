@@ -28,6 +28,10 @@ Native PDF extraction, Textract OCR, bounded recovery, and monitoring are implem
 - **Case timeline and reviewed summary:** read-only approved facts across available case documents,
   precise dates, category counts, source quotations, and authorized downloads. See [case history](docs/case-history.md).
 
+- **Document search:** keyword and pgvector semantic search over processed document text,
+  restricted to cases the user can access, with highlighted snippets, a global Search page, and
+  per-case search. See [document search](docs/document-search.md).
+
 ## Stack and structure
 
 | Location                                                   | Responsibility                                                               |
@@ -36,7 +40,9 @@ Native PDF extraction, Textract OCR, bounded recovery, and monitoring are implem
 | [apps/api](apps/api)                                       | Fastify API with PostgreSQL authorization, S3 storage, and an SQS dispatcher |
 | [services/document-processor](services/document-processor) | Python workers for native text, Textract starts, and OCR completion          |
 | [services/fact-extractor](services/fact-extractor)         | Python worker for OpenAI structured facts and evidence validation            |
+| [services/search-indexer](services/search-indexer)         | Python worker for search chunks and OpenAI embeddings                        |
 | [infra/fact-extraction](infra/fact-extraction)             | Fact queue/worker, secrets, and monitoring definitions                       |
+| [infra/search-indexing](infra/search-indexing)             | Search indexing queue/worker, secrets, and monitoring definitions            |
 | [infra/document-processing](infra/document-processing)     | SAM template, isolated validation tooling, and container builds              |
 | [packages/schemas](packages/schemas)                       | Handwritten shared Zod contracts, constants, and TypeScript types            |
 | [supabase](supabase)                                       | PostgreSQL migrations, local configuration, and fictional seed data          |

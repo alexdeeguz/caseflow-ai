@@ -37,6 +37,7 @@ All endpoints require a Microsoft bearer access token. Shared contracts live in
 | `PATCH /admin/users/:id/access`                      | Enable/disable permitted target                                   |
 | `PUT`, `DELETE /admin/cases/:id/assignments/:userId` | Assign/remove Staff                                               |
 | `GET /admin/audit`                                   | Paginated audit history                                           |
+| `GET /search`                                        | Search document text in accessible cases                          |
 
 Lists accept `page` (default 1) and `pageSize` (default 25, maximum 100).
 `GET /cases` also accepts `search` (up to 200 characters) and optional `status`

@@ -20,6 +20,10 @@
 }
 /* Manual next-step control inside a panel; collapses when the button renders nothing. */
 .action {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
   margin-top: 0.75rem;
 }
 .action:empty {

@@ -1,6 +1,8 @@
 import {
   FactCategory,
   CaseArchiveFilter,
+  SearchLimits,
+  SearchMode,
   DocumentFilter,
   caseArchiveSchema,
   CaseLimits,
@@ -30,6 +32,17 @@ export interface WorkspaceLocation {
   page: number;
   archive: CaseArchiveFilter;
   mode?: typeof CaseMode.Edit;
+  /** Global document search (Search tab). */
+  query: string;
+  searchMode: SearchMode;
+  searchCase: string | null;
+  searchArchive: CaseArchiveFilter;
+  searchPage: number;
+  /** Search within the open case's Documents tab. */
+  documentQuery: string;
+  documentQueryPage: number;
+  /** Document to show in the details drawer (e.g. opened from a search result). */
+  document: string | null;
 }
 
 function parsePage(value: string | null): number {
@@ -50,6 +63,10 @@ export function parseWorkspaceLocation(params: URLSearchParams): WorkspaceLocati
   const hasCase = tab === WorkspaceTab.Cases && idSchema.safeParse(selected).success;
   const section = params.get(WorkspaceParam.Section);
   const documentFilter = params.get(WorkspaceParam.DocumentFilter);
+  const searching = tab === WorkspaceTab.Search;
+  const searchCase = params.get(WorkspaceParam.SearchCase);
+  const searchArchive = caseArchiveSchema.safeParse(params.get(WorkspaceParam.SearchArchive));
+  const requestedDocument = params.get(WorkspaceParam.Document);
 
   return {
     tab,
@@ -80,7 +97,23 @@ export function parseWorkspaceLocation(params: URLSearchParams): WorkspaceLocati
     search: (params.get(WorkspaceParam.Search) ?? '').slice(0, CaseLimits.Search),
     status: status.success ? status.data : undefined,
     page: Number.isInteger(page) && page >= 1 && page <= 100000 ? page : 1,
+    query: searching ? searchText(params.get(WorkspaceParam.Query)) : '',
+    searchMode:
+      searching && params.get(WorkspaceParam.SearchMode) === SearchMode.Keyword
+        ? SearchMode.Keyword
+        : SearchMode.Hybrid,
+    searchCase: searching && idSchema.safeParse(searchCase).success ? searchCase : null,
+    searchArchive:
+      searching && searchArchive.success ? searchArchive.data : CaseArchiveFilter.Current,
+    searchPage: searching ? parsePage(params.get(WorkspaceParam.SearchPage)) : 1,
+    documentQuery: hasCase ? searchText(params.get(WorkspaceParam.DocumentQuery)) : '',
+    documentQueryPage: hasCase ? parsePage(params.get(WorkspaceParam.DocumentQueryPage)) : 1,
+    document: hasCase && idSchema.safeParse(requestedDocument).success ? requestedDocument : null,
   };
+}
+
+function searchText(value: string | null): string {
+  return (value ?? '').slice(0, SearchLimits.QueryMaxLength);
 }
 
 export function workspaceHref(location: WorkspaceLocation): string {
@@ -107,9 +140,35 @@ export function workspaceHref(location: WorkspaceLocation): string {
       if (location.documentPage > 1) {
         params.set(WorkspaceParam.DocumentPage, String(location.documentPage));
       }
+      if (location.documentQuery) {
+        params.set(WorkspaceParam.DocumentQuery, location.documentQuery);
+        if (location.documentQueryPage > 1) {
+          params.set(WorkspaceParam.DocumentQueryPage, String(location.documentQueryPage));
+        }
+      }
+      if (location.document) {
+        params.set(WorkspaceParam.Document, location.document);
+      }
     }
     if (location.case !== CaseView.New && location.mode) {
       params.set(WorkspaceParam.Mode, location.mode);
+    }
+  }
+  if (location.tab === WorkspaceTab.Search) {
+    if (location.query) {
+      params.set(WorkspaceParam.Query, location.query);
+    }
+    if (location.searchMode !== SearchMode.Hybrid) {
+      params.set(WorkspaceParam.SearchMode, location.searchMode);
+    }
+    if (location.searchCase) {
+      params.set(WorkspaceParam.SearchCase, location.searchCase);
+    }
+    if (location.searchArchive !== CaseArchiveFilter.Current) {
+      params.set(WorkspaceParam.SearchArchive, location.searchArchive);
+    }
+    if (location.searchPage > 1) {
+      params.set(WorkspaceParam.SearchPage, String(location.searchPage));
     }
   }
   if (location.archive !== CaseArchiveFilter.Current) {

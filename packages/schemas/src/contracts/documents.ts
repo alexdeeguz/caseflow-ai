@@ -10,6 +10,7 @@ import {
   documentExtensions,
 } from '../constants/documents.js';
 import { idSchema } from './common.js';
+import { searchIndexSummarySchema } from './search-index.js';
 import { pageQuerySchema, pageSchema } from './pagination.js';
 import { processingSummarySchema } from './processing.js';
 
@@ -136,6 +137,7 @@ export const documentListItemSchema = documentSchema
     processing: processingSummarySchema,
     factExtraction: factExtractionSummarySchema,
     unreviewedFactCount: z.number().int().min(0),
+    searchIndex: searchIndexSummarySchema.nullable(),
   })
   .refine(
     (document) =>

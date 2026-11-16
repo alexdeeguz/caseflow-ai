@@ -15,6 +15,7 @@ const labels: Readonly<Record<string, string>> = {
   [AuditAction.FactRejected]: 'Fact rejected',
   [AuditAction.FactReopened]: 'Fact reopened',
   [AuditAction.FactExtractionQueued]: 'Fact extraction queued',
+  [AuditAction.SearchIndexQueued]: 'Search re-index requested',
   [AuditAction.FactExtractionCompleted]: 'Fact extraction completed',
   [AuditAction.FactExtractionFailed]: 'Fact extraction failed',
   [AuditAction.FactExtractionCancelled]: 'Fact extraction cancelled',

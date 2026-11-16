@@ -1,4 +1,4 @@
-import { factExtractionMessageSchema } from '@caseflow/schemas';
+import { factExtractionMessageSchema, searchIndexMessageSchema } from '@caseflow/schemas';
 import { DispatchTarget } from './store.js';
 import { SendMessageCommand, SQSClient } from '@aws-sdk/client-sqs';
 import { fromIni } from '@aws-sdk/credential-providers';
@@ -70,7 +70,9 @@ export function createQueueAdapter(
               schemaVersion: validated.schemaVersion,
               taskId: validated.jobId,
             })
-          : validated;
+          : target === DispatchTarget.SearchIndexing
+            ? searchIndexMessageSchema.parse(validated)
+            : validated;
       const result = await client.send(
         new SendMessageCommand({ QueueUrl: queueUrl, MessageBody: JSON.stringify(body) }),
         { abortSignal: signal },

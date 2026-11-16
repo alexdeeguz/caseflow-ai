@@ -100,6 +100,16 @@ jobs:
           uv run --project services/fact-extractor --locked mypy services/fact-extractor/src --strict
           uv run --project services/fact-extractor --locked pytest services/fact-extractor/tests
           uv run --project services/fact-extractor --locked pip-audit --skip-editable
+      - name: Check search indexing service
+        env:
+          SEARCH_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: |
+          uv sync --project services/search-indexer --locked
+          uv run --project services/search-indexer --locked ruff check services/search-indexer
+          uv run --project services/search-indexer --locked ruff format --check services/search-indexer
+          uv run --project services/search-indexer --locked mypy services/search-indexer/src --strict
+          uv run --project services/search-indexer --locked pytest services/search-indexer/tests
+          uv run --project services/search-indexer --locked pip-audit --skip-editable
       - name: Build the processor package
         run: uv build --project services/document-processor
 
@@ -123,8 +133,8 @@ jobs:
           uv sync --project services/document-processor --locked
       - name: Check infrastructure scripts
         run: |
-          uv run --project services/document-processor --locked ruff check infra/document-processing infra/fact-extraction
-          uv run --project services/document-processor --locked ruff format --check infra/document-processing infra/fact-extraction
+          uv run --project services/document-processor --locked ruff check infra/document-processing infra/fact-extraction infra/search-indexing
+          uv run --project services/document-processor --locked ruff format --check infra/document-processing infra/fact-extraction infra/search-indexing
       - name: Validate SAM and security rules
         run: |
           uv run --project infra/document-processing --locked sam validate --lint --region us-east-2 --template-file infra/document-processing/template.yaml
@@ -137,6 +147,13 @@ jobs:
           uv run --project infra/document-processing --locked pytest infra/fact-extraction/tests
           uv run --project infra/document-processing --locked python infra/fact-extraction/scripts/build.py
           uv run --project infra/document-processing --locked python infra/fact-extraction/scripts/verify_build.py
+      - name: Validate search indexing infrastructure
+        run: |
+          uv sync --project services/search-indexer --locked
+          uv run --project infra/document-processing --locked sam validate --lint --region us-east-2 --template-file infra/search-indexing/template.yaml
+          uv run --project infra/document-processing --locked pytest infra/search-indexing/tests
+          uv run --project infra/document-processing --locked python infra/search-indexing/scripts/build.py
+          uv run --project infra/document-processing --locked python infra/search-indexing/scripts/verify_build.py
       - name: Build Linux Lambda functions
         run: uv run --project infra/document-processing --locked python infra/document-processing/scripts/build.py
       - name: Verify packaged dependencies and certificate

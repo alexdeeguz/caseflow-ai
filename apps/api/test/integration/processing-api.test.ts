@@ -561,15 +561,21 @@ test('processing API: signed requests, safe summaries and serialized start/retry
         const fixture = await newDocument();
         const id = await start(fixture);
         // Model corruption of a legacy result created before automatic extraction.
-        await db.owner.query(
-          'alter table caseflow.document_processing_jobs disable trigger queue_facts_after_processing',
-        );
+        // Legacy results predate automatic fact extraction and search indexing.
+        const triggers = ['queue_facts_after_processing', 'queue_search_after_processing'];
+        for (const trigger of triggers) {
+          await db.owner.query(
+            `alter table caseflow.document_processing_jobs disable trigger ${trigger}`,
+          );
+        }
         try {
           await complete(id, 'native');
         } finally {
-          await db.owner.query(
-            'alter table caseflow.document_processing_jobs enable trigger queue_facts_after_processing',
-          );
+          for (const trigger of triggers) {
+            await db.owner.query(
+              `alter table caseflow.document_processing_jobs enable trigger ${trigger}`,
+            );
+          }
         }
         await db.owner.query('delete from caseflow.document_processing_results where job_id=$1', [
           id,
