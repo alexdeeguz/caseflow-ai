@@ -11,6 +11,8 @@ MAX_PROVIDER_ATTEMPTS = 3
 MAX_SOURCE_BYTES = 50 * 1024 * 1024
 INITIAL_CHUNK_CHARACTERS = 16_000
 BOUNDARY_OVERLAP = 300
+MAX_CITATION_PASSAGE_CHARACTERS = 800
+MAX_CITATION_PASSAGES = 256
 
 
 class FailureCode(StrEnum):
@@ -31,3 +33,10 @@ class EvidenceFailureReason(StrEnum):
     QUOTE_NOT_FOUND = 'quote_not_found'
     AMBIGUOUS_QUOTE = 'ambiguous_quote'
     PAGE_MISMATCH = 'page_mismatch'
+
+
+class SchemaFailureReason(StrEnum):
+    INVALID_JSON = 'invalid_json'
+    INVALID_DATE = 'invalid_date'
+    DATE_PRECISION = 'date_precision'
+    FIELD_CONSTRAINT = 'field_constraint'

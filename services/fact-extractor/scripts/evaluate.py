@@ -12,6 +12,7 @@ from caseflow_facts.adapters.openai import INSTRUCTIONS, OpenAIFactProvider
 from caseflow_facts.constants import MAX_INPUT_TOKENS, MAX_OUTPUT_TOKENS, MODEL
 from caseflow_facts.models import ProposedFacts
 from caseflow_facts.services.chunks import make_span
+from caseflow_facts.services.citations import citation_passages
 from caseflow_facts.services.evaluation import (
     missing_expected_facts,
     missing_qualifiers,
@@ -44,7 +45,7 @@ def main() -> None:
     report['promptSha256'] = hashlib.sha256(INSTRUCTIONS.encode()).hexdigest()
     for index, fixture in enumerate(fixtures, start=1):
         print(f'Evaluating fixture {index}/{len(fixtures)}...', flush=True)
-        spans = [make_span(1, 0, fixture['text'])]
+        spans = citation_passages([make_span(1, 0, fixture['text'])])
         count = provider.count(spans)
         cost = count * 750 + MAX_OUTPUT_TOKENS * 4500
         if count > MAX_INPUT_TOKENS or reserved + cost > 500_000_000:

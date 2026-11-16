@@ -52,8 +52,22 @@ The structured-output schema uses a separate branch for each fact category. Date
 required only for dates, treatment status for treatments, and finding status for findings; unrelated
 fields must be null. This gives the provider the same category constraints enforced by application
 validation. Invalid schema and citation failures remain terminal and never publish partial facts.
+Schema diagnostics use fixed reason codes for malformed JSON, invalid calendar dates, mismatched
+date precision, and other field constraints. Logs exclude rejected values, quotations, and model
+responses.
 
-The application supplies document/result IDs and evidence offsets. Exact quotation matches take
+The application supplies document/result IDs and evidence offsets. Within each checkpointed chunk,
+source text is addressed through deterministic line-based passages, with long lines split into
+bounded passages. Each passage ID identifies an exact page range. Repeated text in different
+passages can therefore be cited at its selected location without choosing an arbitrary occurrence.
+Quotations must be unique within the selected passage; evidence from different passages uses
+separate citations. All source characters and original page offsets are preserved. The structured
+output schema pairs each supplied passage ID with its exact quotation. The model selects supporting
+passages instead of rewriting quotation text; application validation independently checks every
+quotation and source range. Requests with too many passages split before counting
+or reserving provider usage.
+
+Exact quotation matches take
 precedence. If a quotation differs only in whitespace runs, a unique match may restore the original
 line breaks or spacing from the checkpointed page. Matching never changes words, punctuation, case,
 or word boundaries; ambiguous matches remain invalid. The persisted quotation always equals its
@@ -64,16 +78,19 @@ findings, negation, and conflicting statements remain distinct. Newly extracted 
 A matching quotation proves source location; it does not by itself prove the model interpreted it
 correctly. Fixture evaluation and human review are still required.
 
-| Limit                    | Value                                                                        |
-| ------------------------ | ---------------------------------------------------------------------------- |
-| Text artifact            | Exact S3 version, SHA-256 verified, at most 50 MiB                           |
-| Pages                    | Existing 20-page processing limit                                            |
-| Initial chunk            | At most 16,000 characters on one page, with a 300-character boundary overlap |
-| Input per provider call  | At most 12,000 tokens including instructions and output schema               |
-| Output per provider call | At most 8,192 tokens, including reasoning tokens                             |
-| Tasks per document       | At most 64 extraction chunks, plus preparation                               |
-| Provider attempts        | At most 3 per chunk, each accounted separately                               |
-| Automatic recovery       | At most 3 redispatches per task                                              |
+| Limit                       | Value                                                                        |
+| --------------------------- | ---------------------------------------------------------------------------- |
+| Text artifact               | Exact S3 version, SHA-256 verified, at most 50 MiB                           |
+| Pages                       | Existing 20-page processing limit                                            |
+| Initial chunk               | At most 16,000 characters on one page, with a 300-character boundary overlap |
+| Citation passage            | At most 800 characters; original whitespace and page offsets preserved       |
+| Citation IDs per call       | At most 256, restricted to the supplied source passages                      |
+| Input per provider call     | At most 12,000 tokens including instructions and output schema               |
+| Output per provider call    | At most 8,192 tokens, including reasoning tokens                             |
+| Concurrent extraction tasks | At most 5 across documents                                                   |
+| Tasks per document          | At most 64 extraction chunks, plus preparation                               |
+| Provider attempts           | At most 3 per chunk, each accounted separately                               |
+| Automatic recovery          | At most 3 redispatches per task                                              |
 
 Oversized counted requests split before a paid extraction call. No page is silently truncated.
 Invalid citations, refusals, incomplete responses, source failures, and exhausted limits produce

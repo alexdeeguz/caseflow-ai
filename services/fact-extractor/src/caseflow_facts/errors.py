@@ -1,4 +1,4 @@
-from .constants import EvidenceFailureReason, FailureCode
+from .constants import EvidenceFailureReason, FailureCode, SchemaFailureReason
 
 
 class ExtractionFailure(Exception):
@@ -8,8 +8,11 @@ class ExtractionFailure(Exception):
 
 
 class InvalidEvidence(ExtractionFailure):
-    def __init__(self, reason: EvidenceFailureReason) -> None:
+    def __init__(
+        self, reason: EvidenceFailureReason, schema_reason: SchemaFailureReason | None = None
+    ) -> None:
         self.reason = reason
+        self.schema_reason = schema_reason
         super().__init__(FailureCode.INVALID_EVIDENCE)
 
 

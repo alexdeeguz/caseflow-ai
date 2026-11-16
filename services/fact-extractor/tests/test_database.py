@@ -1,5 +1,6 @@
 import base64
 import hashlib
+import json
 from concurrent.futures import ThreadPoolExecutor
 from uuid import uuid4
 
@@ -16,6 +17,8 @@ from caseflow_facts.models import (
     ValidatedFact,
 )
 from caseflow_facts.services.chunks import make_span
+from caseflow_facts.services.citations import citation_passages
+from caseflow_facts.services.evidence import validate_evidence
 
 pytestmark = pytest.mark.integration
 
@@ -336,3 +339,33 @@ def test_settlement_stays_on_original_utc_day_and_is_idempotent(database):
         ).fetchone()[0]
         == today_before
     )
+
+
+def test_passage_evidence_is_validated_against_original_checkpoint_before_publication(database):
+    owner, store, _ = database
+    job, task, document, _ = new_job(owner)
+    preparation = store.claim(task)
+    assert isinstance(preparation, Claim)
+    text = 'No fracture was found.\nNo fracture was found.'
+    store.prepare(preparation, [[make_span(1, 0, text)]])
+    task = owner.execute(
+        'select id from caseflow.fact_extraction_tasks where job_id=%s and ordinal=1', (job,)
+    ).fetchone()[0]
+    claim = store.claim(str(task))
+    assert isinstance(claim, Claim)
+    passages = citation_passages(claim.spans)
+    proposed = fact().model_dump(by_alias=True)
+    proposed['evidence'] = [{'sourceId': passages[1].source_id, 'quote': 'No fracture was found.'}]
+    validated = validate_evidence(json.dumps({'facts': [proposed]}), passages, {1: text})
+    reservation = store.reserve(claim, 1000)
+    assert isinstance(reservation, Reservation)
+    store.settle(reservation, Usage(input_tokens=1000, output_tokens=100))
+    store.complete(claim, validated)
+    assert owner.execute(
+        'select status,fact_count from caseflow.fact_extraction_jobs where id=%s', (job,)
+    ).fetchone() == ('completed', 1)
+    assert owner.execute(
+        'select page,start_offset,end_offset,quote from caseflow.fact_evidence '
+        'where document_id=%s',
+        (document,),
+    ).fetchone() == (1, 23, 45, 'No fracture was found.')

@@ -12,8 +12,9 @@ from pydantic import (
     model_validator,
 )
 from pydantic.alias_generators import to_camel
+from pydantic_core import PydanticCustomError
 
-from .constants import MAX_SOURCE_BYTES
+from .constants import MAX_SOURCE_BYTES, SchemaFailureReason
 
 
 def validate_identifier(value: str) -> str:
@@ -116,8 +117,16 @@ class FactValues(Model):
                 raise ValueError('A date requires its meaning and precision')
             widths = {'year': 4, 'month': 7, 'day': 10}
             if len(self.date_value) != widths[self.date_precision]:
-                raise ValueError('Date precision does not match its value')
-            date.fromisoformat((self.date_value + '-01-01')[:10])
+                raise PydanticCustomError(
+                    SchemaFailureReason.DATE_PRECISION.value,
+                    'Date precision does not match its value',
+                )
+            try:
+                date.fromisoformat((self.date_value + '-01-01')[:10])
+            except ValueError:
+                raise PydanticCustomError(
+                    SchemaFailureReason.INVALID_DATE.value, 'Invalid calendar date'
+                ) from None
         elif any(
             value is not None for value in (self.date_value, self.date_precision, self.date_meaning)
         ):

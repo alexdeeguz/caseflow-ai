@@ -12,7 +12,7 @@ def test_disabled_mapping_and_bounded_runtime():
     assert function['Timeout'] == 120
     assert 'ReservedConcurrentExecutions' not in function
     event = function['Events']['Tasks']['Properties']
-    assert event['BatchSize'] == 1 and event['ScalingConfig']['MaximumConcurrency'] == 2
+    assert event['BatchSize'] == 1 and event['ScalingConfig']['MaximumConcurrency'] == 5
     assert event['FunctionResponseTypes'] == ['ReportBatchItemFailures']
     assert template['Resources']['FactQueue']['Properties']['VisibilityTimeout'] == 720
 

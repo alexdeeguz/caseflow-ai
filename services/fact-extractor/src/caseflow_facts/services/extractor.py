@@ -2,11 +2,12 @@ import logging
 from collections.abc import Callable
 from time import monotonic
 
-from ..constants import MAX_INPUT_TOKENS, FailureCode
+from ..constants import MAX_CITATION_PASSAGES, MAX_INPUT_TOKENS, FailureCode
 from ..errors import ExtractionFailure, InvalidEvidence, RetryableError
 from ..models import Claim, DeniedReservation, IgnoredClaim, QueueMessage
 from ..ports import Checkpoint, FactProvider, JobStore, TextStorage
 from .chunks import prepare_chunks, split_chunk
+from .citations import citation_passages
 from .evidence import validate_evidence
 
 logger = logging.getLogger(__name__)
@@ -37,10 +38,11 @@ class Extractor:
         except ExtractionFailure as failure:
             if isinstance(failure, InvalidEvidence):
                 logger.warning(
-                    'fact_evidence_rejected job_id=%s task_id=%s reason=%s',
+                    'fact_evidence_rejected job_id=%s task_id=%s reason=%s schema_issue=%s',
                     claim.job_id,
                     claim.task_id,
                     failure.reason.value,
+                    failure.schema_reason.value if failure.schema_reason else 'none',
                 )
             self._store.fail(claim, failure.code)
             self._metric('FailedJobs', 1)
@@ -58,7 +60,11 @@ class Extractor:
             if pages.get(span.page, '')[span.start : span.start + len(span.text)] != span.text:
                 raise ExtractionFailure(FailureCode.SOURCE_UNAVAILABLE)
         deadline()
-        input_tokens = self._provider.count(claim.spans)
+        passages = citation_passages(claim.spans)
+        if len(passages) > MAX_CITATION_PASSAGES:
+            self._store.split(claim, split_chunk(claim.spans))
+            return
+        input_tokens = self._provider.count(passages)
         if input_tokens > MAX_INPUT_TOKENS:
             self._store.split(claim, split_chunk(claim.spans))
             return
@@ -72,7 +78,7 @@ class Extractor:
         self._metric('AllowanceReservedNanodollars', input_tokens * 750 + 8192 * 4500)
         started = monotonic()
         try:
-            response = self._provider.extract(claim.spans)
+            response = self._provider.extract(passages)
         except RetryableError:
             self._store.retry(claim)
             self._metric('Retries', 1)
@@ -85,7 +91,7 @@ class Extractor:
             raise ExtractionFailure(FailureCode.PROVIDER_REFUSED)
         if response.status != 'completed' or response.text is None:
             raise ExtractionFailure(FailureCode.INCOMPLETE_RESPONSE)
-        facts = validate_evidence(response.text, claim.spans, pages)
+        facts = validate_evidence(response.text, passages, pages)
         self._store.check(claim)
         self._store.complete(claim, facts)
         self._metric('CompletedChunks', 1)

@@ -4,7 +4,7 @@ from collections.abc import Mapping
 
 from pydantic import ValidationError
 
-from ..constants import EvidenceFailureReason
+from ..constants import EvidenceFailureReason, SchemaFailureReason
 from ..errors import InvalidEvidence
 from ..models import Evidence, ProposedFacts, Span, ValidatedFact
 
@@ -14,8 +14,18 @@ def validate_evidence(
 ) -> list[ValidatedFact]:
     try:
         proposed = ProposedFacts.model_validate_json(text)
-    except ValidationError:
-        raise InvalidEvidence(EvidenceFailureReason.SCHEMA_INVALID) from None
+    except ValidationError as error:
+        error_types = {
+            item['type']
+            for item in error.errors(include_input=False, include_context=False, include_url=False)
+        }
+        reason = next(
+            (candidate for candidate in SchemaFailureReason if candidate.value in error_types),
+            SchemaFailureReason.INVALID_JSON
+            if 'json_invalid' in error_types
+            else SchemaFailureReason.FIELD_CONSTRAINT,
+        )
+        raise InvalidEvidence(EvidenceFailureReason.SCHEMA_INVALID, reason) from None
 
     sources = {span.source_id: span for span in spans}
     validated: dict[str, ValidatedFact] = {}

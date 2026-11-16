@@ -253,7 +253,7 @@ Resources:
             FunctionResponseTypes:
               - ReportBatchItemFailures
             ScalingConfig:
-              MaximumConcurrency: 2
+              MaximumConcurrency: 5
             Enabled:
               Fn::If:
                 - ConsumeTasks

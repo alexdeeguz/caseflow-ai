@@ -3,8 +3,8 @@ import json
 from openai import APIConnectionError, APIStatusError, APITimeoutError, OpenAI
 from openai.types.responses import ResponseTextConfigParam
 
-from ..constants import MAX_OUTPUT_TOKENS, MODEL
-from ..errors import RetryableError
+from ..constants import MAX_CITATION_PASSAGES, MAX_OUTPUT_TOKENS, MODEL, FailureCode
+from ..errors import ExtractionFailure, RetryableError
 from ..models import ProposedFacts, ProviderResult, Span, Usage
 
 INSTRUCTIONS = """Extract only explicitly documented dates, providers, treatments, and findings.
@@ -31,7 +31,10 @@ statements conflict. Evidence quotes alone do not replace these structured quali
 both affiliation and attribution when both apply. Do not replace them with repeated status words
 or patient names. Never invent affiliations or attribution when the source does not supply them.
 Every fact requires exact, contiguous quotes
-from the supplied source IDs. Include enough context for each quote to be unique in its source.
+from the supplied source IDs. Each ID identifies one passage at an exact page location. Select
+the ID of the passage supporting the fact, including when the same words appear elsewhere.
+Select the complete quotation paired with that passage in the output schema. Do not shorten,
+combine, or rewrite it. Use separate citations for supporting evidence in different passages.
 Use null for fields that do not apply to a category. Use unspecified when the source does not state
 a treatment or finding status. Use ISO date values with only the documented precision (YYYY,
 YYYY-MM, or YYYY-MM-DD). All results will be unreviewed; do not provide confidence scores."""
@@ -40,12 +43,32 @@ YYYY-MM, or YYYY-MM-DD). All results will be unreviewed; do not provide confiden
 class OpenAIFactProvider:
     def __init__(self, client: OpenAI) -> None:
         self._client = client
-        self._text: ResponseTextConfigParam = {
+
+    def _text_config(self, spans: list[Span]) -> ResponseTextConfigParam:
+        if not 1 <= len(spans) <= MAX_CITATION_PASSAGES:
+            raise ExtractionFailure(FailureCode.LIMIT_EXCEEDED)
+        schema = ProposedFacts.model_json_schema(by_alias=True)
+        schema['$defs']['Citation'] = {
+            'anyOf': [
+                {
+                    'type': 'object',
+                    'properties': {
+                        'sourceId': {'type': 'string', 'const': span.source_id},
+                        'quote': {'type': 'string', 'const': span.text.strip()},
+                    },
+                    'required': ['sourceId', 'quote'],
+                    'additionalProperties': False,
+                }
+                for span in spans
+                if span.text.strip()
+            ]
+        }
+        return {
             'format': {
                 'type': 'json_schema',
                 'name': 'document_facts',
                 'strict': True,
-                'schema': ProposedFacts.model_json_schema(by_alias=True),
+                'schema': schema,
             }
         }
 
@@ -63,7 +86,7 @@ class OpenAIFactProvider:
             input=self._input(spans),
             instructions=INSTRUCTIONS,
             reasoning={'effort': 'low'},
-            text=self._text,
+            text=self._text_config(spans),
             tools=[],
             truncation='disabled',
             timeout=10,
@@ -79,7 +102,7 @@ class OpenAIFactProvider:
                 input=self._input(spans),
                 instructions=INSTRUCTIONS,
                 reasoning={'effort': 'low'},
-                text=self._text,
+                text=self._text_config(spans),
                 tools=[],
                 truncation='disabled',
                 max_output_tokens=MAX_OUTPUT_TOKENS,
