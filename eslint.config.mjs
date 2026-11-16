@@ -6,6 +6,7 @@ import { defineConfig, globalIgnores } from 'eslint/config';
 export default defineConfig([
   globalIgnores([
     '**/dist/**',
+    '**/dist-lambda/**',
     '**/.next/**',
     '**/next-env.d.ts',
     '**/.venv/**',
@@ -21,7 +22,11 @@ export default defineConfig([
   },
   ...nextVitals.map((config) => ({ ...config, files: ['apps/web/**/*.{ts,tsx,js,mjs}'] })),
   {
-    files: ['apps/api/**/*.ts'],
-    languageOptions: { globals: { process: 'readonly', console: 'readonly' } },
+    files: [
+      'apps/api/**/*.ts',
+      'services/outbox-dispatcher/**/*.ts',
+      'infra/application/scripts/*.mjs',
+    ],
+    languageOptions: { globals: { process: 'readonly', console: 'readonly', Buffer: 'readonly' } },
   },
 ]);

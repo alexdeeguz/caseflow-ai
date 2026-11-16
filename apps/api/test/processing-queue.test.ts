@@ -1,4 +1,4 @@
-import { DispatchTarget } from '../src/processing/store.js';
+import { DispatchTarget } from '@caseflow/dispatch';
 import assert from 'node:assert/strict';
 import { createHash, randomUUID } from 'node:crypto';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { SQSClient } from '@aws-sdk/client-sqs';
-import { createProcessingQueueClient, createQueueAdapter } from '../src/processing/queue.js';
+import { createProcessingQueueClient, createQueueAdapter } from '@caseflow/dispatch';
 
 const config = {
   databaseUrl: '',

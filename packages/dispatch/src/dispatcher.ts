@@ -131,9 +131,9 @@ async function dispatchClaim(
 export async function dispatchPending(
   dependencies: DispatcherDependencies,
   signal: AbortSignal,
-): Promise<void> {
+): Promise<number | null> {
   if (signal.aborted) {
-    return;
+    return 0;
   }
 
   let claims: ProcessingDispatchClaim[];
@@ -145,10 +145,11 @@ export async function dispatchPending(
       { event: DispatchEvent.ClaimFailed },
       'Processing dispatch claim failed.',
     );
-    return;
+    return null;
   }
 
   await Promise.all(claims.map((claim) => dispatchClaim(claim, dependencies, signal)));
+  return claims.length;
 }
 
 export function createProcessingDispatcher(

@@ -42,6 +42,10 @@ jobs:
         run: npm test
       - name: Run lint
         run: npm run lint
+      - name: Check formatting
+        run: npx prettier --check .
+      - name: Audit dependencies
+        run: npm audit --audit-level=moderate
       - name: Run type checks
         run: npm run typecheck
 
@@ -133,13 +137,18 @@ jobs:
           uv sync --project services/document-processor --locked
       - name: Check infrastructure scripts
         run: |
-          uv run --project services/document-processor --locked ruff check infra/document-processing infra/fact-extraction infra/search-indexing
-          uv run --project services/document-processor --locked ruff format --check infra/document-processing infra/fact-extraction infra/search-indexing
+          uv run --project services/document-processor --locked ruff check infra/document-processing infra/fact-extraction infra/search-indexing infra/application
+          uv run --project services/document-processor --locked ruff format --check infra/document-processing infra/fact-extraction infra/search-indexing infra/application
       - name: Validate SAM and security rules
         run: |
           uv run --project infra/document-processing --locked sam validate --lint --region us-east-2 --template-file infra/document-processing/template.yaml
           uv run --project infra/document-processing --locked python infra/document-processing/scripts/validate_security.py
           uv run --project infra/document-processing --locked pytest infra/document-processing/tests
+      - name: Validate application infrastructure
+        run: |
+          uv run --project infra/document-processing --locked sam validate --lint --region us-east-2 --template-file infra/application/template.yaml
+          uv run --project infra/document-processing --locked sam validate --lint --region us-east-2 --template-file infra/application/runner.yaml
+          uv run --project infra/document-processing --locked pytest infra/application/tests
       - name: Validate fact extraction infrastructure
         run: |
           uv sync --project services/fact-extractor --locked
@@ -226,3 +235,23 @@ jobs:
           archive: false
           if-no-files-found: error
           retention-days: 30
+      - name: Build application Lambda bundles
+        run: npm run build:lambda
+      - name: Build API container image
+        run: >-
+          docker buildx build --platform linux/amd64 --provenance=false --load
+          --tag caseflow-api:tested apps/api
+      - name: Verify API container runtime
+        run: node infra/application/scripts/verify-image.mjs
+      - name: Package tested application artifacts
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: node infra/application/scripts/package.mjs
+      - name: Upload tested application artifacts
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: application-release
+          path: release/
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0

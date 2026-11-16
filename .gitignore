@@ -20,3 +20,10 @@ __pycache__/
 # SAM build output and local deployment parameters
 .aws-sam/
 samconfig.toml
+
+# Local Vercel credentials and build output
+.vercel/
+
+**/dist-lambda/
+
+/release/

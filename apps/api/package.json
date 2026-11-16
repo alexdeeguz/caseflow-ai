@@ -5,17 +5,17 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch --env-file-if-exists=.env src/index.ts",
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && node scripts/copy-certificate.mjs",
     "typecheck": "tsc -p tsconfig.test.json",
     "start": "node --env-file-if-exists=.env dist/index.js",
     "test": "node --import tsx --test test/*.test.ts",
     "test:integration": "node --env-file-if-exists=.env.operator --env-file-if-exists=.env --import tsx --test test/integration/*.test.ts",
     "operator:role": "node --env-file-if-exists=.env.operator --import tsx scripts/operator-role.ts",
-    "db:configure": "node --env-file-if-exists=.env.operator --import tsx scripts/configure-local.ts"
+    "db:configure": "node --env-file-if-exists=.env.operator --import tsx scripts/configure-local.ts",
+    "build:lambda": "node scripts/build-lambda.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.1169.0",
-    "@aws-sdk/client-sqs": "3.1169.0",
     "@aws-sdk/credential-providers": "3.1169.0",
     "@aws-sdk/s3-request-presigner": "3.1169.0",
     "@caseflow/schemas": "0.1.0",
@@ -24,7 +24,10 @@
     "file-type": "22.3.0",
     "jose": "6.2.17",
     "pg": "8.23.1",
-    "zod": "4.6.7"
+    "zod": "4.6.7",
+    "@caseflow/dispatch": "0.1.0",
+    "@fastify/aws-lambda": "6.4.2",
+    "@aws-sdk/client-secrets-manager": "3.1169.0"
   },
   "devDependencies": {
     "@types/pg": "8.23.1"

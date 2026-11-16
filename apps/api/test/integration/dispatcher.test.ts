@@ -4,8 +4,8 @@ import { test } from 'node:test';
 import { Pool } from 'pg';
 import { Role, caseSchema, userSchema, type ProcessingMessage } from '@caseflow/schemas';
 import { Operation } from '../../src/database/operations.js';
-import { createDispatchStore } from '../../src/processing/store.js';
-import { dispatchPending, type DispatcherDependencies } from '../../src/processing/dispatcher.js';
+import { createDispatchStore } from '@caseflow/dispatch';
+import { dispatchPending, type DispatcherDependencies } from '@caseflow/dispatch';
 import { createTestDatabase } from './database-fixture.js';
 
 const silentLogger = { info: () => {}, warn: () => {} };

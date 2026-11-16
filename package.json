@@ -5,7 +5,8 @@
   "type": "module",
   "workspaces": [
     "apps/*",
-    "packages/*"
+    "packages/*",
+    "services/outbox-dispatcher"
   ],
   "engines": {
     "node": ">=24.22.3 <25",
@@ -13,22 +14,22 @@
   },
   "packageManager": "npm@11.12.1",
   "scripts": {
-    "dev": "concurrently --kill-others --names schemas,web,api \"npm run dev -w @caseflow/schemas\" \"npm run dev:web\" \"npm run dev:api\"",
+    "dev": "concurrently --kill-others --names schemas,dispatch,web,api \"npm run dev -w @caseflow/schemas\" \"npm run dev -w @caseflow/dispatch\" \"npm run dev:web\" \"npm run dev:api\"",
     "dev:web": "npm run dev -w @caseflow/web",
     "dev:api": "npm run dev -w @caseflow/api",
-    "build": "npm run build -w @caseflow/schemas && npm run build -w @caseflow/api && npm run build -w @caseflow/web",
+    "build": "npm run build:shared && npm run build -w @caseflow/api && npm run build -w @caseflow/web && npm run build -w @caseflow/outbox-dispatcher",
     "lint": "eslint . --max-warnings=0",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "format": "prettier --write . && npm run format:python",
     "format:check": "prettier --check . && npm run format:python:check",
-    "test": "npm run test --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present && npm run test:release",
     "db:start": "supabase start",
     "db:stop": "supabase stop",
     "db:status": "supabase status",
-    "predev": "npm run build -w @caseflow/schemas",
-    "pretest": "npm run build -w @caseflow/schemas",
-    "pretypecheck": "npm run build -w @caseflow/schemas",
-    "test:integration": "npm run build -w @caseflow/schemas && npm run test:integration -w @caseflow/api",
+    "predev": "npm run build:shared",
+    "pretest": "npm run build:shared",
+    "pretypecheck": "npm run build:shared",
+    "test:integration": "npm run build:shared && npm run test:integration -w @caseflow/api",
     "db:migrate": "supabase migration up",
     "operator:role": "npm run operator:role -w @caseflow/api --",
     "db:configure": "npm run db:configure -w @caseflow/api",
@@ -36,8 +37,11 @@
     "test:processor": "uv run --project services/document-processor --locked pytest services/document-processor/tests -m \"not integration\"",
     "format:python": "uv run --project services/document-processor --locked ruff format services infra",
     "format:python:check": "uv run --project services/document-processor --locked ruff format --check services infra",
-    "test:search": "uv run --project services/search-indexer --locked pytest services/search-indexer/tests -m \"not integration\"",
-    "test:facts": "uv run --project services/fact-extractor --locked pytest services/fact-extractor/tests -m \"not integration\""
+    "test:facts": "uv run --project services/fact-extractor --locked pytest services/fact-extractor/tests -m \"not integration\"",
+    "build:shared": "npm run build -w @caseflow/schemas && npm run build -w @caseflow/dispatch",
+    "build:lambda": "npm run build:shared && npm run build:lambda -w @caseflow/api && npm run build -w @caseflow/outbox-dispatcher",
+    "test:release": "node --test infra/application/tests/*.test.mjs",
+    "test:search": "uv run --project services/search-indexer --locked pytest services/search-indexer/tests -m \"not integration\""
   },
   "devDependencies": {
     "@eslint/js": "9.39.5",
@@ -49,7 +53,10 @@
     "supabase": "3.1.0",
     "tsx": "4.23.15",
     "typescript": "5.9.3",
-    "typescript-eslint": "8.72.2"
+    "typescript-eslint": "8.72.2",
+    "esbuild": "0.28.2",
+    "@aws-sdk/client-lambda": "3.1169.0",
+    "@aws-sdk/client-ecr": "3.1169.0"
   },
   "overrides": {
     "@typescript-eslint/typescript-estree@8.72.2": {

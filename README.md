@@ -34,19 +34,22 @@ Native PDF extraction, Textract OCR, bounded recovery, and monitoring are implem
 
 ## Stack and structure
 
-| Location                                                   | Responsibility                                                               |
-| ---------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| [apps/web](apps/web)                                       | Next.js, React, and Tailwind frontend with Microsoft Entra authentication    |
-| [apps/api](apps/api)                                       | Fastify API with PostgreSQL authorization, S3 storage, and an SQS dispatcher |
-| [services/document-processor](services/document-processor) | Python workers for native text, Textract starts, and OCR completion          |
-| [services/fact-extractor](services/fact-extractor)         | Python worker for OpenAI structured facts and evidence validation            |
-| [services/search-indexer](services/search-indexer)         | Python worker for search chunks and OpenAI embeddings                        |
-| [infra/fact-extraction](infra/fact-extraction)             | Fact queue/worker, secrets, and monitoring definitions                       |
-| [infra/search-indexing](infra/search-indexing)             | Search indexing queue/worker, secrets, and monitoring definitions            |
-| [infra/document-processing](infra/document-processing)     | SAM template, isolated validation tooling, and container builds              |
-| [packages/schemas](packages/schemas)                       | Handwritten shared Zod contracts, constants, and TypeScript types            |
-| [supabase](supabase)                                       | PostgreSQL migrations, local configuration, and fictional seed data          |
-| [docs](docs)                                               | Setup guides, feature behavior, and technical references                     |
+| Location                                                   | Responsibility                                                                      |
+| ---------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| [apps/web](apps/web)                                       | Next.js, React, and Tailwind frontend with Microsoft Entra authentication           |
+| [apps/api](apps/api)                                       | Fastify API with PostgreSQL authorization, S3 storage, and a Lambda container image |
+| [services/outbox-dispatcher](services/outbox-dispatcher)   | Scheduled Lambda for bounded processing and fact-extraction queue delivery          |
+| [services/document-processor](services/document-processor) | Python workers for native text, Textract starts, and OCR completion                 |
+| [services/fact-extractor](services/fact-extractor)         | Python worker for OpenAI structured facts and evidence validation                   |
+| [services/search-indexer](services/search-indexer)         | Python worker for search chunks and OpenAI embeddings                               |
+| [infra/fact-extraction](infra/fact-extraction)             | Fact queue/worker, secrets, and monitoring definitions                              |
+| [infra/search-indexing](infra/search-indexing)             | Search indexing queue/worker, secrets, and monitoring definitions                   |
+| [infra/document-processing](infra/document-processing)     | SAM template, isolated validation tooling, and container builds                     |
+| [packages/schemas](packages/schemas)                       | Handwritten shared Zod contracts, constants, and TypeScript types                   |
+| [packages/dispatch](packages/dispatch)                     | Shared outbox claims, queue adapters, leases, and bounded delivery                  |
+| [infra/application](infra/application)                     | API container, scheduled dispatcher, and gated application delivery definitions     |
+| [supabase](supabase)                                       | PostgreSQL migrations, local configuration, and fictional seed data                 |
+| [docs](docs)                                               | Setup guides, feature behavior, and technical references                            |
 
 The API connects to a private PostgreSQL schema using restricted credentials.
 Microsoft Entra provides authentication; S3 stores document bytes. The browser does
@@ -110,21 +113,22 @@ individually, integration-test prerequisites, and dependency maintenance.
 
 ## Documentation
 
-| Guide                                              | Contents                                                                                    |
-| -------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| [Local development](docs/development.md)           | Docker/PostgreSQL setup, verification, code organization, and dependency maintenance        |
-| [Hosted database](docs/hosted-database.md)         | Connection design, TLS, restricted roles, environment switching, and backups                |
-| [Authentication](docs/authentication.md)           | Entra registration, token validation, session behavior, and sign-in verification            |
-| [Users and cases](docs/users-and-cases.md)         | Permission matrix, Super Admin setup, assignments, editing, and archiving                   |
-| [Fact extraction](docs/fact-extraction.md)         | OpenAI facts, evidence, allowance controls, evaluation, and monitoring                      |
-| [Case history](docs/case-history.md)               | Approved timeline, structured summary, sources, permissions, and freshness                  |
-| [Human review](docs/human-review.md)               | Corrections, approval permissions, immutable evidence, revision history, and release checks |
-| [API reference](docs/api.md)                       | Route organization, request/response contracts, pagination, and errors                      |
-| [Document management](docs/document-management.md) | S3 configuration, uploads, library, downloads, removal, and consistency rules               |
-| [Document processing](docs/document-processing.md) | Job/dispatch records, the API dispatcher, permissions, and configuration                    |
-| [Processor database](docs/processor-database.md)   | Worker functions, leases, OCR allowance, artifacts, cancellation, and the processor login   |
-| [Python processor](docs/python-processor.md)       | Extraction, OCR decisions, resource limits, configuration, and verification                 |
-| [Textract completion](docs/textract-completion.md) | Notification validation, result collection, artifact format, and publication recovery       |
+| Guide                                                        | Contents                                                                                    |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
+| [Local development](docs/development.md)                     | Docker/PostgreSQL setup, verification, code organization, and dependency maintenance        |
+| [Application architecture](docs/application-architecture.md) | Vercel frontend, Lambda container, outbox delivery, runtime boundaries, and CI checks       |
+| [Hosted database](docs/hosted-database.md)                   | Connection design, TLS, restricted roles, environment switching, and backups                |
+| [Authentication](docs/authentication.md)                     | Entra registration, token validation, session behavior, and sign-in verification            |
+| [Users and cases](docs/users-and-cases.md)                   | Permission matrix, Super Admin setup, assignments, editing, and archiving                   |
+| [Fact extraction](docs/fact-extraction.md)                   | OpenAI facts, evidence, allowance controls, evaluation, and monitoring                      |
+| [Case history](docs/case-history.md)                         | Approved timeline, structured summary, sources, permissions, and freshness                  |
+| [Human review](docs/human-review.md)                         | Corrections, approval permissions, immutable evidence, revision history, and release checks |
+| [API reference](docs/api.md)                                 | Route organization, request/response contracts, pagination, and errors                      |
+| [Document management](docs/document-management.md)           | S3 configuration, uploads, library, downloads, removal, and consistency rules               |
+| [Document processing](docs/document-processing.md)           | Job/dispatch records, the API dispatcher, permissions, and configuration                    |
+| [Processor database](docs/processor-database.md)             | Worker functions, leases, OCR allowance, artifacts, cancellation, and the processor login   |
+| [Python processor](docs/python-processor.md)                 | Extraction, OCR decisions, resource limits, configuration, and verification                 |
+| [Textract completion](docs/textract-completion.md)           | Notification validation, result collection, artifact format, and publication recovery       |
 
 See [Lambda configuration](docs/lambda-configuration.md) for runtime settings, credentials and
 packaged TLS trust, IAM boundaries, and container builds.

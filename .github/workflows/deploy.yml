@@ -1,0 +1,111 @@
+name: CaseFlow Production Deploy
+on:
+  workflow_run:
+    workflows: [CaseFlow Test & Build]
+    types: [completed]
+    branches: [main]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: caseflow-production-release
+  cancel-in-progress: false
+env:
+  NEXT_TELEMETRY_DISABLED: '1'
+  AWS_REGION: us-east-2
+jobs:
+  verify:
+    name: Verify release eligibility
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.head_repository.full_name == github.repository &&
+      vars.CASEFLOW_DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      sha: ${{ steps.verify.outputs.sha }}
+    steps:
+      - name: Require the current main commit
+        id: verify
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          TESTED_SHA: ${{ github.event.workflow_run.head_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          current_sha="$(gh api "repos/$REPOSITORY/git/ref/heads/main" --jq .object.sha)"
+          test "$TESTED_SHA" = "$current_sha"
+          printf 'sha=%s\n' "$TESTED_SHA" >> "$GITHUB_OUTPUT"
+
+  aws:
+    name: Release tested API and dispatcher
+    needs: verify
+    runs-on: codebuild-caseflow-deploy-runner-${{ github.run_id }}-${{ github.run_attempt }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.verify.outputs.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+      - name: Download this test run's application artifacts
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          name: application-release
+          path: release/
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+      - name: Install locked release tooling
+        run: npm ci --ignore-scripts
+      - name: Validate candidates and move live aliases
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          RELEASE_DIRECTORY: release
+          RELEASE_SHA: ${{ needs.verify.outputs.sha }}
+          API_FUNCTION_NAME: ${{ vars.API_FUNCTION_NAME }}
+          API_IMAGE_REPOSITORY: ${{ vars.API_IMAGE_REPOSITORY }}
+          DISPATCHER_FUNCTION_NAME: ${{ vars.DISPATCHER_FUNCTION_NAME }}
+        run: node infra/application/scripts/release.mjs
+
+  web:
+    name: Build and deploy frontend
+    needs: [verify, aws]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.verify.outputs.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+      - name: Install pinned Vercel CLI
+        run: npm install --global vercel@65.16.0
+      - name: Load production configuration
+        run: vercel pull --yes --environment=production
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      - name: Build production frontend
+        run: vercel build --prod
+      - name: Confirm this release is still current
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          TESTED_SHA: ${{ needs.verify.outputs.sha }}
+        run: |
+          current_sha="$(gh api "repos/$REPOSITORY/git/ref/heads/main" --jq .object.sha)"
+          test "$TESTED_SHA" = "$current_sha"
+      - name: Deploy the production build
+        run: vercel deploy --prebuilt --prod
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}

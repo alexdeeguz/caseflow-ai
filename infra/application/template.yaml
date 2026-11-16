@@ -1,0 +1,242 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: CaseFlow HTTPS API and bounded scheduled outbox dispatcher. Existing data and processing resources remain independently managed.
+Parameters:
+  ApiImageUri:
+    Type: String
+    AllowedPattern: '[0-9]{12}\.dkr\.ecr\.us-east-2\.amazonaws\.com/caseflow-[a-z0-9-]+-api@sha256:[a-f0-9]{64}'
+  WebOrigin:
+    Type: String
+    AllowedPattern: 'https://[A-Za-z0-9.-]+'
+  DatabaseHost:
+    Type: String
+    AllowedPattern: '[a-z0-9-]+\.pooler\.supabase\.com'
+  DatabaseProjectRef:
+    Type: String
+    AllowedPattern: '[a-z0-9]{20}'
+  ApiClientId:
+    Type: String
+  WebClientId:
+    Type: String
+  DocumentsBucket:
+    Type: String
+  StorageEnvironment:
+    Type: String
+    AllowedPattern: '[a-z][a-z0-9-]{0,31}'
+  ApiSecretArn:
+    Type: String
+  DemoLoginEnabled:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['false', 'true']
+  DispatcherSecretArn:
+    Type: String
+  ProcessingQueueArn:
+    Type: String
+  ProcessingQueueUrl:
+    Type: String
+  FactQueueArn:
+    Type: String
+  FactQueueUrl:
+    Type: String
+  AlarmTopicArn:
+    Type: String
+  DispatcherState:
+    Type: String
+    Default: DISABLED
+    AllowedValues: [DISABLED, ENABLED]
+Globals:
+  Function:
+    Architectures: [x86_64]
+    MemorySize: 512
+    Environment:
+      Variables:
+        NODE_ENV: production
+        DATABASE_HOST: !Ref DatabaseHost
+        DATABASE_PROJECT_REF: !Ref DatabaseProjectRef
+Resources:
+  ApiLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${AWS::StackName}-api'
+      RetentionInDays: 30
+  DispatcherLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${AWS::StackName}-dispatcher'
+      RetentionInDays: 30
+  AccessLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      LogGroupName: !Sub '/aws/apigateway/${AWS::StackName}'
+      RetentionInDays: 30
+  ApiRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: { Service: lambda.amazonaws.com }
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: api-runtime
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: [logs:CreateLogStream, logs:PutLogEvents]
+                Resource: !GetAtt ApiLogGroup.Arn
+              - Effect: Allow
+                Action: secretsmanager:GetSecretValue
+                Resource: !Ref ApiSecretArn
+              - Effect: Allow
+                Action: [s3:GetObject, s3:GetObjectVersion, s3:PutObject]
+                Resource: !Sub 'arn:${AWS::Partition}:s3:::${DocumentsBucket}/${StorageEnvironment}/cases/*/documents/*/original/*'
+  DispatcherRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: { Service: lambda.amazonaws.com }
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: outbox-dispatch
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: [logs:CreateLogStream, logs:PutLogEvents]
+                Resource: !GetAtt DispatcherLogGroup.Arn
+              - Effect: Allow
+                Action: secretsmanager:GetSecretValue
+                Resource: !Ref DispatcherSecretArn
+              - Effect: Allow
+                Action: sqs:SendMessage
+                Resource: [!Ref ProcessingQueueArn, !Ref FactQueueArn]
+  HttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: '$default'
+      CorsConfiguration:
+        AllowOrigins: [!Ref WebOrigin]
+        AllowHeaders: [Authorization, Content-Type]
+        AllowMethods: [GET, POST, PATCH, PUT, DELETE, OPTIONS]
+        AllowCredentials: false
+      DefaultRouteSettings:
+        ThrottlingBurstLimit: 20
+        ThrottlingRateLimit: 10
+        DetailedMetricsEnabled: true
+      AccessLogSettings:
+        DestinationArn: !GetAtt AccessLogGroup.Arn
+        Format: '{"requestId":"$context.requestId","route":"$context.routeKey","status":"$context.status","latency":"$context.responseLatency"}'
+  ApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-api'
+      PackageType: Image
+      ImageUri: !Ref ApiImageUri
+      Timeout: 29
+      Role: !GetAtt ApiRole.Arn
+      AutoPublishAlias: live
+      Environment:
+        Variables:
+          API_SECRET_ARN: !Ref ApiSecretArn
+          DEMO_LOGIN_ENABLED: !Ref DemoLoginEnabled
+          ENTRA_API_CLIENT_ID: !Ref ApiClientId
+          ENTRA_WEB_CLIENT_ID: !Ref WebClientId
+          WEB_ORIGIN: !Ref WebOrigin
+          S3_BUCKET: !Ref DocumentsBucket
+          S3_ENVIRONMENT: !Ref StorageEnvironment
+          PROCESSING_DISPATCHER_ENABLED: 'false'
+          FACT_EXTRACTION_DISPATCHER_ENABLED: 'false'
+          SEARCH_INDEX_DISPATCHER_ENABLED: 'false'
+      Events:
+        Requests:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+  DispatcherFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}-dispatcher'
+      Runtime: nodejs24.x
+      Handler: index.handler
+      CodeUri: ../../services/outbox-dispatcher/dist/
+      Timeout: 55
+      Role: !GetAtt DispatcherRole.Arn
+      AutoPublishAlias: live
+      Environment:
+        Variables:
+          AWS_PROJECT_ID: !Ref AWS::AccountId
+          DISPATCHER_SECRET_ARN: !Ref DispatcherSecretArn
+          PROCESSING_QUEUE_URL: !Ref ProcessingQueueUrl
+          FACT_EXTRACTION_QUEUE_URL: !Ref FactQueueUrl
+      Events:
+        Tick:
+          Type: ScheduleV2
+          Properties:
+            ScheduleExpression: rate(1 minute)
+            State: !Ref DispatcherState
+            FlexibleTimeWindow: { Mode: 'OFF' }
+            RetryPolicy:
+              MaximumEventAgeInSeconds: 60
+              MaximumRetryAttempts: 0
+  ApiErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      Namespace: AWS/ApiGateway
+      MetricName: 5xx
+      Dimensions:
+        - { Name: ApiId, Value: !Ref HttpApi }
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 5
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref AlarmTopicArn]
+  DispatcherErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Dimensions:
+        - { Name: FunctionName, Value: !Ref DispatcherFunction }
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref AlarmTopicArn]
+  DispatcherHeartbeatAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      Namespace: AWS/Lambda
+      MetricName: Invocations
+      Dimensions:
+        - { Name: FunctionName, Value: !Ref DispatcherFunction }
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 1
+      ComparisonOperator: LessThanThreshold
+      TreatMissingData: breaching
+      ActionsEnabled: false
+      AlarmActions: [!Ref AlarmTopicArn]
+Outputs:
+  ApiOrigin:
+    Value: !Sub 'https://${HttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}'
+  ApiFunctionName:
+    Value: !Ref ApiFunction
+  DispatcherFunctionName:
+    Value: !Ref DispatcherFunction

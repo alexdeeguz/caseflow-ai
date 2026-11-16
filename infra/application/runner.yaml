@@ -1,0 +1,142 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Ephemeral GitHub Actions deployment runner with narrowly scoped Lambda code-release permissions. Tests run separately without AWS credentials.
+Parameters:
+  ConnectionArn:
+    Type: String
+  ApplicationStack:
+    Type: String
+    Default: caseflow-application
+    AllowedPattern: '[A-Za-z][A-Za-z0-9-]{0,63}'
+  RepositoryOwnerId:
+    Type: String
+    AllowedPattern: '[0-9]+'
+Resources:
+  ApiRepository:
+    Type: AWS::ECR::Repository
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      RepositoryName: !Sub '${ApplicationStack}-api'
+      ImageTagMutability: IMMUTABLE
+      EncryptionConfiguration:
+        EncryptionType: AES256
+      ImageScanningConfiguration:
+        ScanOnPush: true
+      RepositoryPolicyText:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: LambdaImageRetrieval
+            Effect: Allow
+            Principal: { Service: lambda.amazonaws.com }
+            Action: [ecr:BatchGetImage, ecr:GetDownloadUrlForLayer]
+            Condition:
+              ArnLike:
+                aws:SourceArn: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${ApplicationStack}-api'
+  RunnerLogs:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      LogGroupName: !Sub '/aws/codebuild/${AWS::StackName}'
+      RetentionInDays: 30
+  RunnerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: { Service: codebuild.amazonaws.com }
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+              ArnEquals:
+                aws:SourceArn: !Sub 'arn:${AWS::Partition}:codebuild:${AWS::Region}:${AWS::AccountId}:project/${AWS::StackName}'
+      Policies:
+        - PolicyName: release-application-code
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: [logs:CreateLogStream, logs:PutLogEvents]
+                Resource: !GetAtt RunnerLogs.Arn
+              - Effect: Allow
+                Action: [codeconnections:GetConnection, codeconnections:GetConnectionToken]
+                Resource: !Ref ConnectionArn
+              - Effect: Allow
+                Action: codeconnections:UseConnection
+                Resource: !Ref ConnectionArn
+                Condition:
+                  StringEqualsIfExists:
+                    codeconnections:FullRepositoryId: alexdeeguz/caseflow-ai
+                    codeconnections:BranchName: main
+                    codeconnections:ProviderAction: [GitPull, GetRepository, GetCommit, GetBranch]
+              - Effect: Allow
+                Action: ecr:GetAuthorizationToken
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - ecr:BatchCheckLayerAvailability
+                  - ecr:InitiateLayerUpload
+                  - ecr:UploadLayerPart
+                  - ecr:CompleteLayerUpload
+                  - ecr:PutImage
+                  - ecr:BatchGetImage
+                  - ecr:GetDownloadUrlForLayer
+                Resource: !GetAtt ApiRepository.Arn
+              - Effect: Allow
+                Action:
+                  [
+                    lambda:GetFunctionConfiguration,
+                    lambda:GetAlias,
+                    lambda:UpdateFunctionCode,
+                    lambda:PublishVersion,
+                    lambda:ListVersionsByFunction,
+                    lambda:UpdateAlias,
+                    lambda:InvokeFunction,
+                  ]
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${ApplicationStack}-api'
+                  - !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${ApplicationStack}-api:*'
+                  - !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${ApplicationStack}-dispatcher'
+                  - !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${ApplicationStack}-dispatcher:*'
+  Runner:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: !Ref AWS::StackName
+      ServiceRole: !GetAtt RunnerRole.Arn
+      ConcurrentBuildLimit: 1
+      TimeoutInMinutes: 15
+      QueuedTimeoutInMinutes: 30
+      Artifacts: { Type: NO_ARTIFACTS }
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/standard:7.0
+        PrivilegedMode: true
+      Source:
+        Type: GITHUB
+        Location: https://github.com/alexdeeguz/caseflow-ai
+        Auth:
+          Type: CODECONNECTIONS
+          Resource: !Ref ConnectionArn
+        GitCloneDepth: 1
+        ReportBuildStatus: false
+      SourceVersion: main
+      Triggers:
+        Webhook: true
+        FilterGroups:
+          - - { Type: EVENT, Pattern: WORKFLOW_JOB_QUEUED }
+            - { Type: WORKFLOW_NAME, Pattern: '^CaseFlow Production Deploy$' }
+            - Type: ACTOR_ACCOUNT_ID
+              Pattern: !Sub '^${RepositoryOwnerId}$'
+      LogsConfig:
+        CloudWatchLogs:
+          Status: ENABLED
+          GroupName: !Ref RunnerLogs
+Outputs:
+  ApiImageRepository:
+    Value: !GetAtt ApiRepository.RepositoryUri
+  RunnerProjectName:
+    Value: !Ref Runner

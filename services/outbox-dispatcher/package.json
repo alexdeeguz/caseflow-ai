@@ -1,0 +1,16 @@
+{
+  "name": "@caseflow/outbox-dispatcher",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "node --import tsx --test test/*.test.ts"
+  },
+  "dependencies": {
+    "@aws-sdk/client-secrets-manager": "3.1169.0",
+    "@caseflow/dispatch": "0.1.0",
+    "zod": "4.6.7"
+  }
+}

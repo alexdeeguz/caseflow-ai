@@ -1,6 +1,6 @@
 import { registerCaseHistoryRoutes } from './routes/case-history.js';
 import { registerFactReviewRoutes } from './routes/fact-review.js';
-import { DispatchTarget } from './processing/store.js';
+import { DispatchTarget } from '@caseflow/dispatch';
 import { registerFactExtractionRoutes } from './routes/fact-extraction.js';
 import { registerSearchRoutes } from './routes/search.js';
 import { registerDemoRoutes } from './routes/demo.js';
@@ -15,7 +15,7 @@ import { AuthError, createTokenVerifier } from './auth.js';
 import type { ApiConfig } from './config.js';
 import { AppError } from './errors.js';
 import { registerProcessingDispatcher } from './processing/register.js';
-import type { ProcessingDispatcher } from './processing/dispatcher.js';
+import type { ProcessingDispatcher } from '@caseflow/dispatch';
 import { createDatabase, type WorkspaceStore } from './database/index.js';
 import { registerAuditRoutes } from './routes/audit.js';
 import { registerCaseRoutes } from './routes/cases.js';

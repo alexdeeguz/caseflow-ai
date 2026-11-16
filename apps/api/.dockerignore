@@ -1,0 +1,6 @@
+**
+!Dockerfile
+!dist-lambda/
+!dist-lambda/index.mjs
+!dist-lambda/certs/
+!dist-lambda/certs/supabase-ca.crt

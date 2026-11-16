@@ -18,3 +18,6 @@ services/document-processor/uv.lock
 services/fact-extractor/.venv/
 services/fact-extractor/uv.lock
 services/fact-extractor/.mypy_cache/
+
+**/dist-lambda/
+release/

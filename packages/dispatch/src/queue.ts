@@ -4,7 +4,11 @@ import { SendMessageCommand, SQSClient } from '@aws-sdk/client-sqs';
 import { fromIni } from '@aws-sdk/credential-providers';
 import { processingMessageSchema, type ProcessingMessage } from '@caseflow/schemas';
 import { z } from 'zod';
-import type { DispatcherConfig } from './config.js';
+export interface QueueConfig {
+  queueUrl: string;
+  region: string;
+  profile?: string;
+}
 import { DispatcherLimits } from './constants.js';
 
 export interface ProcessingQueue {
@@ -32,7 +36,7 @@ const clientOptions = {
   },
 } as const;
 
-export function createProcessingQueueClient(config: DispatcherConfig): SQSClient {
+export function createProcessingQueueClient(config: QueueConfig): SQSClient {
   return new SQSClient({
     ...clientOptions,
     region: config.region,
@@ -49,7 +53,7 @@ export function createProcessingQueueClient(config: DispatcherConfig): SQSClient
 }
 
 export function createProcessingQueue(
-  config: DispatcherConfig,
+  config: QueueConfig,
   target: DispatchTarget = DispatchTarget.Processing,
 ): ProcessingQueue {
   return createQueueAdapter(createProcessingQueueClient(config), config.queueUrl, target);

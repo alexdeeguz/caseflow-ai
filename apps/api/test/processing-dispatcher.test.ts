@@ -2,11 +2,11 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { test } from 'node:test';
 import { setTimeout as delay } from 'node:timers/promises';
-import type { ProcessingDispatchClaim } from '../src/processing/contracts.js';
+import type { ProcessingDispatchClaim } from '@caseflow/dispatch';
 import Fastify from 'fastify';
 import { readDispatcherConfig } from '../src/processing/config.js';
-import { createProcessingDispatcher, dispatchPending } from '../src/processing/dispatcher.js';
-import { DispatchEvent, DispatcherLimits } from '../src/processing/constants.js';
+import { createProcessingDispatcher, dispatchPending } from '@caseflow/dispatch';
+import { DispatchEvent, DispatcherLimits } from '@caseflow/dispatch';
 import { registerProcessingDispatcher } from '../src/processing/register.js';
 
 const runtimeUrl = 'postgresql://caseflow_runtime:test@127.0.0.1:54322/postgres';

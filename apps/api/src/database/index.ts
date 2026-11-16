@@ -15,10 +15,10 @@ export interface WorkspaceStore {
   close(): Promise<void>;
 }
 
-export function createDatabase(connectionString: string): WorkspaceStore {
+export function createDatabase(connectionString: string, maxConnections = 5): WorkspaceStore {
   const pool = new Pool({
     connectionString,
-    max: 5,
+    max: maxConnections,
     connectionTimeoutMillis: 5000,
     idleTimeoutMillis: 30000,
     statement_timeout: 8000,

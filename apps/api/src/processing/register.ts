@@ -1,9 +1,9 @@
 import type { FastifyInstance } from 'fastify';
 import type { DispatcherConfig } from './config.js';
-import { DispatchEvent } from './constants.js';
-import { createProcessingDispatcher, type ProcessingDispatcher } from './dispatcher.js';
-import { createProcessingQueue } from './queue.js';
-import { createDispatchStore, DispatchTarget } from './store.js';
+import { DispatchEvent } from '@caseflow/dispatch';
+import { createProcessingDispatcher, type ProcessingDispatcher } from '@caseflow/dispatch';
+import { createProcessingQueue } from '@caseflow/dispatch';
+import { createDispatchStore, DispatchTarget } from '@caseflow/dispatch';
 
 export function registerProcessingDispatcher(
   app: FastifyInstance,
