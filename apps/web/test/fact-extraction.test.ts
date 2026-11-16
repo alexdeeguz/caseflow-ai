@@ -7,7 +7,12 @@ import {
   Role,
   type DocumentListItem,
 } from '@caseflow/schemas';
-import { factExtractionAction, factRequestFeedback } from '../lib/fact-extraction/presentation';
+import {
+  factExtractionAction,
+  factExtractionTone,
+  factRequestFeedback,
+} from '../lib/fact-extraction/presentation';
+import { StatusTone } from '../lib/documents/presentation';
 import { processingPollInterval, documentLibraryState } from '../lib/processing/resources';
 import { processingChanges } from '../lib/processing/presentation';
 import { createResourceClient, withResourceInvalidation } from '../lib/resources';
@@ -108,5 +113,19 @@ test('fact mutations invalidate only their document, facts, case library and aud
     );
   } finally {
     client.clear();
+  }
+});
+
+test('fact extraction tone highlights active work and failures', () => {
+  const expected: Record<FactExtractionStatus, StatusTone> = {
+    [FactExtractionStatus.NotExtracted]: StatusTone.Idle,
+    [FactExtractionStatus.Queued]: StatusTone.Active,
+    [FactExtractionStatus.Extracting]: StatusTone.Active,
+    [FactExtractionStatus.Completed]: StatusTone.Done,
+    [FactExtractionStatus.Failed]: StatusTone.Failed,
+    [FactExtractionStatus.Cancelled]: StatusTone.Idle,
+  };
+  for (const status of Object.values(FactExtractionStatus)) {
+    assert.equal(factExtractionTone(document(status).factExtraction), expected[status]);
   }
 });

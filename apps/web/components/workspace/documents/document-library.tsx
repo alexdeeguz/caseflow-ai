@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from 'react';
 import { useFactExtractionAction } from './use-fact-extraction-action';
 import { FactExtractionConfirmation } from './fact-extraction-confirmation';
 import { FactsPanel } from './facts-panel';
-import { DocumentAction } from '../../../lib/documents/actions';
 import { useQuery } from '@tanstack/react-query';
 import { DocumentFilter, Role } from '@caseflow/schemas';
 import type { AuthRequest } from '../../../hooks/use-authentication';
@@ -15,17 +14,22 @@ import { documentLibraryOptions, documentLibraryState } from '../../../lib/proce
 import { ProcessingConfirmation } from './processing-confirmation';
 import { useProcessingAction } from './use-processing-action';
 import { useProcessingUpdates } from './use-processing-updates';
-import processingStyles from './processing.module.css';
 import { documentLibraryQuery, documentListResource } from '../../../lib/documents/resources';
 import { documentEmptyState, documentFilterLabels } from '../../../lib/documents/presentation';
 import { Button } from '../../ui/button';
+import { SegmentedControl } from '../../ui/segmented-control';
+import { CaseSectionLayout } from '../case-section-layout';
 import { Pagination } from '../../ui/pagination';
 import { DocumentIcon } from './document-icon';
+import { UploadIcon } from './document-icons';
 import { ConfirmDialog } from '../../ui/confirm-dialog';
 import { StatusMessage } from '../../ui/status-message';
-import { UploadPanel } from './upload-panel';
+import { UploadModal } from './upload-modal';
 import { useDocumentActions } from './use-document-actions';
 import { DocumentList } from './document-list';
+import { FactExtractionActionButton } from './fact-extraction-action-button';
+import { useReviewTotals } from './use-review-totals';
+import type { ReviewTotals } from '../../../lib/documents/state';
 import styles from './documents.module.css';
 
 export function DocumentLibrary({
@@ -54,6 +58,7 @@ export function DocumentLibrary({
   const query = useQuery(documentLibraryOptions(request, resource));
   const { data, error, denied, stale } = documentLibraryState(query);
   const { online, verified } = useVerifiedConnection(query.dataUpdatedAt);
+  const review = useReviewTotals(request, caseId);
   const canAct = !!data && !error && verified;
   const announcement = useProcessingUpdates(resource.path, data, stale || !verified);
   const processing = useProcessingAction({
@@ -118,46 +123,56 @@ export function DocumentLibrary({
   }
 
   return (
-    <section aria-labelledby="documents-heading" className={styles.library}>
-      <header className={styles.header}>
-        <div>
-          <div className={styles.heading}>
-            <h2 id="documents-heading" ref={heading} tabIndex={-1}>
-              Documents
-            </h2>
-            {data && (
-              <span
-                className={styles.count}
-                aria-label={`${data.total} ${data.total === 1 ? 'document' : 'documents'} in this view`}
-              >
-                {data.total}
-              </span>
-            )}
-          </div>
-          <p className={styles.subtitle}>Files and supporting records for this case.</p>
-        </div>
-        <div className={styles.headerActions}>
-          <span className={styles.order}>Newest first</span>
+    <CaseSectionLayout
+      id="documents-heading"
+      title="Documents"
+      headingRef={heading}
+      loading={navigating}
+      summary={data && <DocumentsSummary total={data.total} review={review} />}
+      actions={
+        <>
+          {role !== Role.Staff && (
+            <SegmentedControl
+              label="Document visibility"
+              options={Object.values(DocumentFilter).map((value) => ({
+                value,
+                label: documentFilterLabels[value],
+              }))}
+              value={filter}
+              pendingValue={pendingLocation?.documentFilter}
+              onChange={(value) =>
+                void navigate({ ...location, documentFilter: value, documentPage: 1 })
+              }
+            />
+          )}
           {!archived && (
             <Button
               ref={uploadButton}
+              className={styles.uploadButton}
               disabled={actionsDisabled}
-              aria-expanded={uploadOpen}
+              aria-haspopup="dialog"
               onClick={() => setUploadOpen((value) => !value)}
             >
+              <UploadIcon />
               Upload files
             </Button>
           )}
-        </div>
-      </header>
+        </>
+      }
+    >
       {archived && (
         <p className={styles.archiveHint}>
           Downloads remain available. Restore this case before uploading, processing, removing, or
           restoring documents.
         </p>
       )}
-      {!archived && uploadOpen && canAct && (
-        <UploadPanel key={caseId} target={{ id: caseId, label: caseLabel }} onClose={closeUpload} />
+      {!archived && (
+        <UploadModal
+          key={caseId}
+          open={uploadOpen && canAct}
+          target={{ id: caseId, label: caseLabel }}
+          onClose={closeUpload}
+        />
       )}
       {actionError && !confirming && (
         <div ref={errorSummary} tabIndex={-1}>
@@ -197,7 +212,7 @@ export function DocumentLibrary({
         enabled={canAct && actions.busy === null && !facts.busy}
       />
       {(stale || !verified) && data && (
-        <div className={processingStyles.notice}>
+        <div className={styles.notice}>
           <p>
             {!online
               ? 'You’re offline.'
@@ -215,21 +230,6 @@ export function DocumentLibrary({
           >
             {query.isFetching ? 'Refreshing…' : 'Refresh documents'}
           </button>
-        </div>
-      )}
-      {role !== Role.Staff && (
-        <div role="group" aria-label="Document visibility" className={styles.filters}>
-          {Object.values(DocumentFilter).map((value) => (
-            <button
-              key={value}
-              type="button"
-              aria-pressed={filter === value}
-              aria-busy={pendingLocation?.documentFilter === value && filter !== value}
-              onClick={() => void navigate({ ...location, documentFilter: value, documentPage: 1 })}
-            >
-              {documentFilterLabels[value]}
-            </button>
-          ))}
         </div>
       )}
       {!data ? (
@@ -261,6 +261,7 @@ export function DocumentLibrary({
               <div key={row} className={styles.skeletonRow} aria-hidden="true">
                 <span className={styles.skeletonIcon} />
                 <span className={styles.skeletonText} />
+                <span className={styles.skeletonTrack} />
                 <span className={styles.skeletonMeta} />
               </div>
             ))}
@@ -295,11 +296,6 @@ export function DocumentLibrary({
                 }}
                 disabled={actionsDisabled}
                 processingId={processing.busy ? (processing.selected?.id ?? null) : null}
-                onExtract={(document) => {
-                  actions.dismissError();
-                  processing.dismissError();
-                  facts.open(document);
-                }}
                 renderFacts={(document) => (
                   <FactsPanel
                     key={document.id}
@@ -309,7 +305,19 @@ export function DocumentLibrary({
                     request={request}
                     onAccessRejected={onAccessRejected}
                     disabled={!canAct}
-                    onDownload={() => actions.act(document, DocumentAction.Download)}
+                    action={
+                      <FactExtractionActionButton
+                        document={document}
+                        role={role}
+                        archived={archived}
+                        disabled={actionsDisabled}
+                        onExtract={(target) => {
+                          actions.dismissError();
+                          processing.dismissError();
+                          facts.open(target);
+                        }}
+                      />
+                    }
                   />
                 )}
                 onProcess={(document) => {
@@ -323,6 +331,26 @@ export function DocumentLibrary({
         </>
       )}
       <span ref={announcement} className="sr-only" role="status" aria-atomic="true" />
-    </section>
+    </CaseSectionLayout>
+  );
+}
+
+function DocumentsSummary({ total, review }: { total: number; review: ReviewTotals | null }) {
+  return (
+    <>
+      {total} {total === 1 ? 'document' : 'documents'}
+      {review && review.unreviewed > 0 ? (
+        <>
+          {' · '}
+          <strong className={styles.reviewCount}>
+            {review.unreviewed}
+            {review.partial ? '+' : ''} {review.unreviewed === 1 ? 'fact' : 'facts'} to review
+          </strong>
+        </>
+      ) : review && review.facts > 0 && !review.partial ? (
+        ' · All facts reviewed'
+      ) : null}
+      {' · Newest first'}
+    </>
   );
 }

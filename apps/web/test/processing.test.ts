@@ -26,7 +26,9 @@ import {
   processingChanges,
   processingLabel,
   processingRequestFeedback,
+  processingTone,
 } from '../lib/processing/presentation';
+import { StatusTone } from '../lib/documents/presentation';
 import {
   documentLibraryOptions,
   documentLibraryState,
@@ -276,5 +278,19 @@ test('processing and document state mutations invalidate the affected summaries,
     } finally {
       client.clear();
     }
+  }
+});
+
+test('processing tone marks ready as done, failures as failed, and in-flight work as active', () => {
+  const expected: Record<ProcessingStatus, StatusTone> = {
+    [ProcessingStatus.NotProcessed]: StatusTone.Idle,
+    [ProcessingStatus.Queued]: StatusTone.Active,
+    [ProcessingStatus.Processing]: StatusTone.Active,
+    [ProcessingStatus.Ready]: StatusTone.Done,
+    [ProcessingStatus.Failed]: StatusTone.Failed,
+    [ProcessingStatus.Cancelled]: StatusTone.Idle,
+  };
+  for (const status of Object.values(ProcessingStatus)) {
+    assert.equal(processingTone(summary(status)), expected[status]);
   }
 });

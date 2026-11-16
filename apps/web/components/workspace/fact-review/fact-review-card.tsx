@@ -218,12 +218,12 @@ export function FactReviewCard({
   }
 
   return (
-    <li className={styles.card} aria-labelledby={`${id}-heading`}>
+    <li className={styles.card} data-status={fact.reviewStatus} aria-labelledby={`${id}-heading`}>
       <div className={styles.heading}>
         <h4 ref={heading} tabIndex={-1} id={`${id}-heading`}>
           Fact review <span className={styles.muted}>· Revision {fact.version}</span>
         </h4>
-        <div className={styles.actions}>
+        <div className={styles.badges}>
           <FactReviewBadge status={fact.reviewStatus} />
           {fact.corrected && <span className={styles.corrected}>Corrected</span>}
         </div>
@@ -281,7 +281,7 @@ export function FactReviewCard({
           }}
         />
       )}
-      <div className={styles.actions}>
+      <div className={`${styles.actions} ${styles.cardActions}`}>
         {!archived && !draft && fact.reviewStatus !== FactReviewStatus.Approved && (
           <Button
             variant="secondary"
@@ -321,6 +321,7 @@ export function FactReviewCard({
         )}
         <Button
           variant="secondary"
+          className={styles.historyToggle}
           disabled={disabled || busy}
           aria-expanded={history}
           aria-controls={`${id}-history`}

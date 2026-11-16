@@ -84,7 +84,7 @@ test('access rejection or removal clears protected correction drafts', async () 
   await request('/cases/case/documents?filter=all', schema);
   assert.equal(store.getSnapshot().size, 0);
 });
-test('review mutations invalidate document facts/history and audit without unrelated requests', async () => {
+test('review mutations refresh document facts/history, review counts and audit without unrelated requests', async () => {
   const client = createResourceClient();
   const root = '/cases/c/documents/d/facts';
   const paths = [
@@ -101,7 +101,7 @@ test('review mutations invalidate document facts/history and audit without unrel
     await request(`${root}/f/approve`, reviewedFactSchema, { method: 'POST' });
     assert.deepEqual(
       paths.map((path) => client.getQueryState([path])?.isInvalidated),
-      [true, true, true, true, false, false],
+      [true, true, true, true, false, true],
     );
   } finally {
     client.clear();

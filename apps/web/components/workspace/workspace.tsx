@@ -20,6 +20,7 @@ import { WorkspaceNavigation } from './workspace-navigation';
 import { SignOutIcon } from './workspace-icons';
 import { WorkspaceTab, tabLabels } from './navigation';
 import { useWorkspaceNavigation } from '../../hooks/use-workspace-navigation';
+import { isPageNavigation } from '../../lib/workspace-location';
 import { ToastProvider } from '../ui/toast-provider';
 import { StatusMessage } from '../ui/status-message';
 import { FactDraftProvider } from './fact-review/fact-draft-provider';
@@ -88,14 +89,15 @@ function WorkspaceContent({ user, request, signOut, refreshProfile }: WorkspaceP
     user.role,
   );
   const tab = location.tab;
-  const pendingTab = pending?.tab ?? null;
+  const pageNavigation = !!pending && isPageNavigation(location, pending);
+  const pendingTab = pending && pending.tab !== tab ? pending.tab : null;
 
   const selectTab = (nextTab: WorkspaceTab) =>
     navigate({ ...location, tab: nextTab, case: null, mode: undefined });
 
   return (
     <WorkspaceFrame
-      busy={pendingTab !== null}
+      busy={pageNavigation}
       account={
         <>
           <div className={styles.accountDetails}>
@@ -122,7 +124,7 @@ function WorkspaceContent({ user, request, signOut, refreshProfile }: WorkspaceP
     >
       <UploadQueuePanel />
       <span role="status" className="sr-only">
-        {pendingTab ? `Opening ${tabLabels[pendingTab]}…` : ''}
+        {pendingTab ? `Opening ${tabLabels[pendingTab]}…` : pending ? 'Loading…' : ''}
       </span>
       {tab === WorkspaceTab.Cases && (
         <Cases

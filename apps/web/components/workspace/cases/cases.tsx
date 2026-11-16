@@ -6,6 +6,7 @@ import { useResource } from '../../../hooks/use-resource';
 import { Button } from '../../ui/button';
 import { StatusMessage } from '../../ui/status-message';
 import { LoadState } from '../../ui/load-state';
+import { LoadingRegion } from '../../ui/loading-region';
 import { Pagination } from '../../ui/pagination';
 import { CaseDetail } from './case-detail';
 import { CaseForm } from './case-form';
@@ -122,7 +123,7 @@ function CaseBrowser({ request, user, location, navigate, pendingLocation }: Cas
       {!data ? (
         <LoadState error={error} />
       ) : (
-        <>
+        <LoadingRegion loading={!!pendingLocation && !pendingLocation.case}>
           {!data.items.length ? (
             <StatusMessage>
               {filtered
@@ -137,7 +138,7 @@ function CaseBrowser({ request, user, location, navigate, pendingLocation }: Cas
             <CaseList items={data.items} location={location} />
           )}
           <Pagination {...data} onPage={(page) => void navigate({ ...location, page })} />
-        </>
+        </LoadingRegion>
       )}
     </section>
   );

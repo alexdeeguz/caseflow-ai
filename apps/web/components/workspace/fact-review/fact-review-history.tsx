@@ -11,6 +11,7 @@ import { DocumentDate } from '../documents/document-details';
 import { FactValuesDisplay } from './fact-values';
 import { FactReviewBadge } from './fact-review-badge';
 import styles from './review.module.css';
+import { LoadingIndicator } from '../../ui/spinner';
 
 export function FactReviewHistory({
   caseId,
@@ -76,7 +77,7 @@ export function FactReviewHistory({
           )}
         </>
       ) : (
-        !state.error && <p role="status">Loading review history…</p>
+        !state.error && <LoadingIndicator label="Loading review history…" />
       )}
     </section>
   );

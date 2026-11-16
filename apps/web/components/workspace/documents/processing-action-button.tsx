@@ -1,5 +1,6 @@
 import type { DocumentListItem, Role } from '@caseflow/schemas';
 import { processingAction, processingActionLabels } from '../../../lib/processing/presentation';
+import { ArrowRightIcon } from './document-icons';
 import styles from './documents.module.css';
 
 export function ProcessingActionButton({
@@ -24,11 +25,12 @@ export function ProcessingActionButton({
   return (
     <button
       type="button"
-      className={styles.actionButton}
+      className={styles.nextAction}
       disabled={disabled}
       onClick={() => onProcess(document)}
     >
       {busy ? 'Queuing…' : processingActionLabels[action]}
+      <ArrowRightIcon />
       <span className="sr-only"> {document.filename}</span>
     </button>
   );

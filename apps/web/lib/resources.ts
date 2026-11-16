@@ -63,8 +63,10 @@ export function withResourceInvalidation(client: QueryClient, request: AuthReque
             void client.invalidateQueries({
               predicate: ({ queryKey }) => {
                 const key = String(queryKey[0]);
+                // Review decisions change the per-document "to review" counts in the library too.
                 return (
                   isCaseHistoryResource(key, documents[1]!) ||
+                  key.startsWith(`/cases/${documents[1]}/documents?`) ||
                   key.startsWith(`${review[1]}?`) ||
                   key.startsWith(`${review[1]}/`) ||
                   key.startsWith('/admin/audit')

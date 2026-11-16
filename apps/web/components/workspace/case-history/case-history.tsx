@@ -7,6 +7,7 @@ import {
   factCategoryLabels,
   type CaseTimeline,
   type CaseReviewedSummary,
+  type ApprovedCaseFact,
 } from '@caseflow/schemas';
 import type { AuthRequest } from '../../../hooks/use-authentication';
 import type { WorkspaceNavigate } from '../../../hooks/use-workspace-navigation';
@@ -21,8 +22,12 @@ import {
 import { resourceOptions } from '../../../lib/resources';
 import { documentLibraryState } from '../../../lib/processing/resources';
 import { Button } from '../../ui/button';
+import { SegmentedControl } from '../../ui/segmented-control';
+import { CaseSectionLayout } from '../case-section-layout';
+import { formatFactDate, groupTimelineByYear } from '../../../lib/case-history/presentation';
 import { Pagination } from '../../ui/pagination';
 import { StatusMessage } from '../../ui/status-message';
+import { LoadingIndicator } from '../../ui/spinner';
 import { ApprovedFactCard } from './approved-fact-card';
 import { useSourceDownload } from './use-source-download';
 import styles from './case-history.module.css';
@@ -64,6 +69,9 @@ export function CaseHistory({
   const id = useId();
   const summary = data && 'counts' in data ? data : null;
   const title = timeline ? 'Timeline' : 'Reviewed summary';
+  const approvedTotal = summary
+    ? Object.values(summary.counts).reduce((total, count) => total + count, 0)
+    : 0;
   const download = useSourceDownload({
     request,
     enabled: !!data && !error && !caseError && verified && !query.isFetching && !navigating,
@@ -86,54 +94,99 @@ export function CaseHistory({
       ...(timeline ? { timelinePage: next } : { summaryPage: next }),
     });
 
+  const factCard = (fact: ApprovedCaseFact) => (
+    <ApprovedFactCard
+      fact={fact}
+      showDate={!timeline}
+      busy={download.busy === fact.documentId}
+      disabled={
+        !verified ||
+        !!error ||
+        !!caseError ||
+        query.isFetching ||
+        navigating ||
+        download.busy !== null
+      }
+      onDownload={() =>
+        void download.download({
+          caseId,
+          id: fact.documentId,
+          filename: fact.filename,
+        })
+      }
+    />
+  );
+
+  const renderFacts = (items: ApprovedCaseFact[]) =>
+    timeline ? (
+      <div className={styles.timeline}>
+        {groupTimelineByYear(items).map((group, index) => (
+          <section key={`${group.year}-${index}`} aria-labelledby={`${id}-year-${index}`}>
+            <h3 id={`${id}-year-${index}`} className={styles.year}>
+              {group.year}
+            </h3>
+            <ol className={styles.entries} aria-label={`Approved dates in ${group.year}`}>
+              {group.items.map((fact) => (
+                <li key={fact.id} className={styles.entry}>
+                  <span className={styles.entryDate}>{formatFactDate(fact)}</span>
+                  {factCard(fact)}
+                </li>
+              ))}
+            </ol>
+          </section>
+        ))}
+      </div>
+    ) : (
+      <ol className={styles.facts} aria-label={factCategoryLabels[location.summaryCategory]}>
+        {items.map((fact) => (
+          <li key={fact.id}>{factCard(fact)}</li>
+        ))}
+      </ol>
+    );
+
   if (denied) {
     return <StatusMessage tone="error">{error}</StatusMessage>;
   }
 
   return (
-    <section className={styles.panel} aria-labelledby={`${id}-title`}>
-      <header className={styles.header}>
-        <div>
-          <p className={styles.eyebrow}>Approved information</p>
-          <h2 id={`${id}-title`}>{title}</h2>
-          <p className={styles.description}>
-            {timeline
-              ? 'Dates documented in approved facts, oldest first. Partial dates retain their original precision.'
-              : 'Approved facts organized by category, with the original evidence alongside each statement.'}
-          </p>
-        </div>
-        <Button
-          variant="secondary"
-          disabled={!online || query.isFetching || navigating}
-          onClick={() => void Promise.all([query.refetch(), refreshCase()])}
-        >
-          {query.isFetching && data ? 'Refreshing…' : 'Refresh'}
-        </Button>
-      </header>
-      {!timeline && (
-        <div className={styles.categories} role="group" aria-label="Summary category">
-          {Object.values(FactCategory).map((category) => (
-            <button
-              key={category}
-              type="button"
-              aria-pressed={location.summaryCategory === category}
-              onClick={() =>
+    <CaseSectionLayout
+      id={`${id}-title`}
+      title={title}
+      loading={navigating}
+      summary={
+        summary
+          ? `${approvedTotal} approved ${approvedTotal === 1 ? 'fact' : 'facts'} from ${summary.sourceDocumentCount} ${summary.sourceDocumentCount === 1 ? 'document' : 'documents'}`
+          : timeline
+            ? 'Approved date facts · Oldest first · Partial dates keep their original precision'
+            : null
+      }
+      actions={
+        <>
+          {!timeline && (
+            <SegmentedControl
+              label="Summary category"
+              options={Object.values(FactCategory).map((category) => ({
+                value: category,
+                label: factCategoryLabels[category],
+                count: summary?.counts[category],
+              }))}
+              value={location.summaryCategory}
+              onChange={(category) =>
                 void navigate({ ...location, summaryCategory: category, summaryPage: 1 })
               }
-            >
-              <span>{factCategoryLabels[category]}</span>
-              <strong>{summary?.counts[category] ?? '—'}</strong>
-            </button>
-          ))}
-        </div>
-      )}
-      {summary && (
-        <p className={styles.description}>
-          {Object.values(summary.counts).reduce((total, count) => total + count, 0)} approved facts
-          from {summary.sourceDocumentCount}{' '}
-          {summary.sourceDocumentCount === 1 ? 'document' : 'documents'}.
-        </p>
-      )}
+            />
+          )}
+          <Button
+            variant="secondary"
+            className={styles.refresh}
+            disabled={!online || query.isFetching || navigating}
+            onClick={() => void Promise.all([query.refetch(), refreshCase()])}
+          >
+            {query.isFetching && data ? 'Refreshing…' : 'Refresh'}
+          </Button>
+        </>
+      }
+    >
       {data && (stale || !verified || caseError) && (
         <StatusMessage>
           {!online ? 'You’re offline.' : (error ?? caseError ?? 'Verifying current access.')}{' '}
@@ -143,12 +196,13 @@ export function CaseHistory({
       )}
       {download.error && <StatusMessage tone="error">{download.error}</StatusMessage>}
       {!data ? (
-        <div className={styles.empty} role={error ? 'alert' : 'status'}>
-          {error ??
-            (!online
-              ? 'Reconnect to load approved information.'
-              : `Loading ${title.toLowerCase()}…`)}
-        </div>
+        error || !online ? (
+          <div className={styles.empty} role={error ? 'alert' : 'status'}>
+            {error ?? 'Reconnect to load approved information.'}
+          </div>
+        ) : (
+          <LoadingIndicator label={`Loading ${title.toLowerCase()}…`} size="lg" />
+        )
       ) : (
         <div aria-busy={query.isFetching || navigating}>
           {!data.items.length ? (
@@ -174,40 +228,11 @@ export function CaseHistory({
               )}
             </div>
           ) : (
-            <ol
-              className={timeline ? styles.timeline : styles.facts}
-              aria-label={
-                timeline ? 'Approved dates' : factCategoryLabels[location.summaryCategory]
-              }
-            >
-              {data.items.map((fact) => (
-                <li key={fact.id}>
-                  <ApprovedFactCard
-                    fact={fact}
-                    busy={download.busy === fact.documentId}
-                    disabled={
-                      !verified ||
-                      !!error ||
-                      !!caseError ||
-                      query.isFetching ||
-                      navigating ||
-                      download.busy !== null
-                    }
-                    onDownload={() =>
-                      void download.download({
-                        caseId,
-                        id: fact.documentId,
-                        filename: fact.filename,
-                      })
-                    }
-                  />
-                </li>
-              ))}
-            </ol>
+            renderFacts(data.items)
           )}
           {(data.total > data.pageSize || page > 1) && <Pagination {...data} onPage={selectPage} />}
         </div>
       )}
-    </section>
+    </CaseSectionLayout>
   );
 }

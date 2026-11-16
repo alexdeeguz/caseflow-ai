@@ -23,3 +23,25 @@ export function formatFactDate(fact: Pick<FactValues, 'dateValue' | 'datePrecisi
   }
   return dayFormatter.format(calendar);
 }
+
+export interface TimelineGroup<T> {
+  year: string;
+  items: T[];
+}
+
+/** Groups consecutive timeline entries by year, preserving their order; undated entries are labelled. */
+export function groupTimelineByYear<T extends Pick<FactValues, 'dateValue'>>(
+  items: readonly T[],
+): TimelineGroup<T>[] {
+  const groups: TimelineGroup<T>[] = [];
+  for (const item of items) {
+    const year = /^\d{4}/.exec(item.dateValue ?? '')?.[0] ?? 'Undated';
+    const current = groups.at(-1);
+    if (current?.year === year) {
+      current.items.push(item);
+    } else {
+      groups.push({ year, items: [item] });
+    }
+  }
+  return groups;
+}

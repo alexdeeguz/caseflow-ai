@@ -1,5 +1,6 @@
 import type { DocumentListItem, Role } from '@caseflow/schemas';
 import { factExtractionAction } from '../../../lib/fact-extraction/presentation';
+import { ArrowRightIcon } from './document-icons';
 import styles from './documents.module.css';
 
 export function FactExtractionActionButton({
@@ -24,11 +25,12 @@ export function FactExtractionActionButton({
   return (
     <button
       type="button"
-      className={styles.actionButton}
+      className={styles.nextAction}
       disabled={disabled}
       onClick={() => onExtract(document)}
     >
       {action}
+      <ArrowRightIcon />
       <span className="sr-only"> for {document.filename}</span>
     </button>
   );

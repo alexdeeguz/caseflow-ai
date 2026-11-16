@@ -10,10 +10,11 @@ import { resourceOptions } from '../../../lib/resources';
 import { documentLibraryState } from '../../../lib/processing/resources';
 import { caseDetailResource } from '../../../lib/workspace-resources';
 import { CaseSection, caseSectionLabels } from '../../../lib/constants/navigation';
-import { Button } from '../../ui/button';
+import { ArrowLeftIcon } from '../workspace-icons';
 import { StatusMessage } from '../../ui/status-message';
 import { LoadState } from '../../ui/load-state';
 import { DocumentLibrary } from '../documents/document-library';
+import { useReviewTotals } from '../documents/use-review-totals';
 import { CaseHistory } from '../case-history/case-history';
 import { CaseOverview } from './case-overview';
 import { CaseStatusBadge } from './case-status-badge';
@@ -45,20 +46,31 @@ export function CaseDetail({
   const { error } = state;
   const data = error && !historySection ? null : state.data;
   const [accessError, setAccessError] = useState<string | null>(null);
+  const review = useReviewTotals(request, id);
 
   return (
-    <section>
-      <Button variant="secondary" onClick={onBack}>
-        Back to cases
-      </Button>
+    <section className={styles.detail}>
+      <div className={styles.crumbs}>
+        <button type="button" className={styles.backLink} onClick={onBack}>
+          <ArrowLeftIcon />
+          Back to cases
+        </button>
+        {data && !accessError && (
+          <>
+            <span className={styles.crumbSeparator} aria-hidden="true">
+              /
+            </span>
+            <span className={styles.caseChip}>{data.case.caseNumber}</span>
+          </>
+        )}
+      </div>
       {!data || accessError ? (
         <LoadState error={accessError ?? error} />
       ) : (
         <>
-          <header className="mt-8">
-            <p className={styles.eyebrow}>{data.case.caseNumber}</p>
-            <div className="flex flex-wrap items-center gap-4">
-              <h1 className="break-words min-w-0">{data.case.title}</h1>
+          <header className={styles.detailHeader}>
+            <div className={styles.titleRow}>
+              <h1>{data.case.title}</h1>
               <CaseStatusBadge status={data.case.status} />
             </div>
           </header>
@@ -81,6 +93,16 @@ export function CaseDetail({
                 onClick={() => void navigate({ ...location, section })}
               >
                 {caseSectionLabels[section]}
+                {section === CaseSection.Documents && review && review.unreviewed > 0 && (
+                  <span className={styles.tabBadge}>
+                    {review.unreviewed}
+                    {review.partial ? '+' : ''}
+                    <span className="sr-only">
+                      {' '}
+                      {review.unreviewed === 1 ? 'fact' : 'facts'} to review
+                    </span>
+                  </span>
+                )}
               </button>
             ))}
           </nav>
@@ -110,7 +132,13 @@ export function CaseDetail({
               refreshCase={() => query.refetch()}
             />
           ) : (
-            <CaseOverview data={data} user={user} request={request} onEdit={onEdit} />
+            <CaseOverview
+              data={data}
+              user={user}
+              request={request}
+              onEdit={onEdit}
+              navigating={pendingLocation !== null}
+            />
           )}
         </>
       )}

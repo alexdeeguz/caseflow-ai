@@ -1,0 +1,37 @@
+.inspector {
+  display: grid;
+  grid-template-columns: minmax(15rem, 17rem) minmax(0, 1fr);
+  align-items: start;
+  gap: 1rem;
+  padding: 1.25rem;
+}
+.aside,
+.content {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+/* On tall screens, reference info stays in view while the facts column scrolls past it. */
+@media (min-height: 50rem) {
+  .aside {
+    position: sticky;
+    top: 1.25rem;
+  }
+}
+/* Manual next-step control inside a panel; collapses when the button renders nothing. */
+.action {
+  margin-top: 0.75rem;
+}
+.action:empty {
+  display: none;
+}
+@container (max-width: 44rem) {
+  .inspector {
+    grid-template-columns: 1fr;
+    padding: 1rem;
+  }
+  .aside {
+    position: static;
+    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  }
+}

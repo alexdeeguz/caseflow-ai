@@ -1,0 +1,85 @@
+.status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.5rem;
+  min-width: 0;
+}
+/* Soft tinted tag; the tint carries the state, text stays dark for contrast. */
+.label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4375rem;
+  padding: 0.125rem 0.625rem 0.125rem 0.5rem;
+  border: 1px solid var(--brand-line);
+  border-radius: 999px;
+  background: var(--brand-paper);
+  color: var(--brand-ink-soft);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+.dot {
+  width: 0.4375rem;
+  height: 0.4375rem;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--brand-muted);
+}
+.detail {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--brand-muted);
+  font-size: 0.75rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status[data-kind='review'] .label {
+  border-color: color-mix(in srgb, var(--brand-yellow), var(--brand-ink) 16%);
+  background: var(--brand-yellow-soft);
+  color: var(--brand-ink);
+  font-weight: 700;
+}
+.status[data-kind='review'] .dot {
+  background: var(--brand-navy);
+}
+.status[data-kind='reviewed'] .label {
+  border-color: color-mix(in srgb, var(--brand-success) 22%, transparent);
+  background: color-mix(in srgb, var(--brand-success) 8%, var(--brand-white));
+  color: var(--brand-ink);
+}
+.check {
+  color: var(--brand-success);
+}
+.status[data-kind='processing'] .label {
+  background: var(--brand-cream);
+  color: var(--brand-navy);
+}
+.status[data-kind='processing'] .dot {
+  background: var(--brand-navy);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+.status[data-kind='failed'] .label {
+  border-color: color-mix(in srgb, var(--brand-danger) 28%, transparent);
+  background: color-mix(in srgb, var(--brand-danger) 7%, var(--brand-white));
+  color: var(--brand-ink);
+}
+.status[data-kind='failed'] .dot {
+  background: var(--brand-danger);
+}
+.status[data-kind='failed'] .detail {
+  flex-basis: 100%;
+  color: var(--brand-ink-soft);
+}
+.status[data-kind='removed'] .label,
+.status[data-kind='noFacts'] .label,
+.status[data-kind='waiting'] .label {
+  color: var(--brand-muted);
+}
+@keyframes pulse {
+  50% {
+    opacity: 0.3;
+  }
+}

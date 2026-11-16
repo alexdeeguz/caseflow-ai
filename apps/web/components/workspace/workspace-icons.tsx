@@ -1,23 +1,6 @@
-import type { ReactNode } from 'react';
+import { Icon } from '../ui/icon';
 
-function Icon({ children }: { children: ReactNode }) {
-  return (
-    <svg
-      aria-hidden="true"
-      focusable="false"
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.75"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      {children}
-    </svg>
-  );
-}
+export { CloseIcon } from '../ui/icon';
 
 export function CasesIcon() {
   return (
@@ -63,18 +46,18 @@ export function MenuIcon() {
   );
 }
 
-export function CloseIcon() {
-  return (
-    <Icon>
-      <path d="m6 6 12 12M6 18 18 6" />
-    </Icon>
-  );
-}
-
 export function SignOutIcon() {
   return (
     <Icon>
       <path d="M9 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4M9 12h12m-4-4 4 4-4 4" />
+    </Icon>
+  );
+}
+
+export function ArrowLeftIcon() {
+  return (
+    <Icon size={16}>
+      <path d="M19 12H5m6-6-6 6 6 6" />
     </Icon>
   );
 }

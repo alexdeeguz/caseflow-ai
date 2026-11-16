@@ -5,7 +5,9 @@ import { Role, successSchema, type User, type caseDetailSchema } from '@caseflow
 
 import type { AuthRequest } from '../../../hooks/use-authentication';
 import { useToast } from '../../ui/toast-provider';
-import { Button } from '../../ui/button';
+import { DetailList, Panel } from '../../ui/panel';
+import { CaseSectionLayout } from '../case-section-layout';
+import { CaseStatusBadge } from './case-status-badge';
 import { StatusMessage } from '../../ui/status-message';
 import { RoleBadge } from '../role-badge';
 import { StaffPicker } from './staff-picker';
@@ -18,11 +20,14 @@ export function CaseOverview({
   user,
   request,
   onEdit,
+  navigating = false,
 }: {
   data: ReturnType<typeof caseDetailSchema.parse>;
   user: User;
   request: AuthRequest;
   onEdit: () => void;
+  /** An in-case navigation (e.g. switching tabs) is loading. */
+  navigating?: boolean;
 }) {
   const id = data.case.id;
   const notify = useToast();
@@ -45,74 +50,90 @@ export function CaseOverview({
     }
   }
 
+  const admin = user.role !== Role.Staff;
+
   return (
-    <>
-      {user.role !== Role.Staff && (
-        <CaseActions record={data.case} request={request} onEdit={onEdit} />
-      )}
-      <dl className={styles.metadata}>
-        <div>
-          <dt>Client</dt>
-          <dd>{data.case.clientName}</dd>
-        </div>
-        <div>
-          <dt>Incident date</dt>
-          <dd>{formatIncidentDate(data.case.incidentDate)}</dd>
-        </div>
-        <div>
-          <dt>Created</dt>
-          <dd>
-            <time dateTime={data.case.createdAt}>
-              {new Date(data.case.createdAt).toLocaleString()}
-            </time>
-          </dd>
-        </div>
-        <div>
-          <dt>Last updated</dt>
-          <dd>
-            <time dateTime={data.case.updatedAt}>
-              {new Date(data.case.updatedAt).toLocaleString()}
-            </time>
-          </dd>
-        </div>
-      </dl>
-      <h2 className="font-semibold text-lg">Summary</h2>
-      <p className="mt-3 whitespace-pre-wrap break-words text-ink-soft">
-        {data.case.summary || 'No summary provided.'}
-      </p>
-      {user.role !== Role.Staff && (
-        <>
-          <h2 className="mt-8">Assigned people</h2>
-          {data.assignedUsers.map((person) => (
-            <div className="flex flex-wrap items-center gap-4 py-3" key={person.id}>
-              <span>{person.displayName}</span>
-              <RoleBadge role={person.role} />
-              {!person.active && <span>Disabled</span>}
-              {person.role === Role.Staff ? (
-                <Button
-                  disabled={busy}
-                  variant="secondary"
-                  onClick={() => void assign(person.id, false)}
-                >
-                  Remove assignment
-                </Button>
-              ) : (
-                <span className="text-sm text-muted">
-                  Assignment retained; currently has all-case access.
-                </span>
-              )}
-            </div>
-          ))}
-          {!data.assignedUsers.length && <p>No assignments yet.</p>}
-          <StaffPicker
-            request={request}
-            assigned={data.assignedUsers.map((u) => u.id)}
-            busy={busy}
-            onAssign={(id) => void assign(id, true)}
-          />
-        </>
-      )}
+    <CaseSectionLayout
+      id="overview-heading"
+      title="Overview"
+      loading={navigating}
+      actions={admin && <CaseActions record={data.case} request={request} onEdit={onEdit} />}
+    >
       {error && <StatusMessage tone="error">{error}</StatusMessage>}
-    </>
+      <div className={styles.overviewGrid}>
+        <Panel title="Summary" className={styles.summaryPanel}>
+          <p className={data.case.summary ? styles.summaryText : styles.summaryEmpty}>
+            {data.case.summary || 'No summary provided.'}
+          </p>
+        </Panel>
+        <div className={styles.overviewRail}>
+          <Panel title="Details">
+            <DetailList
+              items={[
+                { label: 'Client', value: data.case.clientName },
+                { label: 'Incident date', value: formatIncidentDate(data.case.incidentDate) },
+                { label: 'Status', value: <CaseStatusBadge status={data.case.status} /> },
+                {
+                  label: 'Created',
+                  value: (
+                    <time dateTime={data.case.createdAt}>
+                      {new Date(data.case.createdAt).toLocaleString()}
+                    </time>
+                  ),
+                },
+                {
+                  label: 'Last updated',
+                  value: (
+                    <time dateTime={data.case.updatedAt}>
+                      {new Date(data.case.updatedAt).toLocaleString()}
+                    </time>
+                  ),
+                },
+              ]}
+            />
+          </Panel>
+          {admin && (
+            <Panel title="Assigned people">
+              {data.assignedUsers.length ? (
+                <ul className={styles.people}>
+                  {data.assignedUsers.map((person) => (
+                    <li key={person.id}>
+                      <div className={styles.person}>
+                        <span className={styles.personName}>{person.displayName}</span>
+                        <RoleBadge role={person.role} />
+                        {!person.active && <span className={styles.disabledTag}>Disabled</span>}
+                      </div>
+                      {person.role === Role.Staff ? (
+                        <button
+                          type="button"
+                          className={styles.textAction}
+                          disabled={busy}
+                          onClick={() => void assign(person.id, false)}
+                        >
+                          Remove assignment
+                          <span className="sr-only"> for {person.displayName}</span>
+                        </button>
+                      ) : (
+                        <span className={styles.personNote}>
+                          Assignment retained; currently has all-case access.
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className={styles.railEmpty}>No assignments yet.</p>
+              )}
+              <StaffPicker
+                request={request}
+                assigned={data.assignedUsers.map((u) => u.id)}
+                busy={busy}
+                onAssign={(id) => void assign(id, true)}
+              />
+            </Panel>
+          )}
+        </div>
+      </div>
+    </CaseSectionLayout>
   );
 }

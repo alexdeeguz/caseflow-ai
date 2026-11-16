@@ -9,6 +9,7 @@ import { Button } from '../../ui/button';
 import { LoadState } from '../../ui/load-state';
 import { Pagination } from '../../ui/pagination';
 import { userListResource } from '../../../lib/workspace-resources';
+import styles from './cases.module.css';
 
 export function StaffPicker({
   request,
@@ -30,10 +31,10 @@ export function StaffPicker({
   );
 
   return (
-    <div className="mt-8">
-      <h2>Assign Staff</h2>
+    <div className={styles.staffPicker}>
+      <h4 className={styles.pickerTitle}>Assign Staff</h4>
       <form
-        className="flex flex-wrap gap-3 my-4"
+        className={styles.pickerSearch}
         onSubmit={(e) => {
           e.preventDefault();
           setPage(1);
@@ -50,28 +51,38 @@ export function StaffPicker({
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
-        <Button type="submit">Search</Button>
+        <Button type="submit" className={styles.compactButton}>
+          Search
+        </Button>
       </form>
       {!data ? (
-        <LoadState error={error} />
+        <LoadState error={error} label="Loading Staff…" size="md" />
       ) : (
         <>
-          {data.items.map((person) => (
-            <div className="flex flex-wrap gap-4 items-center py-3" key={person.id}>
-              <div>
-                <strong>{person.displayName}</strong>
-                <p className="text-xs text-muted break-all">{person.id}</p>
-              </div>
-              <Button
-                variant="secondary"
-                disabled={busy || !person.active || assigned.includes(person.id)}
-                onClick={() => onAssign(person.id)}
-              >
-                {assigned.includes(person.id) ? 'Assigned' : !person.active ? 'Disabled' : 'Assign'}
-              </Button>
-            </div>
-          ))}
-          {!data.items.length && <p>No matching Staff.</p>}
+          <ul className={styles.people}>
+            {data.items.map((person) => (
+              <li key={person.id}>
+                <div className={styles.personText}>
+                  <span className={styles.personName}>{person.displayName}</span>
+                  <span className={styles.personId}>{person.id}</span>
+                </div>
+                <Button
+                  variant="secondary"
+                  className={styles.compactButton}
+                  disabled={busy || !person.active || assigned.includes(person.id)}
+                  onClick={() => onAssign(person.id)}
+                >
+                  {assigned.includes(person.id)
+                    ? 'Assigned'
+                    : !person.active
+                      ? 'Disabled'
+                      : 'Assign'}
+                  <span className="sr-only"> {person.displayName}</span>
+                </Button>
+              </li>
+            ))}
+          </ul>
+          {!data.items.length && <p className={styles.railEmpty}>No matching Staff.</p>}
           <Pagination {...data} onPage={setPage} />
         </>
       )}

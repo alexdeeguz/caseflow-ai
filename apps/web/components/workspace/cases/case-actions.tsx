@@ -9,6 +9,7 @@ import { Button } from '../../ui/button';
 import { ConfirmDialog } from '../../ui/confirm-dialog';
 import { useToast } from '../../ui/toast-provider';
 import { StatusMessage } from '../../ui/status-message';
+import styles from './cases.module.css';
 
 export function CaseActions({
   record,
@@ -53,15 +54,16 @@ export function CaseActions({
   }
 
   return (
-    <div className="mt-6">
-      <div className="flex flex-wrap gap-3">
+    <div className={styles.caseActions}>
+      <div className={styles.caseActionButtons}>
         {!archived && (
-          <Button onClick={onEdit} disabled={busy}>
+          <Button className={styles.compactButton} onClick={onEdit} disabled={busy}>
             Edit case
           </Button>
         )}
         <Button
           variant="secondary"
+          className={styles.compactButton}
           onClick={() => {
             if (archived) {
               void changeArchive();

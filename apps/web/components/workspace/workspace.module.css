@@ -100,15 +100,6 @@
   border-color: var(--brand-yellow);
 }
 
-.pendingIndicator {
-  flex-shrink: 0;
-  width: 6px;
-  height: 6px;
-  margin-left: auto;
-  border-radius: 50%;
-  background: currentColor;
-}
-
 .sidebar :focus-visible {
   outline: 2px solid var(--brand-yellow);
   outline-offset: 3px;
@@ -143,37 +134,43 @@
 
 .body {
   min-width: 0;
+  height: 100svh;
   display: flex;
   flex-direction: column;
-  padding: 40px clamp(24px, 4vw, 64px) 0;
 }
 
+/* The content area is the scroll container, so pages can pin their own headers. */
 .main {
-  width: 100%;
-  max-width: 1280px;
-  margin: 0 auto;
-  min-width: 0;
+  display: flex;
+  flex-direction: column;
   flex: 1;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  --content-gutter: 28px;
+  overflow-y: auto;
   background: var(--brand-white);
-  border: 1px solid var(--brand-line);
-  border-radius: var(--radius-panel);
-  padding: 32px;
+  padding: 24px var(--content-gutter);
 }
 
-.main h1 {
-  font-size: clamp(26px, 4vw, 36px);
+.main > * {
+  flex-shrink: 0;
+}
+
+:where(.main) h1 {
+  font-size: clamp(24px, 3vw, 30px);
   font-weight: 800;
   letter-spacing: -0.035em;
   margin-bottom: 12px;
 }
 
-.main h2 {
+:where(.main) h2 {
   font-size: 19px;
   font-weight: 700;
   margin-bottom: 8px;
 }
 
-.main p {
+:where(.main) p {
   line-height: 1.7;
   margin-bottom: 16px;
 }
@@ -197,11 +194,11 @@
   width: auto;
 }
 
-.footer {
-  text-align: center;
-  font-size: 12px;
-  padding: 24px 0;
-  color: var(--brand-muted);
+.mainRegion {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .skip {
@@ -276,10 +273,12 @@
   }
 
   .body {
-    padding: 20px 16px 0;
+    height: auto;
   }
 
   .main {
-    padding: 22px;
+    --content-gutter: 16px;
+    overflow: visible;
+    padding: 20px var(--content-gutter);
   }
 }

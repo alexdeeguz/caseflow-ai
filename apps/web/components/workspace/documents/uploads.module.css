@@ -1,4 +1,3 @@
-.panel,
 .queue {
   border: 1px solid var(--brand-line);
   border-radius: var(--radius-control);
@@ -6,29 +5,12 @@
   margin-bottom: 1.5rem;
   overflow: hidden;
 }
-.panel {
-  padding: 1.5rem;
-  background: var(--brand-paper);
-}
-.panelHeader,
-.panelFooter {
-  display: flex;
-  gap: 1rem;
-  align-items: center;
-  justify-content: space-between;
-}
-.panel h3 {
-  font-size: 1rem;
-  font-weight: 700;
-}
-.panel p,
 .queue .queueHint {
   margin: 0.5rem 0 0;
   font-size: 0.8125rem;
   color: var(--brand-muted);
 }
 .dropzone {
-  margin: 1.25rem 0;
   padding: 2rem 1rem;
   border: 1px dashed var(--brand-muted);
   border-radius: var(--radius-control);
@@ -38,6 +20,9 @@
   gap: 0.625rem;
   background: var(--brand-white);
   text-align: center;
+}
+.dropzone strong {
+  font-size: 0.9375rem;
 }
 .dropzone > span {
   font-size: 0.8125rem;
@@ -91,9 +76,13 @@
   color: var(--brand-muted);
   overflow-wrap: anywhere;
 }
-.panel .error,
+.error,
 .fileInfo .error {
   color: var(--brand-danger);
+}
+p.error {
+  margin: 0.75rem 0 0;
+  font-size: 0.8125rem;
 }
 .textButton {
   color: var(--brand-navy);
@@ -107,12 +96,35 @@
   text-decoration: underline;
   text-underline-offset: 4px;
 }
-.panelFooter p {
-  max-width: 25rem;
-  margin: 0;
+/* Upload modal */
+.selection li {
+  align-items: center;
+  padding: 0.625rem 0;
 }
-.panelFooter button {
+.selection li:first-child {
+  border-top: 0;
+}
+.fileIcon {
+  display: grid;
+  place-items: center;
   flex-shrink: 0;
+  width: 32px;
+  height: 36px;
+  border-radius: 8px;
+  background: var(--brand-cream);
+  color: var(--brand-navy);
+}
+.footerHint {
+  flex: 1 1 14rem;
+  margin: 0;
+  color: var(--brand-muted);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+button.footerButton {
+  min-height: 40px;
+  padding: 0.5rem 1rem;
+  font-size: 0.8125rem;
 }
 .queue {
   border-top: 3px solid var(--brand-navy);
@@ -192,16 +204,6 @@
   background: var(--brand-navy);
 }
 @media (max-width: 600px) {
-  .panel {
-    padding: 1rem;
-  }
-  .panelHeader {
-    align-items: flex-start;
-  }
-  .panelFooter {
-    align-items: stretch;
-    flex-direction: column;
-  }
   .queueList li {
     flex-direction: column;
     gap: 0.25rem;
@@ -212,13 +214,4 @@
   .queueActions {
     align-self: flex-end;
   }
-}
-
-.panelHeader > div {
-  min-width: 0;
-}
-.panelHeader > button {
-  flex-shrink: 0;
-  padding-inline: 1rem;
-  white-space: nowrap;
 }

@@ -1,12 +1,14 @@
 'use client';
 
-import { useId, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { DocumentLimits } from '@caseflow/schemas';
 import { validateFile, documentAccept } from '../../../lib/documents/file-validation';
 import type { UploadCase } from '../../../lib/documents/upload-types';
 import { formatFileSize } from '../../../lib/documents/presentation';
 import { Button } from '../../ui/button';
+import { Modal } from '../../ui/overlay-dialog';
 import { DocumentIcon } from './document-icon';
+import { UploadIcon } from './document-icons';
 import { useUploads } from './upload-provider';
 import styles from './uploads.module.css';
 
@@ -16,11 +18,17 @@ interface Selection {
   error: string | null;
 }
 
-export function UploadPanel({ target, onClose }: { target: UploadCase; onClose: () => void }) {
+export function UploadModal({
+  open,
+  target,
+  onClose,
+}: {
+  open: boolean;
+  target: UploadCase;
+  onClose: () => void;
+}) {
   const { store } = useUploads();
   const input = useRef<HTMLInputElement>(null);
-  const heading = useRef<HTMLHeadingElement>(null);
-  const id = useId();
   const [selected, setSelected] = useState<Selection[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
@@ -45,33 +53,54 @@ export function UploadPanel({ target, onClose }: { target: UploadCase; onClose: 
     ]);
   }
 
+  // Like the old inline panel, closing discards an unsent selection.
+  function close() {
+    setSelected([]);
+    setError(null);
+    setDragging(false);
+    onClose();
+  }
+
   function upload() {
     try {
       store.add(
         selected.map(({ file }) => file),
         target,
       );
-      setSelected([]);
-      onClose();
+      close();
     } catch (issue) {
       setError(issue instanceof Error ? issue.message : 'Unable to queue these files.');
-      heading.current?.focus();
     }
   }
 
   return (
-    <section className={styles.panel} aria-labelledby={`${id}-title`}>
-      <div className={styles.panelHeader}>
-        <div>
-          <h3 id={`${id}-title`} ref={heading} tabIndex={-1}>
-            Upload documents
-          </h3>
-          <p>PDF, JPEG, or PNG · Up to 25 MiB each · 10 files per batch</p>
-        </div>
-        <Button variant="secondary" onClick={onClose}>
-          Close
-        </Button>
-      </div>
+    <Modal
+      open={open}
+      title="Upload documents"
+      description="PDF, JPEG, or PNG · Up to 25 MiB each · 10 files per batch"
+      closeLabel="Close upload"
+      onClose={close}
+      footer={
+        <>
+          <p className={styles.footerHint}>
+            Use fictional data only. Files appear in the library after verification.
+          </p>
+          <Button variant="secondary" className={styles.footerButton} onClick={close}>
+            Cancel
+          </Button>
+          <Button
+            className={styles.footerButton}
+            disabled={!selected.length || selected.some((item) => item.error)}
+            onClick={upload}
+          >
+            Upload
+            {selected.length
+              ? ` ${selected.length} ${selected.length === 1 ? 'file' : 'files'}`
+              : ' files'}
+          </Button>
+        </>
+      }
+    >
       <div
         className={`${styles.dropzone} ${dragging ? styles.dragging : ''}`}
         onDragOver={(event) => {
@@ -86,13 +115,12 @@ export function UploadPanel({ target, onClose }: { target: UploadCase; onClose: 
         }}
       >
         <span className={styles.dropIcon}>
-          <DocumentIcon />
+          <UploadIcon size={22} />
         </span>
         <strong>Drop your files here</strong>
         <span>or choose files from your device</span>
         <input
           ref={input}
-          id={`${id}-files`}
           type="file"
           multiple
           accept={documentAccept}
@@ -104,7 +132,11 @@ export function UploadPanel({ target, onClose }: { target: UploadCase; onClose: 
             event.target.value = '';
           }}
         />
-        <Button variant="secondary" onClick={() => input.current?.click()}>
+        <Button
+          variant="secondary"
+          className={styles.footerButton}
+          onClick={() => input.current?.click()}
+        >
           Choose files
         </Button>
       </div>
@@ -117,6 +149,9 @@ export function UploadPanel({ target, onClose }: { target: UploadCase; onClose: 
         <ul className={styles.selection} aria-label="Selected files">
           {selected.map(({ id, file, error }) => (
             <li key={id}>
+              <span className={styles.fileIcon}>
+                <DocumentIcon />
+              </span>
               <div className={styles.fileInfo}>
                 <strong>{file.name}</strong>
                 <span>{formatFileSize(file.size)}</span>
@@ -134,15 +169,6 @@ export function UploadPanel({ target, onClose }: { target: UploadCase; onClose: 
           ))}
         </ul>
       )}
-      <div className={styles.panelFooter}>
-        <p>Use fictional data only. Files appear in the library after verification.</p>
-        <Button disabled={!selected.length || selected.some((item) => item.error)} onClick={upload}>
-          Upload
-          {selected.length
-            ? ` ${selected.length} ${selected.length === 1 ? 'file' : 'files'}`
-            : ' files'}
-        </Button>
-      </div>
-    </section>
+    </Modal>
   );
 }

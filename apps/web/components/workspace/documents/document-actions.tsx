@@ -1,6 +1,20 @@
+import type { ReactNode } from 'react';
 import type { Document, Role } from '@caseflow/schemas';
 import { DocumentAction, documentActions } from '../../../lib/documents/actions';
+import { DownloadIcon, RestoreIcon, TrashIcon } from './document-icons';
 import styles from './documents.module.css';
+
+const labels: Record<DocumentAction, string> = {
+  download: 'Download',
+  remove: 'Remove',
+  restore: 'Restore',
+};
+
+const icons: Record<DocumentAction, ReactNode> = {
+  download: <DownloadIcon />,
+  remove: <TrashIcon />,
+  restore: <RestoreIcon />,
+};
 
 export function DocumentActions({
   document,
@@ -18,7 +32,6 @@ export function DocumentActions({
   onAction: (document: Document, action: DocumentAction) => void;
 }) {
   const allowed = documentActions(document, role, archived);
-  const labels = { download: 'Download', remove: 'Remove', restore: 'Restore' };
   return (
     <div className={styles.documentActions}>
       {Object.values(DocumentAction)
@@ -27,11 +40,16 @@ export function DocumentActions({
           <button
             key={action}
             type="button"
-            className={styles.actionButton}
+            className={`${styles.actionButton} ${action === DocumentAction.Remove ? styles.destructive : ''}`}
             disabled={disabled || busy !== null}
+            aria-busy={busy?.id === document.id && busy.action === action}
+            title={labels[action]}
             onClick={() => onAction(document, action)}
           >
-            {busy?.id === document.id && busy.action === action ? 'Working…' : labels[action]}
+            {icons[action]}
+            <span>
+              {busy?.id === document.id && busy.action === action ? 'Working…' : labels[action]}
+            </span>
             <span className="sr-only"> {document.filename}</span>
           </button>
         ))}

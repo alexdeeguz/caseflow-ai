@@ -45,3 +45,12 @@ export function documentEmptyState(filter: DocumentFilter, page: number) {
     description: 'Completed, verified uploads will appear here. Removed files are excluded.',
   };
 }
+
+/** Visual state shared by every document status pill and pipeline step. */
+export const StatusTone = {
+  Done: 'done',
+  Active: 'active',
+  Failed: 'failed',
+  Idle: 'idle',
+} as const;
+export type StatusTone = (typeof StatusTone)[keyof typeof StatusTone];

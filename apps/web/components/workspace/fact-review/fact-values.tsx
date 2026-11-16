@@ -17,12 +17,19 @@ export function FactValuesDisplay({
     values.qualifier,
   ].filter(Boolean);
 
+  const tags = [showDate ? values.dateValue : null, ...qualifiers].filter(Boolean);
+
   return (
     <div className={styles.values}>
       <span className={styles.category}>{factCategoryLabels[values.category]}</span>
       <p className={styles.value}>{values.value}</p>
-      {showDate && values.dateValue && <p>{values.dateValue}</p>}
-      {!!qualifiers.length && <p className={styles.qualifiers}>{qualifiers.join(' · ')}</p>}
+      {!!tags.length && (
+        <ul className={styles.tags} aria-label="Fact details">
+          {tags.map((tag, index) => (
+            <li key={`${tag}-${index}`}>{tag}</li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

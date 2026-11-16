@@ -3,6 +3,7 @@
 import { useRef, useState, type ReactNode } from 'react';
 import { Brand } from '../brand';
 import { CloseIcon, MenuIcon } from './workspace-icons';
+import { LoadingRegion } from '../ui/loading-region';
 import styles from './workspace.module.css';
 
 const workspaceMainId = 'workspace-main';
@@ -67,12 +68,11 @@ export function WorkspaceFrame({
         </div>
       </aside>
       <div className={styles.body}>
-        <main id={workspaceMainId} tabIndex={-1} className={styles.main} aria-busy={busy}>
-          {children}
-        </main>
-        <footer className={styles.footer}>
-          Independent portfolio demo · Fictional case data only
-        </footer>
+        <LoadingRegion loading={busy} className={styles.mainRegion}>
+          <main id={workspaceMainId} tabIndex={-1} className={styles.main}>
+            {children}
+          </main>
+        </LoadingRegion>
       </div>
     </div>
   );

@@ -1,0 +1,60 @@
+.section {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.625rem 1rem;
+  padding-bottom: 0.875rem;
+}
+.toolbar .summary {
+  margin: 0;
+  color: var(--brand-muted);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  margin-left: auto;
+}
+.bodyFrame {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+/* Only this region scrolls; the case header, tabs and toolbar stay put. */
+.body {
+  display: grid;
+  flex: 1;
+  align-content: start;
+  gap: 1rem;
+  min-height: 0;
+  min-width: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  /* Reach the content area's right edge so the scrollbar sits flush against the window. */
+  margin-right: calc(-1 * var(--content-gutter, 0px));
+  padding: 0 var(--content-gutter, 0px) 0.25rem 0;
+  container-type: inline-size;
+}
+
+@media (max-width: 767px) {
+  .section,
+  .bodyFrame {
+    flex: none;
+  }
+  .body {
+    overflow: visible;
+  }
+}

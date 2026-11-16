@@ -6,6 +6,7 @@ import {
   type DocumentListItem,
   type FactExtractionSummary,
 } from '@caseflow/schemas';
+import { StatusTone } from '../documents/presentation';
 
 export const factStatusLabels: Record<FactExtractionStatus, string> = {
   not_extracted: 'Not extracted',
@@ -47,4 +48,14 @@ export function factRequestFeedback(summary: FactExtractionSummary) {
   return summary.status === FactExtractionStatus.Queued
     ? 'Fact extraction queued.'
     : `Latest fact extraction status: ${factStatusLabels[summary.status]}.`;
+}
+
+export function factExtractionTone(summary: FactExtractionSummary): StatusTone {
+  if (isFactExtractionActive(summary)) {
+    return StatusTone.Active;
+  }
+  if (summary.status === FactExtractionStatus.Completed) {
+    return StatusTone.Done;
+  }
+  return summary.status === FactExtractionStatus.Failed ? StatusTone.Failed : StatusTone.Idle;
 }

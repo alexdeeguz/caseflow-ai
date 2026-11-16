@@ -127,3 +127,11 @@ export function workspaceHref(location: WorkspaceLocation): string {
 
   return `/?${params}`;
 }
+
+/**
+ * True when navigating replaces the whole page (another tab, case, or editor mode). Otherwise the
+ * change is in-place (a case section, filter or page) and the affected region shows its own loading.
+ */
+export function isPageNavigation(from: WorkspaceLocation, to: WorkspaceLocation): boolean {
+  return to.tab !== from.tab || to.case !== from.case || to.mode !== from.mode;
+}

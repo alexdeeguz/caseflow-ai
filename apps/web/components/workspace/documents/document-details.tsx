@@ -1,6 +1,6 @@
 import type { Document } from '@caseflow/schemas';
 import { documentTypeLabels, formatFileSize } from '../../../lib/documents/presentation';
-import styles from './documents.module.css';
+import { DetailList, Panel } from '../../ui/panel';
 
 export function DocumentDate({
   value,
@@ -24,39 +24,19 @@ export function DocumentDate({
 
 export function DocumentDetails({ document }: { document: Document }) {
   return (
-    <dl className={styles.details}>
-      <div className={styles.fullWidth}>
-        <dt>Filename</dt>
-        <dd>{document.filename}</dd>
-      </div>
-      <div>
-        <dt>File type</dt>
-        <dd>{documentTypeLabels[document.contentType]}</dd>
-      </div>
-      <div>
-        <dt>Size</dt>
-        <dd>{formatFileSize(document.sizeBytes)}</dd>
-      </div>
-      <div>
-        <dt>Uploaded</dt>
-        <dd>
-          <DocumentDate value={document.uploadedAt} detailed />
-        </dd>
-      </div>
-      <div>
-        <dt>Last updated</dt>
-        <dd>
-          <DocumentDate value={document.updatedAt} detailed />
-        </dd>
-      </div>
-      {document.removedAt && (
-        <div>
-          <dt>Removed</dt>
-          <dd>
-            <DocumentDate value={document.removedAt} detailed />
-          </dd>
-        </div>
-      )}
-    </dl>
+    <Panel title="File" label={`File details for ${document.filename}`}>
+      <DetailList
+        items={[
+          { label: 'Filename', value: document.filename, stacked: true },
+          { label: 'File type', value: documentTypeLabels[document.contentType] },
+          { label: 'Size', value: formatFileSize(document.sizeBytes) },
+          { label: 'Uploaded', value: <DocumentDate value={document.uploadedAt} detailed /> },
+          { label: 'Last updated', value: <DocumentDate value={document.updatedAt} detailed /> },
+          ...(document.removedAt
+            ? [{ label: 'Removed', value: <DocumentDate value={document.removedAt} detailed /> }]
+            : []),
+        ]}
+      />
+    </Panel>
   );
 }

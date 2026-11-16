@@ -5,59 +5,68 @@ import {
   processingFailureMessages,
   type DocumentListItem,
 } from '@caseflow/schemas';
+import type { ReactNode } from 'react';
 import { extractionMethodLabels, isPdf } from '../../../lib/processing/presentation';
+import { Callout, DetailList, Panel } from '../../ui/panel';
 import { DocumentDate } from './document-details';
 import { ProcessingStatusBadge } from './processing-status';
-import styles from './processing.module.css';
+import styles from './document-inspector.module.css';
 
 export function ProcessingLimitsNote({ document }: { document: DocumentListItem }) {
   return (
-    <p className={styles.hint}>
+    <Callout>
       {isPdf(document)
         ? `PDFs can contain up to ${ProcessingLimits.MaxPdfPages} pages. Scanned or mixed-content pages may need OCR.`
         : 'Images must be at most 10 MB, 10,000 pixels per side, and 40 megapixels.'}{' '}
       OCR shares a workspace allowance of {ProcessingLimits.DailyOcrPages} pages per UTC day.
-    </p>
+    </Callout>
   );
 }
 
-export function ProcessingDetails({ document }: { document: DocumentListItem }) {
+export function ProcessingDetails({
+  document,
+  action,
+}: {
+  document: DocumentListItem;
+  /** Manual start/retry control, shown while processing is not automatic. */
+  action?: ReactNode;
+}) {
   const { processing } = document;
   const { job, result } = processing;
 
   return (
-    <section className={styles.details} aria-label={`Processing details for ${document.filename}`}>
-      <div className={styles.heading}>
-        <h3>Text processing</h3>
-        <ProcessingStatusBadge summary={processing} />
-      </div>
-      <dl className={styles.metadata}>
-        <div>
-          <dt>Extraction method</dt>
-          <dd>{result ? extractionMethodLabels[result.extractionMethod] : 'Not available yet'}</dd>
-        </div>
-        <div>
-          <dt>Pages processed</dt>
-          <dd>{result ? result.pageCount : 'Not available yet'}</dd>
-        </div>
-        <div>
-          <dt>Latest processing update</dt>
-          <dd>{job ? <DocumentDate value={job.updatedAt} detailed /> : 'Not started'}</dd>
-        </div>
-      </dl>
+    <Panel
+      title="Text processing"
+      label={`Processing details for ${document.filename}`}
+      badge={<ProcessingStatusBadge summary={processing} />}
+    >
+      <DetailList
+        items={[
+          {
+            label: 'Extraction method',
+            value: result ? extractionMethodLabels[result.extractionMethod] : 'Not available yet',
+          },
+          { label: 'Pages processed', value: result ? result.pageCount : 'Not available yet' },
+          {
+            label: 'Latest update',
+            value: job ? <DocumentDate value={job.updatedAt} detailed /> : 'Not started',
+          },
+        ]}
+      />
+      {action && <div className={styles.action}>{action}</div>}
       {job?.failureCode && (
-        <p className={styles.failure}>{processingFailureMessages[job.failureCode]}</p>
+        <Callout tone="danger">{processingFailureMessages[job.failureCode]}</Callout>
       )}
       {processing.status === ProcessingStatus.Cancelled && (
-        <p className={styles.hint}>
+        <Callout>
           This attempt was cancelled. An administrator can retry an available document in a current
           case.
-        </p>
+        </Callout>
       )}
       {job?.failureCode === ProcessingFailureCode.OcrBudgetExceeded && (
-        <p className={styles.hint}>
+        <Callout>
           Retry after the next UTC day begins. The allowance is shared across the workspace.
-        </p>
+        </Callout>
       )}
       {(processing.status === ProcessingStatus.NotProcessed ||
         job?.failureCode === ProcessingFailureCode.LimitExceeded ||
@@ -65,6 +74,6 @@ export function ProcessingDetails({ document }: { document: DocumentListItem }) 
         job?.failureCode === ProcessingFailureCode.OcrBudgetExceeded) && (
         <ProcessingLimitsNote document={document} />
       )}
-    </section>
+    </Panel>
   );
 }

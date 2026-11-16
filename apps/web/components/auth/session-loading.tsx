@@ -1,4 +1,5 @@
 import { WorkspaceFrame } from '../workspace/workspace-frame';
+import { LoadingIndicator } from '../ui/spinner';
 import styles from '../workspace/workspace.module.css';
 
 export function SessionLoading() {
@@ -13,9 +14,7 @@ export function SessionLoading() {
         </div>
       )}
     >
-      <p role="status" className="text-muted">
-        Opening your workspace…
-      </p>
+      <LoadingIndicator label="Opening your workspace…" />
       <div className="mt-8 grid gap-5" aria-hidden="true">
         <div className={styles.skeleton} />
         <div className={styles.skeleton} />

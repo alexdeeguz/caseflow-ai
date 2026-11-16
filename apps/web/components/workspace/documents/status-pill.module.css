@@ -1,0 +1,53 @@
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4375rem;
+  width: fit-content;
+  min-height: 1.625rem;
+  padding: 0.1875rem 0.625rem 0.1875rem 0.5rem;
+  border: 1px solid var(--brand-line);
+  border-radius: 999px;
+  background: var(--brand-white);
+  color: var(--brand-ink);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+.dot {
+  width: 0.4375rem;
+  height: 0.4375rem;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--brand-muted);
+}
+.done .dot {
+  background: var(--brand-success);
+}
+.active {
+  border-color: color-mix(in srgb, var(--brand-navy) 22%, transparent);
+  background: var(--brand-cream);
+  color: var(--brand-navy);
+}
+.active .dot {
+  background: var(--brand-navy);
+  box-shadow: 0 0 0 3px var(--brand-yellow);
+  animation: pulse 1.6s ease-in-out infinite;
+}
+.failed {
+  border-color: color-mix(in srgb, var(--brand-danger) 45%, transparent);
+  background: color-mix(in srgb, var(--brand-danger) 7%, var(--brand-white));
+  color: var(--brand-ink);
+}
+.failed .dot {
+  background: var(--brand-danger);
+}
+.idle {
+  color: var(--brand-ink-soft);
+  background: var(--brand-paper);
+}
+@keyframes pulse {
+  50% {
+    box-shadow: 0 0 0 5px color-mix(in srgb, var(--brand-yellow) 55%, transparent);
+  }
+}

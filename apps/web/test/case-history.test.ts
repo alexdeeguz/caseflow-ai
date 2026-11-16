@@ -7,10 +7,10 @@ import {
   caseTimelineQuerySchema,
   caseReviewedSummaryQuerySchema,
 } from '@caseflow/schemas';
-import { parseWorkspaceLocation, workspaceHref } from '../lib/workspace-location';
-import { CaseSection } from '../lib/constants/navigation';
+import { isPageNavigation, parseWorkspaceLocation, workspaceHref } from '../lib/workspace-location';
+import { CaseMode, CaseSection, WorkspaceTab } from '../lib/constants/navigation';
 import { locationResources } from '../components/workspace/navigation';
-import { formatFactDate } from '../lib/case-history/presentation';
+import { formatFactDate, groupTimelineByYear } from '../lib/case-history/presentation';
 import { caseTimelineResource, caseReviewedSummaryResource } from '../lib/case-history/resources';
 import { createResourceClient, withResourceInvalidation } from '../lib/resources';
 import { documentLibraryState } from '../lib/processing/resources';
@@ -150,13 +150,15 @@ test('strict contracts reject forged review/query data and cross-document eviden
   );
 });
 
-test('all review decisions and document visibility changes invalidate only the affected case history', async () => {
+test('review decisions and document visibility changes refresh only the affected case history and document list', async () => {
   const paths = [
     '/cases/c/timeline?page=1',
     '/cases/c/reviewed-summary?category=date&page=1',
     '/cases/c/reviewed-summary?category=provider&page=2',
+    '/cases/c/documents?page=1&filter=current',
     '/cases/other/timeline?page=1',
     '/cases/other/reviewed-summary?category=date&page=1',
+    '/cases/other/documents?page=1&filter=current',
   ];
   const mutations = [
     ['/cases/c/documents/d/facts/f', 'PATCH'],
@@ -174,7 +176,7 @@ test('all review decisions and document visibility changes invalidate only the a
       await request(path!, { parse: () => ({}) }, { method });
       assert.deepEqual(
         paths.map((key) => client.getQueryState([key])?.isInvalidated),
-        [true, true, true, false, false],
+        [true, true, true, true, false, false, false],
         path,
       );
     } finally {
@@ -256,4 +258,31 @@ test('shared downloads reauthorize with empty JSON and never click after cancell
       Reflect.deleteProperty(globalThis, 'document');
     }
   }
+});
+
+test('timeline groups consecutive entries by year without reordering them', () => {
+  const entries = [
+    { id: 'a', dateValue: '2024' },
+    { id: 'b', dateValue: '2024-03' },
+    { id: 'c', dateValue: '2025-01-09' },
+    { id: 'd', dateValue: null },
+  ];
+  assert.deepEqual(
+    groupTimelineByYear(entries).map(({ year, items }) => [year, items.map((item) => item.id)]),
+    [
+      ['2024', ['a', 'b']],
+      ['2025', ['c']],
+      ['Undated', ['d']],
+    ],
+  );
+  assert.deepEqual(groupTimelineByYear([]), []);
+});
+
+test('only tab, case or editor changes count as page navigation', () => {
+  const base = parseWorkspaceLocation(new URLSearchParams(`tab=cases&case=${caseId}`));
+  assert.equal(isPageNavigation(base, { ...base, section: CaseSection.Timeline }), false);
+  assert.equal(isPageNavigation(base, { ...base, documentPage: 2 }), false);
+  assert.equal(isPageNavigation(base, { ...base, case: null }), true);
+  assert.equal(isPageNavigation(base, { ...base, mode: CaseMode.Edit }), true);
+  assert.equal(isPageNavigation(base, { ...base, tab: WorkspaceTab.Profile }), true);
 });

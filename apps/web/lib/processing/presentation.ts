@@ -1,4 +1,5 @@
 import { factStatusLabels } from '../fact-extraction/presentation';
+import { StatusTone } from '../documents/presentation';
 import {
   DocumentContentType,
   DocumentStatus,
@@ -110,4 +111,14 @@ export function processingAnnouncement(changed: DocumentListItem[]): string {
 
 export function isPdf(document: Pick<DocumentListItem, 'contentType'>): boolean {
   return document.contentType === DocumentContentType.Pdf;
+}
+
+export function processingTone(summary: ProcessingSummary): StatusTone {
+  if (summary.status === ProcessingStatus.Ready) {
+    return StatusTone.Done;
+  }
+  if (summary.status === ProcessingStatus.Failed) {
+    return StatusTone.Failed;
+  }
+  return isProcessingActive(summary) ? StatusTone.Active : StatusTone.Idle;
 }

@@ -1,0 +1,31 @@
+.region {
+  position: relative;
+  min-width: 0;
+}
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  border-radius: inherit;
+  background: color-mix(in srgb, var(--brand-white) 72%, transparent);
+  animation: overlay-in 160ms ease-out 150ms both;
+}
+.indicator {
+  /* Stays centered in the visible part of tall regions. */
+  position: sticky;
+  top: 40%;
+  bottom: 40%;
+  display: grid;
+  justify-items: center;
+  gap: 0.625rem;
+  color: var(--brand-navy);
+  font-size: 0.8125rem;
+  font-weight: 650;
+}
+@keyframes overlay-in {
+  from {
+    opacity: 0;
+  }
+}

@@ -45,7 +45,6 @@ export function WorkspaceNavigation({
           >
             <TabIcon />
             <span>{tabLabels[tab]}</span>
-            {pendingTab === tab && <span className={styles.pendingIndicator} aria-hidden="true" />}
           </button>
         );
       })}
