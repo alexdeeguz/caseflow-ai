@@ -5,7 +5,7 @@
 The completion worker in `services/document-processor` collects real Textract results through
 SNS and SQS. Verification covers local AWS stubs, bounded HTTP retries, disposable PostgreSQL
 databases, and the hosted development workflow. See [workflow verification](processing-verification.md)
-for deployment evidence and activation requirements.
+for results and known limits.
 
 ## Delivery and correlation
 
@@ -20,7 +20,7 @@ JSON notification, not an SNS `Message` envelope. Validation requires
 status, timestamp, and document location. Optional `S3ObjectVersion` values must match the
 saved source version when supplied. The handler accepts only the configured
 queue/event source/Region, at most ten records, and notification bodies up to 16 KiB.
-Use `ReportBatchItemFailures`; start deployment verification with batch size one.
+The event source mapping uses `ReportBatchItemFailures` with batch size one.
 
 PostgreSQL supplies the source snapshot, saved request, provider receipt, pipeline
 version, and artifact prefix. Notification locations are compared with that snapshot
@@ -113,24 +113,6 @@ must check result references and must never delete referenced object versions.
 Cancellation cannot retract a Textract request already accepted by AWS. The application
 will stop subsequent publication when cancellation is observed.
 
-## Activation checklist
-
-1. Review/apply the processor migration and
-   `20261115184408_textract_completion_correlation.sql` to the intended hosted project.
-   Provision restricted processor credentials separately; no migration creates a password.
-2. Package the trusted public CA and supply the database secret through deployment
-   configuration, using the transaction pooler and full TLS verification.
-3. Configure a separate completion Lambda/event mapping, timeouts, concurrency,
-   `ReportBatchItemFailures`, and scoped queue receive/delete permissions.
-4. Grant `textract:GetDocumentTextDetection` and scoped processed-artifact
-   `s3:PutObject` / `s3:GetObjectVersion`. The completion handler does not start Textract
-   or need `iam:PassRole` permission.
-5. Verify real notifications, OCR output, retries, DLQ recovery, and operational alerts
-   before enabling continuous dispatching. Missing notifications still require the
-   reconciliation path; a repeated idempotent OCR start does not resend them.
-
-These deployment steps are not performed by local tests or application startup.
-
 ## Verification
 
 Run the Python checks and disposable PostgreSQL tests in [the processor guide](python-processor.md).
@@ -139,9 +121,3 @@ notifications, failure statuses, expiry, actual bounded SDK retries against a lo
 server, storage failures, stale leases, cancellation, audit rollback, unreferenced-artifact
 recovery, migration preservation, and restricted role grants. Existing API/database
 regressions also exercise the revised correlation behavior.
-
-## Lambda deployment
-
-See [Lambda configuration](lambda-configuration.md) for the SAM template, Secrets Manager,
-verified database TLS, container builds, IAM boundaries, and deployment/rollback steps.
-New deployments leave queue consumption disabled until their workflow checks pass.

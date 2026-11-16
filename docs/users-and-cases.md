@@ -19,7 +19,7 @@ CaseFlow uses one shared fictional workspace. Application roles and case assignm
 | View audit history                      | No                    | Yes                   | Yes                   |
 | Grant/remove Super Admin                | Operator command only | Operator command only | Operator command only |
 
-Configure the operator connection for the same database as the API using the [local setup](development.md#first-time-database-setup) or [hosted setup](hosted-database.md#first-sign-in-and-verification).
+Configure the operator connection for the same database as the API using the [local setup](development.md#first-time-database-setup).
 
 New users start as active Staff with no assignments. After first sign-in, copy the
 application user ID from **Profile** and run:

@@ -16,7 +16,7 @@ Use fictional data for demonstrations and testing.
   for SQS, authorized processing status/start/retry endpoints, restricted processor database functions,
   and Python extraction/completion workers.
 
-Native PDF extraction, Textract OCR, bounded recovery, and monitoring are implemented and verified in the hosted development environment. Queue consumers and scheduled recovery run in AWS; continuous dispatch runs with the API. New deployments start with triggers disabled and follow the [verification and activation guide](docs/processing-verification.md). File previews and extracted-text viewing remain outside this phase.
+Native PDF extraction, Textract OCR, bounded recovery, and monitoring are implemented and verified with fictional documents. Queue consumers and scheduled recovery run in AWS; continuous dispatch runs with the API. See [workflow verification](docs/processing-verification.md). File previews and extracted-text viewing remain outside this phase.
 
 - **Fact extraction:** OpenAI-only unreviewed facts, queued automatically when document processing
   reaches Ready, with exact source quotations and a shared daily allowance. Retries and human
@@ -113,22 +113,22 @@ individually, integration-test prerequisites, and dependency maintenance.
 | Guide                                              | Contents                                                                                    |
 | -------------------------------------------------- | ------------------------------------------------------------------------------------------- |
 | [Local development](docs/development.md)           | Docker/PostgreSQL setup, verification, code organization, and dependency maintenance        |
-| [Hosted database](docs/hosted-database.md)         | Migrations, TLS, Session pooler credentials, environment switching, and recovery            |
+| [Hosted database](docs/hosted-database.md)         | Connection design, TLS, restricted roles, environment switching, and backups                |
 | [Authentication](docs/authentication.md)           | Entra registration, token validation, session behavior, and sign-in verification            |
 | [Users and cases](docs/users-and-cases.md)         | Permission matrix, Super Admin setup, assignments, editing, and archiving                   |
-| [Fact extraction](docs/fact-extraction.md)         | OpenAI facts, evidence, allowance controls, verification, and reviewed deployment           |
+| [Fact extraction](docs/fact-extraction.md)         | OpenAI facts, evidence, allowance controls, evaluation, and monitoring                      |
 | [Case history](docs/case-history.md)               | Approved timeline, structured summary, sources, permissions, and freshness                  |
 | [Human review](docs/human-review.md)               | Corrections, approval permissions, immutable evidence, revision history, and release checks |
 | [API reference](docs/api.md)                       | Route organization, request/response contracts, pagination, and errors                      |
 | [Document management](docs/document-management.md) | S3 configuration, uploads, library, downloads, removal, and consistency rules               |
-| [Document processing](docs/document-processing.md) | Job/dispatch records, dispatcher credentials, SQS permissions, and configuration            |
-| [Processor database](docs/processor-database.md)   | Worker functions, leases, OCR allowance, artifacts, cancellation, and credentials           |
+| [Document processing](docs/document-processing.md) | Job/dispatch records, the API dispatcher, permissions, and configuration                    |
+| [Processor database](docs/processor-database.md)   | Worker functions, leases, OCR allowance, artifacts, cancellation, and the processor login   |
 | [Python processor](docs/python-processor.md)       | Extraction, OCR decisions, resource limits, configuration, and verification                 |
 | [Textract completion](docs/textract-completion.md) | Notification validation, result collection, artifact format, and publication recovery       |
 
-See [Lambda configuration](docs/lambda-configuration.md) for secret setup, packaged TLS trust,
-container builds, IAM boundaries, and reviewed deployment with queue mappings disabled.
+See [Lambda configuration](docs/lambda-configuration.md) for runtime settings, credentials and
+packaged TLS trust, IAM boundaries, and container builds.
 
-See [processing recovery and monitoring](docs/processing-recovery.md) for bounded retries, recovery credentials, dashboards, alerts, and operator procedures.
+See [processing recovery and monitoring](docs/processing-recovery.md) for recovery rules, monitoring, alerts, and operator recovery principles.
 
-See [workflow verification](docs/processing-verification.md) for the automated matrix, hosted release checks, completion-first activation, and rollback. The hosted development workflow is active and verified with fictional native, scanned, and image documents. The guide records the remaining verification limits.
+See [workflow verification](docs/processing-verification.md) for the automated test matrix, end-to-end results with fictional native, scanned, and image documents, and known limits.

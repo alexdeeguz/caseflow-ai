@@ -129,8 +129,6 @@ covers save, approval, reopening, rejection, reasons, history, draft retention, 
 reload, keyboard modal containment, Staff controls, archived cases, and service failures. It is not
 a hosted end-to-end extraction-to-review check. Mobile visual verification remains a release check.
 
-Before release, review/apply the additive migration to the explicitly selected database and then
-restart the API/frontend together: the fact response now includes review metadata. Existing code
-continues to read immutable extraction tables; preserve all review tables/history on rollback.
-A real extraction-to-review test and hosted permission checks are still required before activation.
+The migration is additive: extraction tables stay immutable, and review tables and history are
+never dropped. The fact response includes review metadata, so the API and frontend change together.
 See [local development](development.md#verification) for the standard repository checks.

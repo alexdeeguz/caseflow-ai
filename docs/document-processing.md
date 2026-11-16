@@ -2,15 +2,14 @@
 
 [Back to README](../README.md)
 
-The database lifecycle, API dispatcher, processing endpoints, Python extraction and completion workers, bounded recovery, monitoring, and document-library controls are implemented. Native and OCR paths are verified in the active hosted development environment. See [workflow verification](processing-verification.md) for evidence, limitations, and the staged activation procedure for new deployments.
+The database lifecycle, API dispatcher, processing endpoints, Python extraction and completion workers, bounded recovery, monitoring, and document-library controls are implemented. See [workflow verification](processing-verification.md) for what has been verified and known limits.
 
 - [Processing in the document library](#processing-in-the-document-library)
 - [Processing API](#processing-api)
 - [Job and dispatch records](#job-and-dispatch-records)
 - [Processor database](#processor-database)
 - [API dispatcher](#api-processing-dispatcher)
-- [Dispatcher login](#restricted-dispatcher-login)
-- [SQS permission and configuration](#sqs-permission-and-api-configuration)
+- [Dispatcher credentials and configuration](#dispatcher-credentials-and-configuration)
 
 ## Processing in the document library
 
@@ -47,9 +46,7 @@ and audit history.
 The web tests cover role eligibility, labels, feedback, refresh decisions, stale/access-denied
 states, request sharing, and cache invalidation. Browser verification uses isolated fictional
 fixtures for state transitions, dialogs, keyboard focus, connection failures, navigation, and
-responsive layouts. It does not enable AWS consumption. Apply the processing migrations and
-complete the deployment/recovery prerequisites before expecting jobs to advance in a hosted
-workspace.
+responsive layouts. Jobs advance only when the dispatcher and workers are running.
 
 ## Processing API
 
@@ -151,10 +148,8 @@ client-provided storage locations or credentials.
 
 The database foundation does not create cloud resources or run OCR. The processing API
 exposes job state and the document library provides authorized start/retry controls. The
-[API dispatcher](#api-processing-dispatcher) sends queued jobs once enabled. Worker deployment
-and live verification are explicit setup steps. Apply the migration
-through the existing reviewed migration workflow; starting the API never applies it.
-Until dispatching is enabled, new jobs remain queued in PostgreSQL.
+[API dispatcher](#api-processing-dispatcher) sends queued jobs once enabled; until then, new jobs
+remain queued in PostgreSQL. Starting the API never applies migrations.
 
 `npm run test:integration` covers atomic rollback, completion and retry idempotency,
 role changes, RLS, dispatch concurrency and expired claims, migration preservation,
@@ -168,27 +163,20 @@ versioned artifact references, service audit events, and a shared OCR allowance 
 100 pages per UTC day (maximum 20 PDF pages per job). Removal and archival cancel
 unfinished processing atomically; restoration requires an explicit retry.
 
-The `caseflow_processor` role has no login and no direct table access. Its dedicated
-login/password must be provisioned separately after the migration is applied.
-[Processor database setup and function reference](processor-database.md) describes
-the transaction contract, claim outcomes, artifact format, allowance behavior, and
-restricted credential setup. API/dispatcher credentials are unchanged.
-
-The audit API remains compatible while the migration is pending, returning a null
-service identity for existing records. The migration does not start workers, run OCR,
-or enable continuous dispatching. Verify it on disposable
-PostgreSQL before applying it to the explicitly selected hosted project.
+The `caseflow_processor` role has no login and no direct table access. Workers connect
+through a separate restricted login. [Processor database](processor-database.md) describes
+the transaction contract, claim outcomes, artifact format, and allowance behavior. Audit
+records created before this migration have a null service identity.
 
 ## Python extraction worker
 
 The worker validates queue messages, verifies the saved S3 source version/checksum,
 extracts native PDF text in a bounded subprocess, and starts OCR through saved,
 idempotent requests. [Python processor setup](python-processor.md) covers its
-configuration, limits, tests, and remaining activation prerequisites. The
+configuration, limits, and tests. The
 [Textract completion consumer](textract-completion.md) collects complete OCR results and
 publishes immutable artifacts. The [reconciler](processing-recovery.md) recovers stalled delivery
-and lost notifications. Deployment and trigger activation are explicit operations; applying
-migrations or starting the API does not deploy workers.
+and lost notifications. Workers run separately from the API.
 
 ## API processing dispatcher
 
@@ -214,60 +202,13 @@ required. Dispatch attempts are distinct from processing attempts and do not mar
 processing job failed. PostgreSQL coordinates concurrent API instances; dispatching
 runs only while at least one enabled API process is running.
 
-### Restricted dispatcher login
+### Dispatcher credentials and configuration
 
-First apply the processing migration using the reviewed migration workflow. It creates
-a `caseflow_dispatcher` permission role with `NOLOGIN`. Keep that role without a password;
-create a separate login that inherits only its permissions. Run the following once
-through the operator connection to the intended database:
-
-```sql
-create role caseflow_dispatcher_login
-  login inherit nosuperuser nocreatedb nocreaterole noreplication nobypassrls;
-grant caseflow_dispatcher to caseflow_dispatcher_login with inherit true, set false;
-```
-
-In the same interactive `psql` session, assign a unique password without placing it in
-SQL history or this repository:
-
-```text
-\password caseflow_dispatcher_login
-```
-
-For the hosted Session pooler, use `caseflow_dispatcher_login.<project-ref>` as the
-connection username. Use the same host, port, database, and project as the API runtime
-connection, with `sslmode=verify-full` and the trusted certificate path. Local direct
-connections use `caseflow_dispatcher_login`. Do not use the operator password, grant
-this login membership in `caseflow_runtime`, or grant either runtime role membership
-in the dispatcher role. The dispatcher can call only the three dispatch functions;
-it cannot read application tables or manage users.
-
-Production needs its own CA certificate file at the path in `sslrootcert`; a developer's
-local filesystem path is not available inside a deployed container. Include the trusted
-public CA certificate in the image or mount it at a stable path such as
-`/app/certs/supabase-ca.crt`, then configure both database URLs with that path and
-`sslmode=verify-full`. The CA certificate is public trust material. Database passwords
-are secrets and belong in the deployment secret store. The Python processor will also
-need a trusted CA configuration when it is deployed.
-
-### SQS permission and API configuration
-
-Grant the API workload's AWS role this additional permission, substituting the intended
-project ID. Retain its existing scoped S3 permissions. Do not broaden the role to
-administrator access or grant it SQS receive/delete permissions.
-
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": "sqs:SendMessage",
-      "Resource": "arn:aws:sqs:us-east-2:123456789012:caseflow-document-processing"
-    }
-  ]
-}
-```
+The dispatcher connects with its own login that inherits only the `caseflow_dispatcher` NOLOGIN
+role. It can call only the three dispatch functions; it cannot read application tables or manage
+users, and it is never granted runtime or operator membership. Connections use full TLS
+verification against a trusted CA. The API's AWS identity needs only `sqs:SendMessage` on the
+processing queue, in addition to its scoped S3 permissions; it has no receive or delete rights.
 
 Set these **server-only** values in the API environment or deployment secret store:
 
@@ -284,19 +225,13 @@ back to unrelated environment credentials. Deployment uses the SDK credential ch
 and should supply a workload role, not static keys. Invalid enabled configuration fails
 at startup with value-free errors. Disabled configuration creates no dispatcher clients.
 
-Keep the dispatcher disabled until the queue, restricted database login, IAM permission,
-and processing consumer are ready. A deliberately sent test message can wait for a
-consumer, but SQS retention still applies; messages can expire if the worker is not
-running. The dispatcher does not requeue records already acknowledged as sent. Queue
-age, DLQ depth, database dispatch backlog, and recurring dispatch failures need monitoring
-before deployment. Existing uploaded documents are not automatically backfilled.
+Dispatching is off by default. Existing uploaded documents are not automatically backfilled.
 
 Logs contain event names and job/dispatch IDs, never connection strings, credentials,
 lease tokens, document contents, or raw provider errors. `processing_dispatch_sent`
 means SQS accepted the message and PostgreSQL recorded the acknowledgement; it does
 not mean document processing completed. Failed acknowledgements leave the lease for
-recovery. Check IAM permissions, connection configuration, and migration state when
-send or claim failures repeat; leave direct outbox updates to reviewed recovery procedures.
+recovery.
 
 Unit tests cover configuration, signed requests, safe errors, timeouts, and server
 lifecycle. Disposable PostgreSQL integration tests cover concurrent senders, committed
@@ -309,13 +244,9 @@ adapter and never send messages to the live processing queue.
 - [Document management](document-management.md)
 - [Hosted database](hosted-database.md)
 - [Processor database function reference](processor-database.md)
-
-## Lambda deployment
-
-See [Lambda configuration](lambda-configuration.md) for the SAM template, Secrets Manager,
-verified database TLS, container builds, IAM boundaries, and deployment/rollback steps.
-New deployments leave queue consumption disabled until their workflow checks pass.
+- [Lambda configuration](lambda-configuration.md)
 
 ## Recovery and monitoring
 
-See [recovery rules and operator procedures](processing-recovery.md). The scheduler is disabled by default. It resets tracked outbox records, inspects saved OCR jobs, and emits aggregate health metrics without enabling consumption or deploying resources.
+See [processing recovery](processing-recovery.md). The scheduled reconciler resets tracked outbox
+records, inspects saved OCR jobs, and emits aggregate health metrics.

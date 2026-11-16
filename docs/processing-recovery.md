@@ -3,9 +3,8 @@
 [Back to README](../README.md)
 
 Recovery repairs interrupted delivery and missing OCR notifications while preserving the original
-job, source version, OCR request token, and reserved page allowance. Recovery and alerts are
-verified in the active hosted development environment. Applying migrations, provisioning credentials,
-and activating a new deployment still require the [workflow checks](processing-verification.md).
+job, source version, OCR request token, and reserved page allowance. See [workflow verification](processing-verification.md) for what has been
+verified.
 
 ## Recovery rules
 
@@ -36,8 +35,7 @@ If the dispatcher is stopped, recovery can prepare pending work but cannot deliv
 
 ## Database interface
 
-Apply `20261115203559_processing_recovery.sql` through the reviewed migration workflow.
-It preserves existing rows, source snapshots, results, RLS, and credentials, and adds:
+The recovery migration preserves existing rows, source snapshots, results, RLS, and credentials, and adds:
 
 | Object                                                      | Purpose                                                              |
 | ----------------------------------------------------------- | -------------------------------------------------------------------- |
@@ -56,29 +54,16 @@ Functions use fixed search paths and explicit grants. The existing permission lo
 case/document/job lock order coordinate recovery with removal and archival. Redispatch and its
 `document.processing_recovered` audit event commit together.
 
-Create a separate login using an operator connection after reviewing the migration:
-
-```sql
-create role caseflow_recovery_login
-  login inherit nosuperuser nocreatedb nocreaterole noreplication nobypassrls;
-grant caseflow_recovery to caseflow_recovery_login with inherit true, set false;
-```
-
-Set its unique password interactively with `\password caseflow_recovery_login`. Store it in a
-separate Secrets Manager secret with the same structure as the processor secret, but username
-`caseflow_recovery_login.YOUR_PROJECT_REFERENCE`. Use the Ohio transaction pooler, numeric
-port `6543`, and database `postgres`. Supply its ARN as `RecoveryDatabaseSecretArn`.
-The recovery runtime loads `RECOVERY_DATABASE_SECRET_ARN`; local tests can supply
-`RECOVERY_DATABASE_URL`. Lambda rejects direct connection strings. Packaged CA verification,
-hostname checks, disabled prepared statements, bounded connections, and five-minute secret
-refresh are shared with the processor. Never grant processor, API, or operator membership to
-this login.
+Recovery connects through its own restricted login that inherits only `caseflow_recovery`, with
+credentials in a separate secret. It shares the processor's packaged CA verification, hostname
+checks, disabled prepared statements, bounded connections, and five-minute secret refresh, and is
+never granted processor, API, or operator membership.
 
 ## Scheduled runtime and IAM
 
 The SAM stack adds a third Python function and an EventBridge Scheduler schedule:
 
-- `rate(5 minutes)`, flexible window off, `EnableRecoverySchedule=false` by default.
+- Runs every five minutes with no flexible window; the schedule can be switched off independently.
 - Shared Regional concurrency, 120-second timeout, at most 25 database candidates per invocation.
   There is no dedicated slot or hard single-invocation cap. Database locks, durable next-check
   times, and fenced collection leases coordinate overlapping invocations. Capacity contention
@@ -97,15 +82,9 @@ No preview, normalized PDF, or new processing pipeline is introduced. The existi
 validates all result pages, enforces limits, writes immutable artifact sets, and publishes under
 a fenced lease. A lost database commit after S3 writes leaves unpublished versions for review.
 
-## Monitoring and alert setup
+## Monitoring
 
-Pass the existing processing and completion DLQ ARNs as `ProcessingDlqArn` and
-`CompletionDlqArn`. Pass a **separate operational SNS topic** as `AlarmTopicArn`; never point
-alarms at the Textract completion topic. Create/confirm the intended subscriber and allow
-CloudWatch to publish to the topic. With a customer-managed encryption key, the topic/key
-policy must also allow the CloudWatch service. The stack does not create subscriptions or
-change external topic/key policies. An empty ARN leaves alarm actions disabled and is suitable
-only for preparing the stack, not operational activation.
+Alarms notify a separate operational alert topic, never the OCR completion topic.
 
 | Signal                                            | Alarm behavior                                     |
 | ------------------------------------------------- | -------------------------------------------------- |
@@ -135,81 +114,39 @@ incremental rollups; the current database statement deadline bounds query durati
 The application allowance limits reserved OCR pages, not total AWS dollars. It is shared by
 all environments using the same database and does not refund uncertain starts. AWS Budgets
 and project spending controls are separate: they cover AWS usage, can notify or pause a project,
-and do not replace the application's reservation check. Confirm their thresholds before activation.
+and do not replace the application's reservation check.
 CloudWatch alarms, custom metrics, dashboards, Secrets Manager, and Lambda can incur charges.
 
-## Targeted operator recovery
+## Operator recovery
 
-1. Inspect the alarm, safe logs, and job using an operator database session. Check its current
-   status, attempts, recovery count, next check, source version, and outbox status. Do not paste
-   credentials, provider responses, or extracted text into logs or tickets.
-2. Correct the cause: IAM, secret/TLS configuration, dispatcher availability, malformed delivery,
-   provider failure, or exhausted allowance. Check case archival/document removal and verify the
-   **exact saved S3 version** with an operator `head-object --version-id` request. Do not substitute
-   the latest object or reset the saved OCR token/request.
-3. For an active job with a lost processing delivery, run one targeted call as the operator:
+When automatic recovery stops (exhausted attempts, expired OCR, or a malformed delivery), an operator
+investigates and uses the tracked paths rather than editing tables or queues directly:
 
-   ```sql
-   select caseflow.recover_processing_job('REVIEWED_JOB_UUID'::uuid);
-   ```
+- An operator-only database function redispatches one active job with the same lease, source,
+  timing, three-redispatch, six-day, and audit checks. It never sends to SQS directly; the API
+  dispatcher delivers the resulting outbox record.
+- Failed or cancelled jobs use the application's explicit **Retry**, which creates a new job and may
+  reserve new OCR pages. Terminal jobs are never revived by editing data.
+- Missing completion notifications are resolved by bounded reconciliation against the saved
+  provider ID, never by a manufactured notification or a replacement OCR start.
+- Dead-letter messages are reviewed individually and correlated with the database; queues are never
+  purged as routine repair.
 
-   This uses the same lease, source, timing, three-redispatch, six-day, and audit checks. It does
-   not send directly to SQS. The API dispatcher sends the resulting pending outbox record.
-   A deferred or terminal result must be investigated, not overridden with direct table edits.
-
-4. For a failed/cancelled job, use the application's explicit **Retry** action after correcting
-   the cause. That creates a new application job and may reserve new OCR pages. Do not make a
-   terminal job active by editing SQL. Budget failures must wait for allowance or a reviewed change.
-5. For a missing completion notification, let one bounded reconciliation invocation inspect the
-   saved provider ID. Do not manufacture a notification or create a replacement OCR start.
-6. Inspect a DLQ **one message at a time** with a short visibility timeout. A receive temporarily
-   hides it; this is not deletion. Correlate its job ID with the database. Prefer the tracked
-   recovery/API retry paths above. Delete only the reviewed DLQ message using its receipt handle
-   after verifying recovery or confirming it is a terminal duplicate. Never purge a queue or
-   start a whole-DLQ message move as a routine repair. Malformed payloads require investigation.
-
-For a controlled invocation after deployment, use the recovery function with the fixed payload
-`{"schemaVersion":1,"task":"reconcile"}` and leave the schedule disabled until verification.
-Review the returned check/error counts and database/audit outcome. It does not accept arbitrary
-job IDs or storage locations from an invocation payload.
+The recovery function accepts only a fixed reconcile payload, never job IDs or storage locations.
 
 ## Unpublished artifact review
 
-Use an operator-only S3 version inventory and a database export of published artifact references.
-Compare `(bucket, key, versionId)`, not keys alone. Preserve every version referenced by
-`caseflow.document_processing_results.artifacts`, even if a newer version exists. Exclude any
-active job or artifact younger than seven days. The helper
-`services/document-processor/scripts/report_unreferenced_artifacts.py` creates a local JSON candidate report from those two
-exports; it makes no network calls and deletes nothing. Its `--help` describes the input formats.
-Export references for the same bucket with an operator query, saving the result privately:
+A lost database commit after S3 writes leaves unpublished artifact versions. The helper
+`services/document-processor/scripts/report_unreferenced_artifacts.py` compares an S3 version
+inventory with published artifact references by bucket, key, **and** version ID, excludes active
+jobs and artifacts younger than seven days, and produces a candidate report. It makes no network
+calls and deletes nothing. Every referenced version is preserved, and no Lambda role has delete
+permission.
 
-```sql
-select coalesce(jsonb_agg(jsonb_build_object(
-  'jobId', j.id, 'status', j.status, 'artifacts', coalesce(r.artifacts, '{}'::jsonb)
-)), '[]'::jsonb)
-from caseflow.document_processing_jobs j
-left join caseflow.document_processing_results r on r.job_id = j.id
-where j.source_bucket = 'REVIEWED_BUCKET_NAME';
-```
+## Verification
 
-Do not use a truncated inventory or filter out published results. Treat the report as a review list: refresh database references and recheck job state immediately
-before any separately authorized cleanup. Do not add deletion permissions to Lambda roles.
-
-## Verification and activation
-
-Run the existing Python unit/integration suites, SAM lint, infrastructure policy tests, Guard,
-and all three Linux package checks. Disposable-database tests cover migration preservation,
+The Python unit and integration suites, SAM lint, infrastructure policy tests, Guard,
+and Linux package checks cover the recovery path. Disposable-database tests cover migration preservation,
 repeatable seeds, counters, concurrent recovery, stale leases, cancellation, six-day expiry,
 OCR reservation preservation, restricted credentials, and atomic audit rollback. Local provider
 stubs verify bounded probes, missing/partial/expired results, safe errors and deadline behavior.
-
-After reviewing and applying the deployment separately, verify the real alert route: use
-CloudWatch's `set-alarm-state` on a selected test alarm, confirm receipt at the intended subscriber,
-then return it to OK and verify recovery delivery. This verifies notification routing, not the
-metric threshold. Also perform a controlled stalled-job/DLQ scenario to verify actual metric
-publication and evaluation; clean up only its test records/messages. Local wiring tests cannot
-prove SNS subscriber delivery. Keep `EnableRecoverySchedule=false` until these checks pass.
-
-For rollback, disable the schedule and queue mappings, pause dispatching, and let in-flight
-invocations finish. Deploy the previous reviewed application package; keep the additive database
-columns and immutable artifacts. Do not reset counters, purge queues, or delete published results.

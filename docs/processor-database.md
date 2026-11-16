@@ -4,7 +4,7 @@
 
 The additive `20261115170546_processor_database.sql` migration supplies the database
 interface for document workers. It does not start processing, create Lambda
-functions, or enable the API dispatcher. Apply it before deploying a processor.
+functions, or enable the API dispatcher.
 
 ## Tables and access
 
@@ -150,45 +150,14 @@ source keys, object versions, lease tokens, notification ARNs, or document conte
 Cancellation retains the separate administrative event identifying who removed or
 archived the document/case. Audit failure rolls back the associated mutation.
 
-## Provision the processor login
+## Processor login
 
-The migration creates only the `caseflow_processor` NOLOGIN capability role. It does
-not create a password or change API/dispatcher credentials. After reviewing and
-applying the migration, connect with operator credentials and verified TLS, then run:
-
-```sql
-do $$ begin
-  if not exists (select 1 from pg_roles where rolname = 'caseflow_processor_login') then
-    create role caseflow_processor_login login inherit
-      nosuperuser nocreatedb nocreaterole noreplication nobypassrls;
-  end if;
-end $$;
-
-grant caseflow_processor to caseflow_processor_login with inherit true, set false;
-
-select rolname, rolcanlogin, rolsuper, rolcreatedb, rolcreaterole, rolreplication, rolbypassrls
-from pg_roles where rolname = 'caseflow_processor_login';
-```
-
-Only `rolcanlogin` should be true in that result. Inspect existing memberships before
-reusing an existing login; it must not inherit other application or privileged roles.
-Set a unique password using psql's interactive command, which avoids a plaintext SQL
-password in terminal history:
-
-```text
-\password caseflow_processor_login
-```
-
-Store the password in the deployment secret store during Lambda configuration. Use
-the transaction pooler on port 6543, database `postgres`, and username
-`caseflow_processor_login.<project-ref>`. Keep TLS certificate/hostname verification
-enabled and disable prepared statements in psycopg. Package the trusted public CA
-certificate with the deployment; do not reference a laptop path.
-
-Verify the actual login can call `claim_document_processing` for an explicitly chosen
-fictional test job and cannot select `caseflow.documents` or call
-`claim_processing_dispatches`. Claiming changes job state, so keep this check
-controlled and do not use an unrelated queued job.
+The migration creates only the `caseflow_processor` NOLOGIN capability role; it does not create
+a password or change API or dispatcher credentials. Workers connect through a separate login that
+inherits only `caseflow_processor`, has no superuser, role-creation, replication, or RLS-bypass
+rights, and cannot read application tables directly. It connects through the transaction pooler
+with full TLS verification and prepared statements disabled, using a password kept in a secret
+store.
 
 ## Verification
 

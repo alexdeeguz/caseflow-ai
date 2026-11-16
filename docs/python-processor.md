@@ -5,10 +5,8 @@
 The extraction worker is implemented in `services/document-processor`. It consumes
 processing jobs, publishes native PDF text, and starts asynchronous Textract OCR.
 The completion worker also collects Textract results and publishes OCR artifacts.
-The hosted development deployment includes both consumers, scheduled reconciliation, processing
-UI, and operational monitoring. The [processing API](document-processing.md#processing-api) exposes
-saved job state. Follow [workflow verification](processing-verification.md) before activating a
-new deployment.
+The [processing API](document-processing.md#processing-api) exposes saved job state; see
+[workflow verification](processing-verification.md) for what has been verified.
 
 ## Structure and local tooling
 
@@ -88,8 +86,7 @@ The message is strictly `{ "schemaVersion": 1, "jobId": "<uuid>" }`. Bucket name
 keys, credentials, filenames, and roles are never accepted from the queue. The
 handler validates the configured standard queue ARN, event source, and Region.
 It processes at most ten records sequentially and returns `batchItemFailures`.
-Configure `ReportBatchItemFailures` on the eventual Lambda event source mapping;
-start with batch size one during deployment verification.
+The Lambda event source mapping uses `ReportBatchItemFailures` with batch size one.
 
 Every database function runs in its own short transaction and connection, which
 closes before external I/O. The dedicated login calls only the existing processor
@@ -161,11 +158,11 @@ the same ID **without sending another completion notification**. The later recov
 step must inspect saved jobs; retrying a start cannot replace reconciliation.
 [Textract asynchronous behavior](https://docs.aws.amazon.com/textract/latest/dg/api-async.html)
 
-## Configuration and activation prerequisites
+## Configuration
 
 `services/document-processor/.env.example` lists server-only settings. The handler does
-not automatically load `.env` files. Supply values through the local process or
-deployment secret configuration; never commit credentials.
+not automatically load `.env` files. Supply values through the local process or a secret
+store; never commit credentials.
 
 | Setting                                                      | Purpose                                                                                        |
 | ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------- |
@@ -179,16 +176,11 @@ deployment secret configuration; never commit credentials.
 
 The extraction handler is `caseflow_processor.handlers.processing.handler`; the
 completion handler is `caseflow_processor.handlers.completion.handler`. The public
-CA file must be packaged/mounted in the deployment, and the restricted database
-password supplied through the deployment secret store. Boto3 uses the default
-credential chain; deployed code uses its execution role.
-
-Before activation, apply the reviewed processor and completion-correlation migrations,
-provision the restricted login, and configure Lambda IAM, TLS/secrets,
-timeouts, concurrency, and queue triggers. Native artifact writes need narrowly
-scoped `s3:PutObject` and `s3:GetObjectVersion`; source reads need version access.
-Textract starts need text-detection permission and scoped `iam:PassRole`. No additional
-AWS permissions or resources are created by installing or testing this application.
+CA file is packaged with the code, and the restricted database password comes from a secret
+store. Boto3 uses the default credential chain; in AWS the code uses its execution role.
+Native artifact writes need narrowly scoped `s3:PutObject` and `s3:GetObjectVersion`; source
+reads need version access. Textract starts need text-detection permission and scoped
+`iam:PassRole`. Installing or testing the application creates no AWS resources.
 
 ## Related guides
 
@@ -196,10 +188,5 @@ AWS permissions or resources are created by installing or testing this applicati
 - [Processor database and function contracts](processor-database.md)
 - [Processing foundation and dispatcher](document-processing.md)
 - [Hosted database](hosted-database.md)
+- [Lambda configuration](lambda-configuration.md)
 - [Textract document limits](https://docs.aws.amazon.com/textract/latest/dg/limits-document.html)
-
-## Lambda deployment
-
-See [Lambda configuration](lambda-configuration.md) for the SAM template, Secrets Manager,
-verified database TLS, container builds, IAM boundaries, and deployment/rollback steps.
-New deployments leave queue consumption disabled until their workflow checks pass.

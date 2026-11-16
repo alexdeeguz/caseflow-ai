@@ -5,8 +5,8 @@
 The [SAM template](../infra/document-processing/template.yaml) defines two consumers and a scheduled reconciler
 from the shared Python package. It creates functions, execution roles, event-source
 mappings, retained log groups, a disabled Scheduler schedule/group, alarms, and a dashboard. Existing queues, DLQs, document storage, SNS topic, notification
-role, and database secrets remain externally managed. Neither deployment nor queue
-consumption runs automatically from CI.
+role, and database secrets are managed outside this stack. Queue consumption is controlled by
+separate per-consumer switches.
 
 ## Runtime configuration
 
@@ -35,38 +35,11 @@ cancellation, attempt limits, and OCR allowance checks still apply.
 
 ## Database credentials and trust
 
-1. Apply the reviewed migrations, including processor lifecycle and Textract completion
-   correlation, using the [hosted migration workflow](hosted-database.md). Review the dry run
-   against the intended project before applying it. Do not reset or seed the hosted database
-   as part of deployment.
-2. Create the restricted `caseflow_processor_login` and set its own password as described
-   in [processor database credentials](processor-database.md#provision-the-processor-login). It must inherit
-   `caseflow_processor` only, with no direct table-write or operator privileges. Both Lambda
-   functions use this processor login; the API and dispatcher retain separate credentials.
-3. In **Secrets Manager**, selected Region **us-east-2**, choose **Store a new secret →
-   Other type of secret**. Use the AWS-managed `aws/secretsmanager` encryption key. Save a
-   JSON object with exactly these fields, entering the password privately in the console:
-
-   ```json
-   {
-     "host": "aws-0-us-east-2.pooler.supabase.com",
-     "port": 6543,
-     "dbname": "postgres",
-     "user": "caseflow_processor_login.YOUR_PROJECT_REFERENCE",
-     "password": "YOUR_PROCESSOR_PASSWORD"
-   }
-   ```
-
-   Use the actual transaction-pooler host from Supabase Connect. The project reference
-   must be the 20-character reference for that database. Keep `port` numeric. Name the
-   secret for its environment, for example `caseflow/dev/processor-database`. Do not put
-   secret JSON into template parameters, local deployment parameter files, Git, or shell
-   arguments. Automatic rotation needs its own coordinated database rotation workflow;
-   this stack does not configure it.
-
-4. Set the template's `ProcessorDatabaseSecretArn` to the complete secret ARN. Lambda
-   receives only this ARN, never the password or a database connection string in its
-   environment. It retrieves `AWSCURRENT` using its execution role.
+Both functions use a restricted `caseflow_processor_login`, which inherits only
+`caseflow_processor` and has no direct table-write or operator privileges; the API and dispatcher
+use separate credentials. Credentials live in AWS Secrets Manager. Lambda receives only the
+secret's ARN, never a password or connection string in its environment, and retrieves the current
+version with its execution role.
 
 The secret schema rejects extra fields, operator usernames, wrong hosts/ports, and attempts
 to override TLS options. Lambda refuses direct `PROCESSOR_DATABASE_URL` configuration.
@@ -89,10 +62,6 @@ short-lived connection per database operation. There is no per-container connect
 Connection timeout is 5 seconds; transaction-local statement, lock, and idle transaction
 timeouts are 8, 5, and 10 seconds. Connections close before S3/Textract calls. Secret refresh
 adds a bounded API call, not a persistent database connection.
-
-For manual password rotation, disable mappings, let in-flight invocations finish, change the
-restricted database password and secret together, then allow the five-minute cache to expire
-before re-enabling consumption. Existing API/dispatcher passwords are unaffected.
 
 ## IAM boundaries
 
@@ -154,96 +123,18 @@ read-only Linux container, including the parser memory ceiling. Bundles are stag
 directory so Docker Desktop does not need to mount the source checkout. Builds need package/image network access, but no AWS deployment
 credentials. CI performs these checks and does not run `deploy`, `sync`, or cloud login.
 
-After authenticating to the intended AWS project, an optional **read-only** IAM check is:
-
-```sh
-uv run --project infra/document-processing --locked python infra/document-processing/scripts/verify_iam.py --profile personal --account YOUR_AWS_PROJECT_ID
-```
-
-This uses IAM's custom-policy simulator and changes no policies. Simulation checks the proposed
-identity policies; it does not prove deployed resource policies, SCPs, secret values, or network
-connectivity. Local secret tests cover validation, rotation caching, malformed responses, and
-provider errors. The PostgreSQL integration suite creates an additional disposable TLS server
+Local secret tests cover validation, rotation caching, malformed responses, and provider errors. The PostgreSQL integration suite creates an additional disposable TLS server
 to verify trusted connections succeed and wrong CA/hostname connections fail. It also tests
 restricted processor credentials against migrated disposable databases.
 
-## Review and deploy with consumption disabled
-
-Before preparing a change set, verify:
-
-- AWS project identity and selected Region match the intended CaseFlow environment.
-- Check `aws lambda get-account-settings` for the actual Regional concurrency limit before deployment.
-  New projects can have lower limits than the documented default. This stack uses shared capacity
-  without reservations and fits a ten-invocation project for its normal scheduled/queue workload.
-  Account for other workloads and direct invocations; shared capacity is not guaranteed per function.
-- All ARN parameters belong to that project and Ohio. Processing/completion queue ARNs are
-  distinct, standard queues with visibility at least 720 seconds, the intended DLQs and redrive
-  policies, and SSE-SQS encryption. Neither parameter points to a DLQ.
-- Bucket settings, SNS subscription/raw delivery, and notification-role permissions are correct.
-- Hosted migrations and the restricted processor login are ready; the secret contains the
-  matching credentials and can reach the transaction pooler with verified TLS.
-- Continuous API dispatching stays disabled, and both consumer flags remain `false`.
-- A separate reviewed deployment-artifact bucket is available in Ohio. Do not use the document
-  library's original/processed prefixes for Lambda deployment packages.
-
-Prepare a change set with the **built** template, substituting the non-secret resource identifiers:
-
-```sh
-uv run --project infra/document-processing --locked sam deploy \
---template-file .aws-sam/document-processing/template.yaml \
---stack-name caseflow-processing-dev \
---region us-east-2 --profile personal \
---s3-bucket YOUR_DEPLOYMENT_ARTIFACT_BUCKET \
---capabilities CAPABILITY_IAM --no-execute-changeset \
---parameter-overrides \
-  Environment=dev \
-  ProcessingQueueArn=YOUR_PROCESSING_QUEUE_ARN \
-  CompletionQueueArn=YOUR_COMPLETION_QUEUE_ARN \
-  DocumentBucketName=YOUR_DOCUMENT_BUCKET \
-  TextractTopicArn=YOUR_TEXTRACT_TOPIC_ARN \
-  TextractNotificationRoleArn=YOUR_NOTIFICATION_ROLE_ARN \
-  ProcessorDatabaseSecretArn=YOUR_PROCESSOR_SECRET_ARN \
-  RecoveryDatabaseSecretArn=YOUR_RECOVERY_SECRET_ARN \
-  ProcessingDlqArn=YOUR_PROCESSING_DLQ_ARN \
-  CompletionDlqArn=YOUR_COMPLETION_DLQ_ARN \
-  AlarmTopicArn=YOUR_OPERATIONAL_ALERT_TOPIC_ARN \
-  EnableRecoverySchedule=false \
-  EnableProcessingConsumer=false \
-  EnableCompletionConsumer=false
-```
-
-This command uploads code and creates a pending change set; it does not execute that change set.
-Review it in CloudFormation. Expect three Lambda functions, four roles, three log groups, two
-**disabled** event-source mappings, a **disabled** recovery schedule/group, 15 alarms, and a dashboard. There should be no replacement/creation of document buckets,
-queues, SNS resources, database credentials, or hosted tables. Execute only the reviewed change
-set, then verify stack outputs, mapping state, runtime configuration, and resource permissions.
-Enable the completion consumer first for controlled verification, then the processing consumer.
-The template rejects processing enabled with completion disabled. Keep recovery and continuous
-dispatching disabled until their controlled checks pass; follow the
-[workflow verification sequence](processing-verification.md).
-Deploying disabled functions does not itself prove a successful secret/database connection;
-that needs a controlled, reviewed runtime verification before consumption is enabled.
-
-## Logs and rollback
+## Logging
 
 Logs use Lambda's JSON format. Job events contain trusted job/case/document IDs, stage, outcome,
 and safe failure codes; delivery events contain message IDs and elapsed milliseconds. They do
 not contain full events, filenames, extracted text, URLs, credentials, lease tokens, or raw
 provider exception messages. A delivery acknowledgment does not necessarily mean Ready: an
-OCR-start message is acknowledged only after its waiting state is persisted.
+OCR-start message is acknowledged only after its waiting state is persisted. Log groups are
+retained when the stack is deleted, and events expire after 30 days.
 
-For a bad release, disable the recovery schedule and both mappings first and pause continuous dispatching. Allow up to
-120 seconds for in-flight invocations to finish. Prepare a reviewed change set from the previous
-known-good source revision and lockfile, with both consumer flags set to `false`, and deploy its built
-packages. Do not purge queues, reset the database, or delete document/artifact versions.
-Existing job leases, stable Textract tokens, and fenced publication support safe retries after
-the service is restored. Database changes need a separately reviewed additive compatibility fix.
-
-Deleting this stack removes its functions, roles, mappings, schedule/group, alarms, and dashboard
-but retains log groups for review;
-log events still expire after 30 days. Externally managed queues, secrets, SNS, S3, and the hosted
-database remain. Reusing a deleted stack name can conflict with retained log-group names; retain
-and import those groups deliberately or choose a new stack name. Do not delete resources simply
-to make a redeployment succeed.
-
-The recovery function uses a separate restricted login/secret and shared concurrency. See [recovery setup](processing-recovery.md) for its permissions, additional parameters, alert delivery verification, and operator procedures.
+The recovery function uses a separate restricted login and shared concurrency; see
+[processing recovery](processing-recovery.md).

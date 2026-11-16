@@ -6,29 +6,9 @@ creates unreviewed dates, providers, treatments, and findings with exact source 
 review remains manual. Admin/Super Admin can explicitly retry failed or cancelled extraction and
 start extraction for historical Ready documents; historical documents are not backfilled.
 
-New deployments default to disabled queue consumption, API dispatch, and scheduled fact recovery.
-Enable each only after reviewing its configuration and verifying the live workflow. Automatic
-creation uses the same persisted outbox as manual requests; actual dispatch requires the API
-dispatcher and queue consumer to be running.
-
-## Verified development deployment
-
-On November 15, 2026, controlled native PDF, scanned PDF, and image runs completed with 8, 10, and
-13 source-linked facts respectively. The image run exercised the continuous API dispatcher and
-Lambda queue trigger from the application request through publication and visible review records.
-The fact consumer and local API dispatcher are enabled; the API must remain running to dispatch
-new database tasks. Scheduled fact recovery remains deferred to a separate deployment and check.
-
-The facts endpoint also requires the human-review migration, `20261116011952_human_review.sql`.
-It initializes review records for existing facts without changing their original values or evidence.
-A completed extraction count alone does not verify that this read-path prerequisite is installed.
-All newly published facts remain Unreviewed; these checks do not establish complete extraction recall.
-No historical documents are automatically submitted for extraction.
-
-The automatic-handoff migration is applied to the hosted development database. Disposable
-PostgreSQL tests cover native/OCR completion, assigned Staff uploads, duplicate completion,
-manual retries, cancellation, and atomic rollback. Hosted read-only checks verified the enabled
-trigger and document-list review counts through restricted API credentials.
+Automatic creation uses the same persisted outbox as manual requests; dispatch requires the API
+dispatcher and the queue consumer. Queue consumption, API dispatch, and scheduled recovery can each
+be switched off independently without losing queued work.
 
 ## Components and request flow
 
@@ -201,51 +181,9 @@ Git. The evaluation sends only committed fictional fixtures, has a separate cons
 per-invocation ceiling, and creates a private report outside the repository. Repeated invocations
 have separate ceilings. Review every actual fact against the source and expected facts; record
 unsupported facts and missed expected facts. Citation validation alone is insufficient. The report
-never automatically approves release. Material errors block activation.
+never automatically approves release. Material errors block release.
 
-## Reviewed deployment
-
-1. Verify the target project and Ohio Region. Review and apply the additive migration explicitly.
-2. Create separate login roles using operator credentials. Grant only `caseflow_fact_extractor` to
-   `caseflow_fact_extractor_login` and only `caseflow_fact_dispatcher` to
-   `caseflow_fact_dispatcher_login`, with inherited membership and `SET FALSE`. Assign unique
-   passwords through a private credential workflow.
-3. Validate and build locally:
-
-   ```sh
-   uv run --project infra/document-processing --locked sam validate --lint --region us-east-2 \
-     --template-file infra/fact-extraction/template.yaml
-   uv run --project infra/document-processing --locked pytest infra/fact-extraction/tests
-   uv run --project infra/document-processing --locked python infra/fact-extraction/scripts/build.py
-   uv run --project infra/document-processing --locked python infra/fact-extraction/scripts/verify_build.py
-   ```
-
-4. Prepare and review a change set with `Environment`, the existing `DocumentBucketName`, the
-   existing operational `AlarmTopicArn`, and `EnableConsumer=false`. The new stack owns only its
-   fact queue/DLQ, Lambda, execution role, two empty secret resources, log group, alarms, and dashboard.
-   It does not recreate the document bucket, OCR queues, Textract topic, or notification role.
-5. After separate deployment approval, populate the generated database secret with JSON fields
-   `host`, `port` (6543), `dbname` (`postgres`), `user`
-   (`caseflow_fact_extractor_login.<project-ref>`), and `password`. Populate the OpenAI secret with
-   `{ "api_key": "<private value>" }`. Secret values are absent from templates and outputs.
-6. Lambda uses the hosted Ohio transaction pooler, disabled prepared statements, and `verify-full`
-   with the packaged public CA. No laptop path or VPC/NAT dependency is required. The API dispatcher
-   uses its own login through the same Session pooler endpoint as the API.
-7. Grant the API execution role `sqs:SendMessage` only for the new fact queue. Configure
-   `FACT_EXTRACTION_DISPATCHER_DATABASE_URL`, `FACT_EXTRACTION_QUEUE_URL`, and existing AWS Region/
-   credential settings. Keep `FACT_EXTRACTION_DISPATCHER_ENABLED=false` until activation review.
-8. Review the existing processing stack update with `EnableFactRecovery=false`. Fact recovery is
-   an explicit opt-in extension; existing OCR recovery behavior is preserved by default.
-9. Complete live fictional evaluation and restricted-runtime checks. Then separately authorize
-   consumer, recovery, and dispatcher activation. Do not backfill historical documents.
-
-The Lambda has a 120-second timeout, 1,024 MiB memory, 512 MiB temporary storage, Python 3.13 x86-64,
-batch size one, partial batch responses, maximum mapping concurrency two, and shared concurrency.
-The queue visibility timeout is 720 seconds. The role reads exact text object versions only, reads
-its two secrets, consumes its own queue, and writes its own logs. It cannot write/delete S3 objects,
-start Textract, access unrelated queues, or directly update database tables.
-
-## Monitoring and rollback
+## Monitoring and recovery
 
 The stack includes queue-age, visible-DLQ, and Lambda-error alarms, with an optional existing SNS
 alert topic. The dashboard shows provider attempts, retries, failures, latency, completed chunks,
@@ -259,11 +197,6 @@ and uses the outbox rather than direct queue sends. It cannot call OpenAI or res
 usage. Exhausted jobs require an explicit administrative retry. Do not purge or redrive whole
 queues automatically.
 
-To pause, disable fact dispatch in the API, disable the fact event-source mapping, and turn off
-`EnableFactRecovery`. Leave the existing OCR controls unchanged. In-flight provider calls may
-finish; fenced publication and reservations still apply. Preserve jobs, facts, evidence, queues,
-secrets, and audit history. The template retains queues, secrets, and logs on stack deletion.
-
 ### Evaluation review checks
 
 The evaluator records a prompt checksum and checks expected provider affiliations and report
@@ -276,4 +209,4 @@ Evaluation also reports `statusMismatches`, `unexpectedFactsWhenNoneExpected`, a
 `missedExpectedFacts`. Coverage checks compare fixture values case-insensitively and preserve
 category, polarity, date precision, status, and required qualifiers. Semantically equivalent
 wording can still need reviewer adjudication; empty diagnostics do not prove general accuracy.
-A passing small fixture run does not replace full-document verification before activation.
+A passing small fixture run does not replace full-document verification before release.
