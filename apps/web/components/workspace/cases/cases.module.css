@@ -467,3 +467,14 @@ button.compactButton {
     justify-items: start;
   }
 }
+
+/* Create-case modal: tighter spacing than the full-page form. */
+.modalForm .fields {
+  gap: 1.125rem;
+}
+@media (max-width: 520px) {
+  .modalForm .fieldPair {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.125rem;
+  }
+}

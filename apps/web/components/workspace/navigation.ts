@@ -18,10 +18,8 @@ export { WorkspaceTab, tabLabels } from '../../lib/constants/navigation';
 export function locationResources(location: WorkspaceLocation, role: Role): Resource<unknown>[] {
   switch (location.tab) {
     case WorkspaceTab.Cases:
-      if (location.case === CaseView.New) {
-        return [];
-      }
-      if (!location.case) {
+      // The create-case form opens as a modal over the case list.
+      if (!location.case || location.case === CaseView.New) {
         return [caseListResource(location)];
       }
       return [

@@ -9,7 +9,7 @@ import { LoadState } from '../../ui/load-state';
 import { LoadingRegion } from '../../ui/loading-region';
 import { Pagination } from '../../ui/pagination';
 import { CaseDetail } from './case-detail';
-import { CaseForm } from './case-form';
+import { CreateCaseModal } from './case-form';
 import { CaseEditor } from './case-editor';
 import { CaseList } from './case-list';
 import { caseListResource } from '../../../lib/workspace-resources';
@@ -32,21 +32,11 @@ export function Cases({ request, user, location, navigate, pendingLocation }: Ca
     void navigate({ ...location, case: null, mode: undefined });
   };
 
-  if (location.case === CaseView.New) {
-    return user.role === Role.Staff ? (
-      <StatusMessage tone="error">Only administrators can create cases.</StatusMessage>
-    ) : (
-      <CaseForm
-        request={request}
-        onCancel={onBack}
-        onCreated={(record) => {
-          void navigate({ ...location, case: record.id, mode: undefined }, { replace: true });
-        }}
-      />
-    );
+  if (location.case === CaseView.New && user.role === Role.Staff) {
+    return <StatusMessage tone="error">Only administrators can create cases.</StatusMessage>;
   }
 
-  if (location.case && location.mode === CaseMode.Edit) {
+  if (location.case && location.case !== CaseView.New && location.mode === CaseMode.Edit) {
     return user.role === Role.Staff ? (
       <StatusMessage tone="error">Only administrators can edit cases.</StatusMessage>
     ) : (
@@ -61,7 +51,7 @@ export function Cases({ request, user, location, navigate, pendingLocation }: Ca
     );
   }
 
-  if (location.case) {
+  if (location.case && location.case !== CaseView.New) {
     return (
       <CaseDetail
         key={location.case}
@@ -90,8 +80,10 @@ export function Cases({ request, user, location, navigate, pendingLocation }: Ca
   );
 }
 
+/** Case list; `case=new` opens the create-case modal over it. */
 function CaseBrowser({ request, user, location, navigate, pendingLocation }: CasesProps) {
   const { data, error } = useResource(request, caseListResource(location));
+  const listLocation = { ...location, case: null, mode: undefined };
   const filtered = Boolean(
     location.search.trim() || location.status || location.archive !== CaseArchiveFilter.Current,
   );
@@ -117,7 +109,7 @@ function CaseBrowser({ request, user, location, navigate, pendingLocation }: Cas
         )}
       </header>
       <CaseFilters
-        location={pendingLocation && !pendingLocation.case ? pendingLocation : location}
+        location={pendingLocation && !pendingLocation.case ? pendingLocation : listLocation}
         navigate={navigate}
       />
       {!data ? (
@@ -135,10 +127,20 @@ function CaseBrowser({ request, user, location, navigate, pendingLocation }: Cas
                     : 'No current cases. Create a case or check Archived.'}
             </StatusMessage>
           ) : (
-            <CaseList items={data.items} location={location} />
+            <CaseList items={data.items} location={listLocation} />
           )}
-          <Pagination {...data} onPage={(page) => void navigate({ ...location, page })} />
+          <Pagination {...data} onPage={(page) => void navigate({ ...listLocation, page })} />
         </LoadingRegion>
+      )}
+      {user.role !== Role.Staff && (
+        <CreateCaseModal
+          open={location.case === CaseView.New}
+          request={request}
+          onClose={() => void navigate(listLocation, { replace: true })}
+          onCreated={(record) =>
+            void navigate({ ...listLocation, case: record.id }, { replace: true })
+          }
+        />
       )}
     </section>
   );

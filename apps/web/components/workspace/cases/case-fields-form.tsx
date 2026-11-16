@@ -17,6 +17,8 @@ import styles from './cases.module.css';
 type FieldErrors = Partial<Record<keyof CaseFormValues, string>>;
 
 export function CaseFieldsForm({
+  id,
+  inlineActions = true,
   values,
   onChange,
   onSubmit,
@@ -29,6 +31,10 @@ export function CaseFieldsForm({
   error,
   children,
 }: {
+  /** Lets buttons outside the form (e.g. a modal footer) submit it. */
+  id?: string;
+  /** Render Submit/Cancel below the fields; turn off when the container provides them. */
+  inlineActions?: boolean;
   values: CaseFormValues;
   onChange: (values: CaseFormValues) => void;
   onSubmit: (values: CaseCreate) => Promise<void>;
@@ -82,7 +88,7 @@ export function CaseFieldsForm({
   }
 
   return (
-    <form onSubmit={submit} noValidate className="mt-8">
+    <form id={id} onSubmit={submit} noValidate className={inlineActions ? 'mt-8' : undefined}>
       {Object.keys(errors).length > 0 && (
         <div ref={errorSummary} tabIndex={-1} role="alert" className={styles.errorSummary}>
           <h2 className="font-semibold">Check the following fields</h2>
@@ -192,14 +198,16 @@ export function CaseFieldsForm({
         </div>
       )}
       {children}
-      <div className="flex flex-wrap gap-3 mt-8">
-        <Button type="submit" disabled={busy || blocked}>
-          {busy ? busyLabel : submitLabel}
-        </Button>
-        <Button variant="secondary" onClick={onCancel} disabled={busy}>
-          Cancel
-        </Button>
-      </div>
+      {inlineActions && (
+        <div className="flex flex-wrap gap-3 mt-8">
+          <Button type="submit" disabled={busy || blocked}>
+            {busy ? busyLabel : submitLabel}
+          </Button>
+          <Button variant="secondary" onClick={onCancel} disabled={busy}>
+            Cancel
+          </Button>
+        </div>
+      )}
     </form>
   );
 }
