@@ -51,7 +51,11 @@ See [model documentation](https://developers.openai.com/api/docs/models/gpt-5.4-
 The structured-output schema uses a separate branch for each fact category. Date fields are
 required only for dates, treatment status for treatments, and finding status for findings; unrelated
 fields must be null. This gives the provider the same category constraints enforced by application
-validation. Invalid schema and citation failures remain terminal and never publish partial facts.
+validation. Date output has separate year, month, and day branches that pair each precision
+with its ISO date format. Application validation also checks calendar validity, including leap
+days; it never pads partial dates or silently repairs mismatches. Explicit date ranges use
+separate endpoint facts with their meaning and range context.
+Invalid schema and citation failures remain terminal and never publish partial facts.
 Schema diagnostics use fixed reason codes for malformed JSON, invalid calendar dates, mismatched
 date precision, and other field constraints. Logs exclude rejected values, quotations, and model
 responses.

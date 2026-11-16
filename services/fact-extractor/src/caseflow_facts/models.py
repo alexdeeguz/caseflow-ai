@@ -14,7 +14,7 @@ from pydantic import (
 from pydantic.alias_generators import to_camel
 from pydantic_core import PydanticCustomError
 
-from .constants import MAX_SOURCE_BYTES, SchemaFailureReason
+from .constants import DATE_VALUE_PATTERNS, MAX_SOURCE_BYTES, SchemaFailureReason
 
 
 def validate_identifier(value: str) -> str:
@@ -122,6 +122,8 @@ class FactValues(Model):
                     'Date precision does not match its value',
                 )
             try:
+                if not re.fullmatch(DATE_VALUE_PATTERNS[self.date_precision], self.date_value):
+                    raise ValueError('Expected an ISO calendar date')
                 date.fromisoformat((self.date_value + '-01-01')[:10])
             except ValueError:
                 raise PydanticCustomError(

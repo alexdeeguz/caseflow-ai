@@ -13,6 +13,11 @@ INITIAL_CHUNK_CHARACTERS = 16_000
 BOUNDARY_OVERLAP = 300
 MAX_CITATION_PASSAGE_CHARACTERS = 800
 MAX_CITATION_PASSAGES = 256
+DATE_VALUE_PATTERNS = {
+    'year': r'^[0-9]{4}$',
+    'month': r'^[0-9]{4}-(0[1-9]|1[0-2])$',
+    'day': r'^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$',
+}
 
 
 class FailureCode(StrEnum):

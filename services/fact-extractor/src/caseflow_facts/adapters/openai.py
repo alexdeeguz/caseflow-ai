@@ -3,7 +3,13 @@ import json
 from openai import APIConnectionError, APIStatusError, APITimeoutError, OpenAI
 from openai.types.responses import ResponseTextConfigParam
 
-from ..constants import MAX_CITATION_PASSAGES, MAX_OUTPUT_TOKENS, MODEL, FailureCode
+from ..constants import (
+    DATE_VALUE_PATTERNS,
+    MAX_CITATION_PASSAGES,
+    MAX_OUTPUT_TOKENS,
+    MODEL,
+    FailureCode,
+)
 from ..errors import ExtractionFailure, RetryableError
 from ..models import ProposedFacts, ProviderResult, Span, Usage
 
@@ -37,7 +43,10 @@ Select the complete quotation paired with that passage in the output schema. Do 
 combine, or rewrite it. Use separate citations for supporting evidence in different passages.
 Use null for fields that do not apply to a category. Use unspecified when the source does not state
 a treatment or finding status. Use ISO date values with only the documented precision (YYYY,
-YYYY-MM, or YYYY-MM-DD). All results will be unreviewed; do not provide confidence scores."""
+YYYY-MM, or YYYY-MM-DD), paired with year, month, or day respectively. A dateValue holds one
+calendar date, never a range, list, or prose. For an explicitly documented date range, extract
+separate start and end date facts with their meaning and range context. Do not invent missing
+date components. All results will be unreviewed; do not provide confidence scores."""
 
 
 class OpenAIFactProvider:
@@ -48,6 +57,21 @@ class OpenAIFactProvider:
         if not 1 <= len(spans) <= MAX_CITATION_PASSAGES:
             raise ExtractionFailure(FailureCode.LIMIT_EXCEEDED)
         schema = ProposedFacts.model_json_schema(by_alias=True)
+        date_schema = schema['$defs']['ProposedDate']
+        # Cross-field validators do not appear in Pydantic's generated JSON Schema.
+        schema['$defs']['ProposedDate'] = {
+            'anyOf': [
+                {
+                    **date_schema,
+                    'properties': {
+                        **date_schema['properties'],
+                        'dateValue': {'type': 'string', 'pattern': pattern},
+                        'datePrecision': {'type': 'string', 'const': precision},
+                    },
+                }
+                for precision, pattern in DATE_VALUE_PATTERNS.items()
+            ]
+        }
         schema['$defs']['Citation'] = {
             'anyOf': [
                 {
