@@ -10,6 +10,7 @@ import {
   assertCurrentCommit,
   loadReleaseArtifacts,
   releaseApplication,
+  waitForLambdaUpdate,
 } from '../scripts/release.mjs';
 
 const config = {
@@ -234,4 +235,23 @@ test('release configuration restricts repository and function targets', () => {
   assert.equal(readReleaseConfig(env).api, config.api);
   assert.throws(() => readReleaseConfig({ ...env, GITHUB_REPOSITORY: 'other/repo' }));
   assert.throws(() => readReleaseConfig({ ...env, DISPATCHER_FUNCTION_NAME: 'unrelated' }));
+});
+
+test('update polling uses configuration reads allowed by the runner role', async () => {
+  const calls = [];
+  const client = {
+    send: async (command) => {
+      calls.push(command);
+      assert.equal(command.constructor.name, 'GetFunctionConfigurationCommand');
+      return { LastUpdateStatus: 'Successful' };
+    },
+  };
+  await waitForLambdaUpdate(client, config.api);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].input.FunctionName, config.api);
+});
+
+test('update polling rejects a failed Lambda update', async () => {
+  const client = { send: async () => ({ LastUpdateStatus: 'Failed' }) };
+  await assert.rejects(waitForLambdaUpdate(client, config.api));
 });

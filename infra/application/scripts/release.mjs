@@ -10,7 +10,7 @@ import {
   ListVersionsByFunctionCommand,
   InvokeCommand,
   UpdateAliasCommand,
-  waitUntilFunctionUpdatedV2,
+  waitUntilFunctionUpdated,
 } from '@aws-sdk/client-lambda';
 import { ECRClient } from '@aws-sdk/client-ecr';
 import { verifyArtifacts } from './artifacts.mjs';
@@ -70,6 +70,13 @@ export async function loadReleaseArtifacts(config) {
   const zip = await readFile(join(config.directory, 'dispatcher.zip'));
 
   return { manifest, dispatcher: { name: config.dispatcher, kind: 'dispatcher', zip } };
+}
+
+export function waitForLambdaUpdate(client, name) {
+  return waitUntilFunctionUpdated(
+    { client, maxWaitTime: 120, minDelay: 1, maxDelay: 5 },
+    { FunctionName: name },
+  );
 }
 
 async function validateCandidate(client, target, version) {
@@ -253,8 +260,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
     const targets = [{ name: config.api, kind: 'api', imageUri }, dispatcher];
     await releaseApplication(config, targets, {
       client,
-      waitForUpdate: (name) =>
-        waitUntilFunctionUpdatedV2({ client, maxWaitTime: 120 }, { FunctionName: name }),
+      waitForUpdate: (name) => waitForLambdaUpdate(client, name),
       assertCurrent: () => assertCurrentCommit(config),
     });
     console.info(`Released tested commit ${config.commit}.`);
