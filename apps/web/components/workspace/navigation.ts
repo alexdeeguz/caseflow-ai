@@ -1,8 +1,5 @@
 import { CaseArchiveFilter, SearchMode, type Role } from '@caseflow/schemas';
-import {
-  caseTimelineResource,
-  caseReviewedSummaryResource,
-} from '../../lib/case-history/resources';
+import { caseSummaryResources, caseTimelineResource } from '../../lib/case-history/resources';
 import {
   auditListResource,
   caseDetailResource,
@@ -33,13 +30,7 @@ export function locationResources(location: WorkspaceLocation, role: Role): Reso
           ? [caseTimelineResource(location.case, location.timelinePage)]
           : []),
         ...(location.section === CaseSection.ReviewedSummary && !location.mode
-          ? [
-              caseReviewedSummaryResource(
-                location.case,
-                location.summaryCategory,
-                location.summaryPage,
-              ),
-            ]
+          ? (({ dates, categories }) => [dates, ...categories])(caseSummaryResources(location.case))
           : []),
         ...(location.section === CaseSection.Documents && !location.mode
           ? [documentListResource(location.case, documentLibraryQuery(location, role))]

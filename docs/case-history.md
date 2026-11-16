@@ -5,6 +5,11 @@ The last two are read-only projections of current approved facts. They use ordin
 there are no AI calls, queues, saved summaries, or additional background jobs. The manually entered
 case summary and incident date remain unchanged in Overview.
 
+- **Timeline** is a chronology: what happened on each date in the record's own words, how far each
+  date is from the incident and from the previous date, and where care has gaps.
+- **Reviewed summary** is a case brief: key dates, findings by certainty, treatment received versus
+  recommended, and providers, each with its source quotation and citation.
+
 ## Eligibility and permissions
 
 Assigned Staff can read their cases; Admin and Super Admin can read all cases. Archived cases
@@ -48,21 +53,35 @@ are explicit: **2026 — month and day unspecified** or **November 2026 — day 
 Full dates use timezone-independent calendar formatting. No date is inferred for a treatment or
 finding, and the manually entered incident date is not inserted into this timeline.
 
-Summary Dates use the same ordering. Other categories sort case-insensitively by effective value,
-then fact ID. Structured entries preserve date meaning, qualifiers, recommended/performed treatment,
-suspected/confirmed findings, and explicit negation. Conflicting or repeated source statements stay
-separate; approval does not establish that a negated event occurred. Empty states describe an
-absence of approved information, not an absence of events.
+Summary categories sort case-insensitively by effective value, then fact ID. Structured entries
+preserve date meaning, qualifiers, recommended/performed treatment, suspected/confirmed findings,
+and explicit negation. Approval does not establish that a negated event occurred. Empty states
+describe an absence of approved information, not an absence of events.
+
+## Chronology and brief design
+
+| Decision                                           | Why                                                                                                                                                                                                                |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **One entry per date, described by its quotation** | A date alone says little; the source line (for example "Rehabilitation visit") says what happened. Lines that only repeat the date or its label are omitted.                                                       |
+| **Incident, care, and record markers**             | Classified from the date's meaning so the incident and treatment dates stand out from statement and correspondence dates.                                                                                          |
+| **Intervals from exact dates only**                | "Day 17" (from the incident) and "26 days later" are shown only when both dates are exact; partial dates never produce intervals.                                                                                  |
+| **Care gaps flagged at 30 days**                   | Gaps between treatment dates matter when evaluating a claim, so long gaps are highlighted on the timeline and in key dates. The flag means no approved care date exists in that window, not that no care occurred. |
+| **Key dates derived, not stored**                  | Incident, first care (and days after the incident), latest care, care span, and longest gap are calculated in the browser from approved date facts, so they always match the timeline.                             |
+| **Findings and treatment grouped by status**       | Confirmed, suspected, and noted findings; treatment received, recommended (future care), and mentioned. Explicit negatives are listed separately so they are never read as present.                                |
+| **Matching statements merged**                     | The same finding or treatment approved from several documents appears once with every citation and an "In N documents" marker, showing corroboration without hiding sources.                                       |
+| **Pending review is visible**                      | The brief notes how many extracted facts still await review, because unapproved facts are not included.                                                                                                            |
+
+The summary loads up to 100 approved facts per category (and the first 100 dates for key dates) and
+says so when a category has more.
 
 ## Navigation, sources, and freshness
 
-The URL retains `section`, `timelinePage`, `summaryCategory`, and `summaryPage`, together with
-existing case-list and document-list context. Bookmarks, refresh, and Back/Forward use the same
-navigation/preloading helpers as the workspace. The sidebar remains mounted. Mobile case navigation
-uses two columns; summary category controls and cards adapt to narrow screens.
+The URL retains `section` and `timelinePage`, together with existing case-list and document-list
+context. Bookmarks, refresh, and Back/Forward use the same navigation/preloading helpers as the
+workspace. The sidebar remains mounted. Mobile case navigation uses two columns; the timeline
+collapses to a single rail and summary panels stack on narrow screens.
 
-Each entry shows its document name and page references. Quotations expand without leaving the
-case. Source downloads reuse the document library's authenticated authorization and browser handoff;
+Each entry shows its quotation, document name, and page references without leaving the case. Source downloads reuse the document library's authenticated authorization and browser handoff;
 no preview or persistent signed URL is added. Review/correction actions remain in Documents.
 
 Review corrections, approval, rejection/reopening, and document removal/restoration invalidate the

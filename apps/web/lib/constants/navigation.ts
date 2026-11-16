@@ -46,8 +46,6 @@ export const WorkspaceParam = {
   DocumentFilter: 'documentFilter',
   DocumentPage: 'documentPage',
   TimelinePage: 'timelinePage',
-  SummaryPage: 'summaryPage',
-  SummaryCategory: 'summaryCategory',
   Query: 'q',
   SearchMode: 'searchMode',
   SearchCase: 'searchCase',

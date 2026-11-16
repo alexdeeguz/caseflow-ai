@@ -1,5 +1,4 @@
 import {
-  FactCategory,
   CaseArchiveFilter,
   SearchLimits,
   SearchMode,
@@ -24,8 +23,6 @@ export interface WorkspaceLocation {
   documentFilter: DocumentFilter;
   documentPage: number;
   timelinePage: number;
-  summaryPage: number;
-  summaryCategory: FactCategory;
   case: string | null;
   search: string;
   status?: CaseStatus;
@@ -74,12 +71,6 @@ export function parseWorkspaceLocation(params: URLSearchParams): WorkspaceLocati
       ? (Object.values(CaseSection).find((value) => value === section) ?? CaseSection.Overview)
       : CaseSection.Overview,
     timelinePage: hasCase ? parsePage(params.get(WorkspaceParam.TimelinePage)) : 1,
-    summaryPage: hasCase ? parsePage(params.get(WorkspaceParam.SummaryPage)) : 1,
-    summaryCategory: hasCase
-      ? (Object.values(FactCategory).find(
-          (value) => value === params.get(WorkspaceParam.SummaryCategory),
-        ) ?? FactCategory.Date)
-      : FactCategory.Date,
     documentFilter: hasCase
       ? (Object.values(DocumentFilter).find((value) => value === documentFilter) ??
         DocumentFilter.Current)
@@ -130,12 +121,6 @@ export function workspaceHref(location: WorkspaceLocation): string {
       }
       if (location.timelinePage > 1) {
         params.set(WorkspaceParam.TimelinePage, String(location.timelinePage));
-      }
-      if (location.summaryPage > 1) {
-        params.set(WorkspaceParam.SummaryPage, String(location.summaryPage));
-      }
-      if (location.summaryCategory !== FactCategory.Date) {
-        params.set(WorkspaceParam.SummaryCategory, location.summaryCategory);
       }
       if (location.documentPage > 1) {
         params.set(WorkspaceParam.DocumentPage, String(location.documentPage));

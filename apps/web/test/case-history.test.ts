@@ -10,8 +10,21 @@ import {
 import { isPageNavigation, parseWorkspaceLocation, workspaceHref } from '../lib/workspace-location';
 import { CaseMode, CaseSection, WorkspaceTab } from '../lib/constants/navigation';
 import { locationResources } from '../components/workspace/navigation';
-import { formatFactDate, groupTimelineByYear } from '../lib/case-history/presentation';
-import { caseTimelineResource, caseReviewedSummaryResource } from '../lib/case-history/resources';
+import {
+  CARE_GAP_DAYS,
+  EventKind,
+  buildChronology,
+  eventDescription,
+  eventKind,
+  findingSections,
+  formatDayOffset,
+  formatFactDate,
+  groupMatchingFacts,
+  groupTimelineByYear,
+  readableQuote,
+  treatmentSections,
+} from '../lib/case-history/presentation';
+import { caseSummaryResources, caseTimelineResource } from '../lib/case-history/resources';
 import { createResourceClient, withResourceInvalidation } from '../lib/resources';
 import { documentLibraryState } from '../lib/processing/resources';
 import { ApiError } from '../lib/api';
@@ -19,51 +32,49 @@ import { downloadDocument } from '../lib/documents/download';
 
 const caseId = '10000000-0000-4000-8000-000000000001';
 
-test('history URLs round-trip independent pages and category without losing document/list context', () => {
+test('history URLs round-trip the timeline page without losing document/list context', () => {
   for (const section of [CaseSection.Timeline, CaseSection.ReviewedSummary]) {
     const location = parseWorkspaceLocation(
       new URLSearchParams(
-        `case=${caseId}&section=${section}&timelinePage=2&summaryCategory=finding&summaryPage=3&documentPage=4&documentFilter=removed&archive=all&search=A%26B&page=5`,
+        `case=${caseId}&section=${section}&timelinePage=2&documentPage=4&documentFilter=removed&archive=all&search=A%26B&page=5`,
       ),
     );
     assert.equal(location.section, section);
     assert.equal(location.timelinePage, 2);
-    assert.equal(location.summaryPage, 3);
-    assert.equal(location.summaryCategory, FactCategory.Finding);
     assert.deepEqual(
       parseWorkspaceLocation(new URL(workspaceHref(location), 'http://localhost').searchParams),
       location,
     );
     const resources = locationResources(location, Role.Staff);
-    assert.equal(resources.length, 2);
-    assert.equal(
-      resources[1]?.path,
+    const summary = caseSummaryResources(caseId);
+    assert.deepEqual(
+      resources.slice(1).map((resource) => resource.path),
       section === CaseSection.Timeline
-        ? caseTimelineResource(caseId, 2).path
-        : caseReviewedSummaryResource(caseId, FactCategory.Finding, 3).path,
+        ? [caseTimelineResource(caseId, 2).path]
+        : [summary.dates.path, ...summary.categories.map((resource) => resource.path)],
     );
     assert.equal(locationResources({ ...location, mode: 'edit' }, Role.Admin).length, 1);
   }
+  // The summary reuses the timeline's first page for key dates, so both share one cached request.
+  assert.equal(caseSummaryResources(caseId).dates.path, caseTimelineResource(caseId).path);
+  assert.deepEqual(
+    caseSummaryResources(caseId).categories.map((resource) =>
+      new URL(resource.path, 'http://localhost').searchParams.get('category'),
+    ),
+    [FactCategory.Finding, FactCategory.Treatment, FactCategory.Provider],
+  );
   for (const page of ['0', '-1', '1.5', 'NaN', 'Infinity', '100001']) {
     const location = parseWorkspaceLocation(
-      new URLSearchParams(
-        `case=${caseId}&timelinePage=${page}&summaryPage=${page}&summaryCategory=bad`,
-      ),
+      new URLSearchParams(`case=${caseId}&timelinePage=${page}`),
     );
     assert.equal(location.timelinePage, 1);
-    assert.equal(location.summaryPage, 1);
-    assert.equal(location.summaryCategory, FactCategory.Date);
   }
   for (const prefix of ['case=new', 'case=bad', `tab=profile&case=${caseId}`]) {
     const location = parseWorkspaceLocation(
-      new URLSearchParams(
-        `${prefix}&section=timeline&timelinePage=3&summaryPage=4&summaryCategory=provider`,
-      ),
+      new URLSearchParams(`${prefix}&section=timeline&timelinePage=3`),
     );
     assert.equal(location.section, CaseSection.Overview);
     assert.equal(location.timelinePage, 1);
-    assert.equal(location.summaryPage, 1);
-    assert.equal(location.summaryCategory, FactCategory.Date);
   }
 });
 
@@ -285,4 +296,156 @@ test('only tab, case or editor changes count as page navigation', () => {
   assert.equal(isPageNavigation(base, { ...base, case: null }), true);
   assert.equal(isPageNavigation(base, { ...base, mode: CaseMode.Edit }), true);
   assert.equal(isPageNavigation(base, { ...base, tab: WorkspaceTab.Profile }), true);
+});
+
+const dated = (
+  dateValue: string,
+  dateMeaning: string,
+  quote = dateValue,
+  qualifier: string | null = null,
+) => ({
+  dateValue,
+  datePrecision: (dateValue.length === 10 ? 'day' : dateValue.length === 7 ? 'month' : 'year') as
+    'day' | 'month' | 'year',
+  dateMeaning,
+  qualifier,
+  evidence: [{ quote }],
+});
+
+test('dates are classified as incident, care, or record from their meaning', () => {
+  assert.equal(eventKind(dated('2025-02-03', 'incident date')), EventKind.Incident);
+  assert.equal(
+    eventKind(dated('2025-02-03', 'date', '', 'reported collision')),
+    EventKind.Incident,
+  );
+  assert.equal(eventKind(dated('2025-02-20', 'service date')), EventKind.Care);
+  assert.equal(eventKind(dated('2025-02-20', 'follow-up appointment')), EventKind.Care);
+  assert.equal(eventKind(dated('2025-04-19', 'statement date')), EventKind.Record);
+});
+
+test('event descriptions keep the record wording but drop lines that only repeat the date', () => {
+  assert.equal(
+    eventDescription(dated('2025-02-20', 'service date', '02/20/2025\nRehabilitation visit')),
+    'Rehabilitation visit',
+  );
+  assert.equal(
+    eventDescription(dated('2025-04-19', 'statement date', 'STATEMENT DATE\n04/19/2025')),
+    null,
+  );
+  assert.equal(
+    eventDescription(
+      dated('2025-02-03', 'incident date', 'Pain after the reported incident on 02/03/2025.'),
+    ),
+    'Pain after the reported incident on 02/03/2025.',
+  );
+  assert.equal(
+    eventDescription(dated('2025-03-01', 'visit', 'March 1, 2025\nIntake exam')),
+    'Intake exam',
+  );
+  assert.equal(
+    readableQuote('Impression\n  No acute   abnormality.'),
+    'Impression — No acute abnormality.',
+  );
+});
+
+test('chronology merges same-day facts and measures intervals and care gaps from exact dates', () => {
+  const { entries, insights } = buildChronology([
+    dated('2025-01', 'billing period'),
+    dated('2025-02-03', 'incident date'),
+    dated('2025-02-20', 'service date'),
+    dated('2025-02-20', 'statement date'),
+    dated('2025-03-18', 'service date'),
+    dated('2025-05-02', 'therapy visit'),
+  ]);
+
+  assert.deepEqual(
+    entries.map((entry) => [entry.dateValue, entry.kind, entry.facts.length]),
+    [
+      ['2025-01', EventKind.Record, 1],
+      ['2025-02-03', EventKind.Incident, 1],
+      ['2025-02-20', EventKind.Care, 2],
+      ['2025-03-18', EventKind.Care, 1],
+      ['2025-05-02', EventKind.Care, 1],
+    ],
+  );
+  assert.deepEqual(
+    entries.map((entry) => [entry.dayOffset, entry.sincePrevious, entry.careGap]),
+    [
+      [null, null, null],
+      [0, null, null],
+      [17, 17, null],
+      [43, 26, null],
+      [88, 45, 45],
+    ],
+  );
+  assert.ok(45 >= CARE_GAP_DAYS);
+  assert.equal(insights.incident?.dateValue, '2025-02-03');
+  assert.equal(insights.daysToFirstCare, 17);
+  assert.equal(insights.careDates, 3);
+  assert.equal(insights.careSpan, 71);
+  assert.equal(insights.longestCareGap?.days, 45);
+  assert.equal(insights.longestCareGap?.from.dateValue, '2025-03-18');
+  assert.equal(formatDayOffset(-3), '3 days before');
+  assert.equal(formatDayOffset(1), 'Day 1');
+
+  const none = buildChronology([dated('2025-04-19', 'statement date')]).insights;
+  assert.equal(none.incident, null);
+  assert.equal(none.daysToFirstCare, null);
+  assert.equal(none.longestCareGap, null);
+});
+
+test('summary groups merge corroborating statements and keep negatives apart', () => {
+  const fact = (
+    value: string,
+    documentId: string,
+    extra: Partial<{
+      negated: boolean;
+      findingStatus: 'confirmed' | 'suspected' | 'unspecified' | null;
+      treatmentStatus: 'performed' | 'recommended' | 'unspecified' | null;
+      qualifier: string | null;
+    }> = {},
+  ) => ({
+    value,
+    documentId,
+    qualifier: null,
+    negated: false,
+    findingStatus: null,
+    treatmentStatus: null,
+    ...extra,
+  });
+  const groups = groupMatchingFacts([
+    fact('acute osseous abnormality', 'a', {
+      negated: true,
+      findingStatus: 'confirmed',
+      qualifier: 'right shoulder',
+    }),
+    fact('Acute osseous abnormality.', 'b', { negated: true, findingStatus: 'confirmed' }),
+    fact('acute osseous abnormality', 'c', { findingStatus: 'confirmed' }),
+  ]);
+  assert.deepEqual(
+    groups.map((group) => [group.value, group.facts.length, group.documentCount, group.qualifiers]),
+    [
+      ['Acute osseous abnormality', 2, 2, ['right shoulder']],
+      ['Acute osseous abnormality', 1, 1, []],
+    ],
+  );
+  assert.deepEqual(
+    findingSections([
+      fact('lumbar strain', 'a', { findingStatus: 'confirmed' }),
+      fact('disc bulge', 'a', { findingStatus: 'suspected' }),
+      fact('fracture', 'a', { findingStatus: 'confirmed', negated: true }),
+    ]).map((section) => [section.id, section.groups.map((group) => group.value)]),
+    [
+      ['confirmed', ['Lumbar strain']],
+      ['suspected', ['Disc bulge']],
+      ['negative', ['Fracture']],
+    ],
+  );
+  assert.deepEqual(
+    treatmentSections([
+      fact('physical therapy', 'a', { treatmentStatus: 'performed' }),
+      fact('MRI', 'a', { treatmentStatus: 'recommended' }),
+    ]).map((section) => section.id),
+    ['performed', 'recommended'],
+  );
 });
