@@ -28,6 +28,12 @@ const DIMENSIONS = 1536;
 // Deterministic unit vectors: chunks on the same axis are semantically "identical".
 const axis = (index: number) =>
   Array.from({ length: DIMENSIONS }, (_value, position) => (position === index ? 1 : 0));
+// A unit query vector with the given cosine similarity to `index`; the rest lies on an unused axis.
+const UNUSED_AXIS = 100;
+const similarTo = (index: number, similarity: number) =>
+  Array.from({ length: DIMENSIONS }, (_value, position) =>
+    position === index ? similarity : position === UNUSED_AXIS ? Math.sqrt(1 - similarity ** 2) : 0,
+  );
 
 test('document search follows case access, visibility and hybrid ranking', async (t) => {
   const db = await createTestDatabase();
@@ -350,7 +356,36 @@ test('document search follows case access, visibility and hybrid ranking', async
     const fallback = await search({ q: 'lumbar' }, 'staff');
     assert.equal(fallback.semanticAvailable, false);
     assert.ok(fallback.items.every((item) => item.matchedBy === SearchMatch.Keyword));
+    assert.equal(fallback.looseMatches, false);
   });
+
+  await t.test(
+    'short queries need closer meaning matches and weak matches are flagged',
+    async () => {
+      // 0.34 is how close an unrelated incident report of the same kind scored for "car accident".
+      queryVector = similarTo(2, 0.34);
+      const short = await search({ q: 'zephyr quorum' }, 'staff');
+      assert.equal(short.total, 0);
+      assert.equal(short.looseMatches, false);
+
+      const longer = await search({ q: 'zephyr quorum nimbus vortex' }, 'staff');
+      assert.equal(longer.items[0]?.documentId, mri);
+      assert.equal(longer.items[0]?.matchedBy, SearchMatch.Semantic);
+      assert.equal(longer.looseMatches, true);
+
+      queryVector = similarTo(2, 0.45);
+      const strong = await search({ q: 'zephyr quorum' }, 'staff');
+      assert.equal(strong.items[0]?.documentId, mri);
+      assert.equal(strong.looseMatches, false);
+
+      // An exact-word match means the results are not merely loosely related.
+      queryVector = similarTo(2, 0.34);
+      const withKeyword = await search({ q: 'physical therapy weekly recommended' }, 'staff');
+      assert.equal(withKeyword.items[0]?.matchedBy, SearchMatch.Both);
+      assert.equal(withKeyword.looseMatches, false);
+      queryVector = null;
+    },
+  );
 
   await t.test('removed documents disappear from search for everyone', async () => {
     const listed = documentPageSchema.parse(

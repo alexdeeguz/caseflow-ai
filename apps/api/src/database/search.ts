@@ -3,6 +3,7 @@ import {
   CaseArchiveFilter,
   ErrorCode,
   SearchLimits,
+  SearchMatch,
   SearchMode,
   documentSearchPageSchema,
   type DocumentSearchResult,
@@ -14,10 +15,18 @@ const CANDIDATES = 50;
 // Standard RRF damping constant: limits how much a single top rank dominates.
 const RRF_K = 60;
 // Meaning-only matches must be reasonably similar (cosine) and close to the best match. Measured on
-// the fictional corpus: unrelated queries stay below 0.13, relevant passages score about 0.39-0.51,
-// and generic page headers about 0.30.
+// the fictional corpus with text-embedding-3-small: unrelated queries stay below 0.30; relevant
+// passages score about 0.31-0.56, with question-style queries lowest; generic page headers and
+// passages about a different incident of the same kind score about 0.30-0.36.
 const MIN_SIMILARITY = 0.3;
+// Short queries ("car accident") score same-kind documents higher (an unrelated slip-and-fall report
+// reached 0.34), so they need a stricter floor. Longer queries keep the lower floor so questions such
+// as "when did physical therapy start" (relevant passages ~0.31) still find their passages.
+const SHORT_QUERY_WORDS = 3;
+const SHORT_QUERY_MIN_SIMILARITY = 0.36;
 const SIMILARITY_WINDOW = 0.1;
+// Without any exact-word match, a best meaning-based match below this is flagged as loosely related.
+const STRONG_SIMILARITY = 0.4;
 // Private markers for ts_headline; converted to ranges so clients never render server markup.
 const START = '\u0001';
 const STOP = '\u0002';
@@ -26,6 +35,8 @@ interface SearchRow {
   total: number;
   indexing: number;
   visible: boolean;
+  keywordMatches: number;
+  bestSimilarity: number | null;
   items: (Omit<DocumentSearchResult, 'snippet' | 'highlights'> & { headline: string })[];
 }
 
@@ -58,6 +69,35 @@ export function parseHeadline(
     highlights: highlights
       .filter((range) => range.end <= snippet.length)
       .slice(0, SearchLimits.MaxHighlights),
+  };
+}
+
+/** Minimum cosine similarity for a meaning-only match; short queries need a stricter floor. */
+export function minimumSimilarity(query: string): number {
+  const words = query.trim().split(/\s+/).filter(Boolean).length;
+  return words <= SHORT_QUERY_WORDS ? SHORT_QUERY_MIN_SIMILARITY : MIN_SIMILARITY;
+}
+
+/**
+ * Meaning-only snippets start at the passage start, which overlapping passages often place
+ * mid-sentence. Start at the first full sentence instead, unless that would drop a highlight or
+ * leave too little text.
+ */
+export function trimLeadingFragment(
+  result: Pick<DocumentSearchResult, 'snippet' | 'highlights'>,
+): Pick<DocumentSearchResult, 'snippet' | 'highlights'> {
+  const { snippet, highlights } = result;
+  if (!/^[a-z]/.test(snippet)) {
+    return result;
+  }
+  const boundary = /[.!?]\s+(?=[A-Z0-9"“(])/.exec(snippet.slice(0, 160));
+  const cut = boundary ? boundary.index + boundary[0].length : 0;
+  if (!cut || snippet.length - cut < 60 || highlights.some((range) => range.start < cut)) {
+    return result;
+  }
+  return {
+    snippet: snippet.slice(cut),
+    highlights: highlights.map(({ start, end }) => ({ start: start - cut, end: end - cut })),
   };
 }
 
@@ -109,8 +149,9 @@ export async function searchDocuments(client: PoolClient, input: Record<string, 
       where $4::text is not null and ch.embedding is not null
       order by distance, ch.id limit ${CANDIDATES}
     ), semantic as (
-      select id, row_number() over (order by distance, id) as rank from semantic_candidates
-      where distance <= ${1 - MIN_SIMILARITY}
+      select id, distance, row_number() over (order by distance, id) as rank
+      from semantic_candidates
+      where distance <= 1 - $7::float8
         and distance <= (select min(distance) from semantic_candidates) + ${SIMILARITY_WINDOW}
     ), fused as (
       select coalesce(k.id, s.id) as id,
@@ -136,6 +177,8 @@ export async function searchDocuments(client: PoolClient, input: Record<string, 
     )
     select ($2::uuid is null or exists(select 1 from accessible)) as visible,
       (select count(*)::int from ranked) as total,
+      (select count(*)::int from keyword) as "keywordMatches",
+      (select (1 - min(distance))::float8 from semantic) as "bestSimilarity",
       (select count(*)::int from caseflow.documents d
         join accessible a on a.id = d.case_id
         left join latest_search s on s.document_id = d.id
@@ -148,7 +191,10 @@ export async function searchDocuments(client: PoolClient, input: Record<string, 
         'contentType', d.content_type, 'page', ch.page, 'matchedBy', r.matched_by,
         'headline', ts_headline('english', translate(ch.content, E'\\x01\\x02', '  '), q.snippet_tsq,
           'StartSel=' || E'\\x01' || ', StopSel=' || E'\\x02'
-            || ', MaxFragments=2, MaxWords=30, MinWords=12, FragmentDelimiter=" … "'))
+            -- Meaning-only matches rarely contain the query words, so show a longer excerpt.
+            || case when r.matched_by = 'semantic' then ', MaxFragments=2, MaxWords=45, MinWords=35'
+              else ', MaxFragments=2, MaxWords=30, MinWords=12' end
+            || ', FragmentDelimiter=" … "'))
         order by r.position)
         from ranked r
         join caseflow.document_text_chunks ch on ch.id = r.id
@@ -163,6 +209,7 @@ export async function searchDocuments(client: PoolClient, input: Record<string, 
       embedding,
       (page - 1) * pageSize,
       pageSize,
+      minimumSimilarity(String(input.q ?? '')),
     ],
   );
   const row = result.rows[0]!;
@@ -172,12 +219,23 @@ export async function searchDocuments(client: PoolClient, input: Record<string, 
   }
 
   return documentSearchPageSchema.parse({
-    items: row.items.map(({ headline, ...item }) => ({ ...item, ...parseHeadline(headline) })),
+    items: row.items.map(({ headline, ...item }) => {
+      const snippet = parseHeadline(headline);
+      return {
+        ...item,
+        ...(item.matchedBy === SearchMatch.Semantic ? trimLeadingFragment(snippet) : snippet),
+      };
+    }),
     total: row.total,
     page,
     pageSize,
     mode,
     semanticAvailable: mode === SearchMode.Hybrid && embedding !== null,
+    looseMatches:
+      row.total > 0 &&
+      row.keywordMatches === 0 &&
+      row.bestSimilarity !== null &&
+      row.bestSimilarity < STRONG_SIMILARITY,
     indexingDocuments: row.indexing,
   });
 }

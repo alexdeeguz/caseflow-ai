@@ -63,6 +63,8 @@ export const documentSearchPageSchema = z.strictObject({
   mode: z.enum(SearchMode),
   /** False when meaning-based matching was unavailable and results are keyword-only. */
   semanticAvailable: z.boolean(),
+  /** True when nothing matched the exact words and the closest meaning-based match is weak. */
+  looseMatches: z.boolean(),
   /** Accessible documents in scope that are not yet fully searchable. */
   indexingDocuments: z.number().int().min(0),
 });

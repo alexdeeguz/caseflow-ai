@@ -62,6 +62,9 @@ export function CaseDocumentSearch({
       {!data.semanticAvailable && (
         <Callout>Showing exact-word matches only. Meaning-based search is unavailable now.</Callout>
       )}
+      {data.looseMatches && (
+        <Callout>No exact matches. These passages may only be loosely related.</Callout>
+      )}
       {data.indexingDocuments > 0 && (
         <Callout>
           {data.indexingDocuments} {data.indexingDocuments === 1 ? 'document is' : 'documents are'}{' '}

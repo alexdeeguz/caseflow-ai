@@ -36,6 +36,15 @@ and can be included with the archive filter or by searching that case directly.
 5. **Queries are ranked together.** A search takes the best full-text matches and the closest
    meaning-based matches from the cases the user can access, and merges them into one ranking.
 
+Meaning-based matches only count when they are close enough: a cosine similarity of at least 0.36
+for searches of three words or fewer, and 0.30 for longer ones, and within 0.1 of the best match.
+Short searches get the stricter floor because a report about a different incident of the same kind
+can score about 0.34 for a query like "car accident", while questions such as "when did physical
+therapy start" score their relevant passages as low as 0.31. When nothing matches the exact words
+and the best meaning-based match is below 0.40, results say they may only be loosely related.
+Meaning-only results show a longer excerpt that starts at a full sentence, since they rarely
+contain the words searched for.
+
 Each document's search status appears in its details: _Searchable_, _Exact words only_,
 _Preparing for search_, or _Not searchable_. Administrators can re-index a document whose indexing
 did not fully complete.

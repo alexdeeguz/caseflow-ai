@@ -184,6 +184,9 @@ export function SearchPage({
                 Showing exact-word matches only. Meaning-based search is unavailable right now.
               </Callout>
             )}
+            {data.looseMatches && (
+              <Callout>No exact matches. These passages may only be loosely related.</Callout>
+            )}
             {data.indexingDocuments > 0 && (
               <Callout>
                 {data.indexingDocuments}{' '}
