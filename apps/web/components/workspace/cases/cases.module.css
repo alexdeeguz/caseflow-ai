@@ -87,6 +87,12 @@
 .table tbody tr:hover {
   background: var(--brand-paper);
 }
+.clickableRow {
+  cursor: pointer;
+}
+.clickableRow:hover .caseLink {
+  text-decoration-color: currentColor;
+}
 .caseNumber {
   display: block;
   font-size: 0.75rem;
