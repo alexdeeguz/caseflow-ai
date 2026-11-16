@@ -131,3 +131,21 @@ test('HTTP API proxy preserves authentication, CORS, no-store, and validation', 
     await app.close();
   }
 });
+
+test('Lambda search uses only the stored API key', () => {
+  const key = 'sk-test-key-with-more-than-twenty-characters';
+  assert.equal(readLambdaConfig(secret, { ...env, SEARCH_OPENAI_API_KEY: key }).search, undefined);
+  assert.equal(
+    readLambdaConfig(JSON.stringify({ database_url: connection, search_openai_api_key: key }), env)
+      .search?.apiKey,
+    key,
+  );
+  assert.throws(
+    () =>
+      readLambdaConfig(
+        JSON.stringify({ database_url: connection, search_openai_api_key: 'invalid' }),
+        env,
+      ),
+    { message: 'Invalid API Lambda configuration.' },
+  );
+});

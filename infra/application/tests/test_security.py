@@ -118,3 +118,24 @@ def test_container_and_gate_cover_the_current_application():
     assert "services/search-indexer" in integration
     assert "services/fact-extractor" in integration
     assert "services/document-processor" in integration
+
+
+def test_search_outbox_is_scoped_to_its_queue():
+    resources = load("infra/application/template.yaml")["Resources"]
+    statements = resources["DispatcherRole"]["Properties"]["Policies"][0][
+        "PolicyDocument"
+    ]["Statement"]
+    send = next(item for item in statements if item["Action"] == "sqs:SendMessage")
+    assert send["Resource"] == [
+        {"Ref": "ProcessingQueueArn"},
+        {"Ref": "FactQueueArn"},
+        {"Ref": "SearchQueueArn"},
+    ]
+    variables = resources["DispatcherFunction"]["Properties"]["Environment"][
+        "Variables"
+    ]
+    assert variables["SEARCH_INDEX_QUEUE_URL"] == {"Ref": "SearchQueueUrl"}
+    assert (
+        "SEARCH_OPENAI_API_KEY"
+        not in resources["ApiFunction"]["Properties"]["Environment"]["Variables"]
+    )

@@ -4,6 +4,10 @@ import { readConfig } from '../config.js';
 
 const secretSchema = z.strictObject({
   database_url: z.string(),
+  search_openai_api_key: z
+    .string()
+    .regex(/^sk-[A-Za-z0-9_-]{20,}$/)
+    .optional(),
   demo_session_secret: z.string().min(32).max(512).optional(),
 });
 
@@ -18,9 +22,11 @@ export function readLambdaConfig(secret: string, env: NodeJS.ProcessEnv) {
       throw new Error('Invalid Lambda environment.');
     }
 
-    const { database_url: value, demo_session_secret: demoSecret } = secretSchema.parse(
-      JSON.parse(secret),
-    );
+    const {
+      database_url: value,
+      demo_session_secret: demoSecret,
+      search_openai_api_key: searchKey,
+    } = secretSchema.parse(JSON.parse(secret));
     const demoEnabled = z.enum(['true', 'false']).default('false').parse(env.DEMO_LOGIN_ENABLED);
     const database = new URL(value);
     const project = env.DATABASE_PROJECT_REF;
@@ -51,6 +57,7 @@ export function readLambdaConfig(secret: string, env: NodeJS.ProcessEnv) {
       DATABASE_URL: database.href,
       DEMO_LOGIN_ENABLED: demoEnabled,
       DEMO_SESSION_SECRET: demoSecret,
+      SEARCH_OPENAI_API_KEY: searchKey,
     });
 
     if (!config.storage || !config.webOrigin.startsWith('https:')) {

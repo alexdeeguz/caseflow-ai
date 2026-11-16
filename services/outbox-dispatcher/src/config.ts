@@ -10,6 +10,7 @@ const configSchema = z.strictObject({
     .regex(/^arn:aws:secretsmanager:[a-z0-9-]+:\d{12}:secret:[A-Za-z0-9/_+=.@-]+$/),
   processingQueueUrl: z.url(),
   factQueueUrl: z.url(),
+  searchQueueUrl: z.url(),
 });
 
 export type ScheduledConfig = z.infer<typeof configSchema>;
@@ -23,6 +24,7 @@ export function readScheduledConfig(env: NodeJS.ProcessEnv): ScheduledConfig {
     secretArn: env.DISPATCHER_SECRET_ARN,
     processingQueueUrl: env.PROCESSING_QUEUE_URL,
     factQueueUrl: env.FACT_EXTRACTION_QUEUE_URL,
+    searchQueueUrl: env.SEARCH_INDEX_QUEUE_URL,
   });
 
   if (!parsed.success) {
@@ -32,16 +34,15 @@ export function readScheduledConfig(env: NodeJS.ProcessEnv): ScheduledConfig {
   const config = parsed.data;
   const secretPrefix = `arn:aws:secretsmanager:${config.region}:${config.projectId}:secret:`;
 
-  if (
-    !config.secretArn.startsWith(secretPrefix) ||
-    config.processingQueueUrl === config.factQueueUrl
-  ) {
+  const queues = [config.processingQueueUrl, config.factQueueUrl, config.searchQueueUrl];
+
+  if (!config.secretArn.startsWith(secretPrefix) || new Set(queues).size !== queues.length) {
     throw new Error(
       'Dispatcher resources must belong to the selected project and use separate queues.',
     );
   }
 
-  for (const value of [config.processingQueueUrl, config.factQueueUrl]) {
+  for (const value of queues) {
     const queue = new URL(value);
     if (
       queue.origin !== `https://sqs.${config.region}.amazonaws.com` ||
@@ -63,6 +64,7 @@ export function readScheduledConfig(env: NodeJS.ProcessEnv): ScheduledConfig {
 const secretSchema = z.strictObject({
   processing_database_url: z.string(),
   fact_database_url: z.string(),
+  search_database_url: z.string(),
 });
 
 export function parseDatabaseSecret(value: string, config: ScheduledConfig, certificate: string) {
@@ -91,6 +93,7 @@ export function parseDatabaseSecret(value: string, config: ScheduledConfig, cert
     return {
       processing: connection(secret.processing_database_url, 'caseflow_dispatcher_login'),
       facts: connection(secret.fact_database_url, 'caseflow_fact_dispatcher_login'),
+      search: connection(secret.search_database_url, 'caseflow_search_dispatcher_login'),
     };
   } catch {
     throw new Error('Invalid dispatcher database secret.');

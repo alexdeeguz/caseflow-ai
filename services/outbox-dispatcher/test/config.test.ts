@@ -10,6 +10,7 @@ const env = {
   DISPATCHER_SECRET_ARN: 'arn:aws:secretsmanager:us-east-2:123456789012:secret:dispatch-abcdef',
   PROCESSING_QUEUE_URL: 'https://sqs.us-east-2.amazonaws.com/123456789012/processing',
   FACT_EXTRACTION_QUEUE_URL: 'https://sqs.us-east-2.amazonaws.com/123456789012/facts',
+  SEARCH_INDEX_QUEUE_URL: 'https://sqs.us-east-2.amazonaws.com/123456789012/search',
 };
 const config = readScheduledConfig(env);
 const connection = (role: string) =>
@@ -17,6 +18,7 @@ const connection = (role: string) =>
 const secret = {
   processing_database_url: connection('caseflow_dispatcher_login'),
   fact_database_url: connection('caseflow_fact_dispatcher_login'),
+  search_database_url: connection('caseflow_search_dispatcher_login'),
 };
 
 test('accepts separate restricted logins and injects the packaged certificate', () => {
@@ -34,6 +36,8 @@ test('accepts separate restricted logins and injects the packaged certificate', 
 test('rejects wrong queues, projects, regions, and secret destinations', () => {
   for (const update of [
     { FACT_EXTRACTION_QUEUE_URL: env.PROCESSING_QUEUE_URL },
+    { SEARCH_INDEX_QUEUE_URL: env.FACT_EXTRACTION_QUEUE_URL },
+    { SEARCH_INDEX_QUEUE_URL: env.SEARCH_INDEX_QUEUE_URL.replace('123456789012', '999999999999') },
     { PROCESSING_QUEUE_URL: env.PROCESSING_QUEUE_URL.replace('123456789012', '999999999999') },
     { PROCESSING_QUEUE_URL: `${env.PROCESSING_QUEUE_URL}?endpoint=other` },
     { PROCESSING_QUEUE_URL: `${env.PROCESSING_QUEUE_URL}.fifo` },
@@ -64,6 +68,23 @@ test('rejects privileged users, session poolers, weakened TLS, and URL overrides
         ),
       (error: unknown) =>
         error instanceof Error && error.message === 'Invalid dispatcher database secret.',
+    );
+  }
+});
+
+test('search dispatch requires its own restricted credential', () => {
+  const parsed = parseDatabaseSecret(JSON.stringify(secret), config, '/var/task/ca.crt');
+  assert.equal(
+    new URL(parsed.search).username,
+    'caseflow_search_dispatcher_login.abcdefghijklmnopqrst',
+  );
+  for (const search_database_url of [
+    undefined,
+    secret.processing_database_url,
+    connection('postgres'),
+  ]) {
+    assert.throws(() =>
+      parseDatabaseSecret(JSON.stringify({ ...secret, search_database_url }), config, '/ca.crt'),
     );
   }
 });

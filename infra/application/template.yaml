@@ -39,6 +39,10 @@ Parameters:
     Type: String
   FactQueueUrl:
     Type: String
+  SearchQueueArn:
+    Type: String
+  SearchQueueUrl:
+    Type: String
   AlarmTopicArn:
     Type: String
   DispatcherState:
@@ -121,7 +125,7 @@ Resources:
                 Resource: !Ref DispatcherSecretArn
               - Effect: Allow
                 Action: sqs:SendMessage
-                Resource: [!Ref ProcessingQueueArn, !Ref FactQueueArn]
+                Resource: [!Ref ProcessingQueueArn, !Ref FactQueueArn, !Ref SearchQueueArn]
   HttpApi:
     Type: AWS::Serverless::HttpApi
     Properties:
@@ -180,6 +184,7 @@ Resources:
           DISPATCHER_SECRET_ARN: !Ref DispatcherSecretArn
           PROCESSING_QUEUE_URL: !Ref ProcessingQueueUrl
           FACT_EXTRACTION_QUEUE_URL: !Ref FactQueueUrl
+          SEARCH_INDEX_QUEUE_URL: !Ref SearchQueueUrl
       Events:
         Tick:
           Type: ScheduleV2

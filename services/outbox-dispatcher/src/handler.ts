@@ -49,6 +49,11 @@ export async function handler(
         databaseUrl: connections.facts,
         queueUrl: config.factQueueUrl,
       },
+      {
+        target: DispatchTarget.SearchIndexing,
+        databaseUrl: connections.search,
+        queueUrl: config.searchQueueUrl,
+      },
     ].map(({ target, databaseUrl, queueUrl }) => ({
       store: createDispatchStore(
         databaseUrl,
