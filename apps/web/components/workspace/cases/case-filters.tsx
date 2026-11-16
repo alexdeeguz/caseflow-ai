@@ -49,6 +49,8 @@ export function CaseFilters({
           maxLength={CaseLimits.Search}
           placeholder="Case number, title, or client"
           type="search"
+          autoComplete="off"
+          spellCheck={false}
         />
       </label>
       <label className={styles.statusField}>
