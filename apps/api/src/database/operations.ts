@@ -1,4 +1,6 @@
 export const Operation = {
+  GetCaseTimeline: 'case.timeline',
+  GetCaseReviewedSummary: 'case.reviewed-summary',
   GetFact: 'fact.get',
   ListFactReviewHistory: 'fact.history',
   CorrectFact: 'fact.correct',
@@ -39,6 +41,8 @@ export const Operation = {
 export type Operation = (typeof Operation)[keyof typeof Operation];
 
 export const operationRequiresAdmin: Readonly<Record<Operation, boolean>> = {
+  [Operation.GetCaseTimeline]: false,
+  [Operation.GetCaseReviewedSummary]: false,
   [Operation.GetFact]: false,
   [Operation.ListFactReviewHistory]: false,
   [Operation.CorrectFact]: false,

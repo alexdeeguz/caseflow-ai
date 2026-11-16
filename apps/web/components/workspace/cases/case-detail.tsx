@@ -1,17 +1,20 @@
 'use client';
 
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import type { User } from '@caseflow/schemas';
 import type { AuthRequest } from '../../../hooks/use-authentication';
 import type { WorkspaceNavigate } from '../../../hooks/use-workspace-navigation';
 import type { WorkspaceLocation } from '../../../lib/workspace-location';
-import { useResource } from '../../../hooks/use-resource';
+import { resourceOptions } from '../../../lib/resources';
+import { documentLibraryState } from '../../../lib/processing/resources';
 import { caseDetailResource } from '../../../lib/workspace-resources';
 import { CaseSection, caseSectionLabels } from '../../../lib/constants/navigation';
 import { Button } from '../../ui/button';
 import { StatusMessage } from '../../ui/status-message';
 import { LoadState } from '../../ui/load-state';
 import { DocumentLibrary } from '../documents/document-library';
+import { CaseHistory } from '../case-history/case-history';
 import { CaseOverview } from './case-overview';
 import { CaseStatusBadge } from './case-status-badge';
 import styles from './cases.module.css';
@@ -35,7 +38,12 @@ export function CaseDetail({
   navigate: WorkspaceNavigate;
   pendingLocation: WorkspaceLocation | null;
 }) {
-  const { data, error } = useResource(request, caseDetailResource(id));
+  const query = useQuery(resourceOptions(request, caseDetailResource(id)));
+  const state = documentLibraryState(query);
+  const historySection =
+    location.section === CaseSection.Timeline || location.section === CaseSection.ReviewedSummary;
+  const { error } = state;
+  const data = error && !historySection ? null : state.data;
   const [accessError, setAccessError] = useState<string | null>(null);
 
   return (
@@ -88,6 +96,18 @@ export function CaseDetail({
               navigate={navigate}
               pendingLocation={pendingLocation}
               onAccessRejected={setAccessError}
+            />
+          ) : historySection ? (
+            <CaseHistory
+              key={`${id}-${location.section}`}
+              caseId={id}
+              location={location}
+              navigate={navigate}
+              request={request}
+              onAccessRejected={setAccessError}
+              navigating={pendingLocation !== null}
+              caseError={error}
+              refreshCase={() => query.refetch()}
             />
           ) : (
             <CaseOverview data={data} user={user} request={request} onEdit={onEdit} />

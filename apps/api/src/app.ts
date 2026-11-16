@@ -1,3 +1,4 @@
+import { registerCaseHistoryRoutes } from './routes/case-history.js';
 import { registerFactReviewRoutes } from './routes/fact-review.js';
 import { DispatchTarget } from './processing/store.js';
 import { registerFactExtractionRoutes } from './routes/fact-extraction.js';
@@ -105,6 +106,7 @@ export async function buildApp(
   registerProfileRoutes(route);
   registerUserRoutes(route);
   registerCaseRoutes(route);
+  registerCaseHistoryRoutes(route);
   registerAuditRoutes(route);
   registerProcessingRoutes(route);
   registerFactExtractionRoutes(route);

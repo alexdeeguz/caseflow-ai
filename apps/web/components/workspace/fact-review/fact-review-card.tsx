@@ -20,6 +20,7 @@ import { FormField } from '../../ui/form-field';
 import { useToast } from '../../ui/toast-provider';
 import { DocumentDate } from '../documents/document-details';
 import { FactReviewBadge } from './fact-review-badge';
+import { FactEvidence } from './fact-evidence';
 import { FactValuesDisplay } from './fact-values';
 import { FactCorrectionForm } from './fact-correction-form';
 import { FactReviewHistory } from './fact-review-history';
@@ -239,12 +240,7 @@ export function FactReviewCard({
           <FactValuesDisplay values={fact.original} />
         </details>
       )}
-      {fact.evidence.map((evidence) => (
-        <figure key={evidence.id} className={styles.evidence}>
-          <figcaption>Source · Page {evidence.page}</figcaption>
-          <blockquote>{evidence.quote}</blockquote>
-        </figure>
-      ))}
+      <FactEvidence evidence={fact.evidence} />
       {error && !conflict && (
         <p className={styles.error} role="alert">
           {error}

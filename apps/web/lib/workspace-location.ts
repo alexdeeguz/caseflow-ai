@@ -1,4 +1,5 @@
 import {
+  FactCategory,
   CaseArchiveFilter,
   DocumentFilter,
   caseArchiveSchema,
@@ -20,12 +21,20 @@ export interface WorkspaceLocation {
   section: CaseSection;
   documentFilter: DocumentFilter;
   documentPage: number;
+  timelinePage: number;
+  summaryPage: number;
+  summaryCategory: FactCategory;
   case: string | null;
   search: string;
   status?: CaseStatus;
   page: number;
   archive: CaseArchiveFilter;
   mode?: typeof CaseMode.Edit;
+}
+
+function parsePage(value: string | null): number {
+  const page = Number(value ?? 1);
+  return Number.isInteger(page) && page >= 1 && page <= 100000 ? page : 1;
 }
 
 export function parseWorkspaceLocation(params: URLSearchParams): WorkspaceLocation {
@@ -44,8 +53,16 @@ export function parseWorkspaceLocation(params: URLSearchParams): WorkspaceLocati
 
   return {
     tab,
-    section:
-      hasCase && section === CaseSection.Documents ? CaseSection.Documents : CaseSection.Overview,
+    section: hasCase
+      ? (Object.values(CaseSection).find((value) => value === section) ?? CaseSection.Overview)
+      : CaseSection.Overview,
+    timelinePage: hasCase ? parsePage(params.get(WorkspaceParam.TimelinePage)) : 1,
+    summaryPage: hasCase ? parsePage(params.get(WorkspaceParam.SummaryPage)) : 1,
+    summaryCategory: hasCase
+      ? (Object.values(FactCategory).find(
+          (value) => value === params.get(WorkspaceParam.SummaryCategory),
+        ) ?? FactCategory.Date)
+      : FactCategory.Date,
     documentFilter: hasCase
       ? (Object.values(DocumentFilter).find((value) => value === documentFilter) ??
         DocumentFilter.Current)
@@ -72,11 +89,20 @@ export function workspaceHref(location: WorkspaceLocation): string {
   if (location.tab === WorkspaceTab.Cases && location.case) {
     params.set(WorkspaceParam.Case, location.case);
     if (location.case !== CaseView.New) {
-      if (location.section === CaseSection.Documents) {
+      if (location.section !== CaseSection.Overview) {
         params.set(WorkspaceParam.Section, location.section);
       }
       if (location.documentFilter !== DocumentFilter.Current) {
         params.set(WorkspaceParam.DocumentFilter, location.documentFilter);
+      }
+      if (location.timelinePage > 1) {
+        params.set(WorkspaceParam.TimelinePage, String(location.timelinePage));
+      }
+      if (location.summaryPage > 1) {
+        params.set(WorkspaceParam.SummaryPage, String(location.summaryPage));
+      }
+      if (location.summaryCategory !== FactCategory.Date) {
+        params.set(WorkspaceParam.SummaryCategory, location.summaryCategory);
       }
       if (location.documentPage > 1) {
         params.set(WorkspaceParam.DocumentPage, String(location.documentPage));

@@ -1,3 +1,4 @@
+import { getCaseTimeline, getCaseReviewedSummary } from './case-history.js';
 import {
   getReviewedFact,
   listReviewedFacts,
@@ -48,6 +49,12 @@ export async function executeOperation(
   const offset = (page - 1) * pageSize;
 
   switch (operation) {
+    case Operation.GetCaseTimeline:
+      return getCaseTimeline(client, input);
+
+    case Operation.GetCaseReviewedSummary:
+      return getCaseReviewedSummary(client, input);
+
     case Operation.GetFactExtraction:
       return getFactExtraction(client, input);
 

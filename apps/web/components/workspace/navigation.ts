@@ -1,5 +1,9 @@
 import type { Role } from '@caseflow/schemas';
 import {
+  caseTimelineResource,
+  caseReviewedSummaryResource,
+} from '../../lib/case-history/resources';
+import {
   auditListResource,
   caseDetailResource,
   caseListResource,
@@ -24,6 +28,18 @@ export function locationResources(location: WorkspaceLocation, role: Role): Reso
       }
       return [
         caseDetailResource(location.case),
+        ...(location.section === CaseSection.Timeline && !location.mode
+          ? [caseTimelineResource(location.case, location.timelinePage)]
+          : []),
+        ...(location.section === CaseSection.ReviewedSummary && !location.mode
+          ? [
+              caseReviewedSummaryResource(
+                location.case,
+                location.summaryCategory,
+                location.summaryPage,
+              ),
+            ]
+          : []),
         ...(location.section === CaseSection.Documents && !location.mode
           ? [documentListResource(location.case, documentLibraryQuery(location, role))]
           : []),

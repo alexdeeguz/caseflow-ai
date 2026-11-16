@@ -8,6 +8,7 @@ Route definitions are grouped by feature under `apps/api/src/routes`:
 
 - `profile.ts`: current-user profile retrieval and updates.
 - `users.ts`: administrative user listing, role changes, and account access.
+- `case-history.ts`: approved case timeline and categorized reviewed summary.
 - `cases.ts`: case creation, editing, archive/restore, searchable listing, details, and Staff assignments.
 - `audit.ts`: case, permission, profile, and document audit history.
 - `documents.ts`: upload sessions, document listing, download authorization, removal, and restoration.
@@ -90,3 +91,12 @@ Fact lists now return effective values, immutable originals/evidence, review met
 The feature adds single-fact reads, versioned corrections, approval/rejection/reopening, and
 paginated history under `/cases/:caseId/documents/:documentId/facts/:factId`.
 See [human review](human-review.md#api) for exact routes, bodies, permissions, and conflict behavior.
+
+## Case timeline and reviewed summary
+
+`GET /cases/:caseId/timeline` returns approved date facts, oldest first.
+`GET /cases/:caseId/reviewed-summary` returns a category page plus case-wide approved category and
+source-document counts. Both accept standard pagination; the summary also accepts `category`,
+defaulting to `date`. Only current approved values from available documents are included.
+
+See [case history](case-history.md#api) for response metadata, ordering, permissions, and freshness.

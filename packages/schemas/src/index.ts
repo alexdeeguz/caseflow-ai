@@ -19,3 +19,4 @@ export * from './contracts/fact-extraction.js';
 export * from './constants/fact-review.js';
 export * from './contracts/fact-review.js';
 export * from './contracts/fact-values.js';
+export * from './contracts/case-history.js';

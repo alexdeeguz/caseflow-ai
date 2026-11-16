@@ -1,5 +1,6 @@
 import { QueryClient, queryOptions } from '@tanstack/react-query';
 import type { AuthRequest } from '../hooks/use-authentication';
+import { isCaseHistoryResource } from './case-history/resources';
 import { ApiError, type Parser, type ApiRequestOptions } from './api';
 
 export interface Resource<T> {
@@ -63,6 +64,7 @@ export function withResourceInvalidation(client: QueryClient, request: AuthReque
               predicate: ({ queryKey }) => {
                 const key = String(queryKey[0]);
                 return (
+                  isCaseHistoryResource(key, documents[1]!) ||
                   key.startsWith(`${review[1]}?`) ||
                   key.startsWith(`${review[1]}/`) ||
                   key.startsWith('/admin/audit')
@@ -82,6 +84,7 @@ export function withResourceInvalidation(client: QueryClient, request: AuthReque
               const key = String(queryKey[0]);
               return (
                 key.startsWith('/admin/audit') ||
+                (/\/(remove|restore)$/.test(path) && isCaseHistoryResource(key, documents[1]!)) ||
                 (libraryChanged && key.startsWith(`/cases/${documents[1]}/documents?`)) ||
                 (libraryChanged &&
                   key.startsWith(

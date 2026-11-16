@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { documentSchema, downloadAuthorizationSchema, type Document } from '@caseflow/schemas';
+import { documentSchema, type Document } from '@caseflow/schemas';
 import type { AuthRequest } from '../../../hooks/use-authentication';
 import { ApiError } from '../../../lib/api';
-import { DocumentAction, handOffDownload } from '../../../lib/documents/actions';
+import { downloadDocument } from '../../../lib/documents/download';
+import { DocumentAction } from '../../../lib/documents/actions';
 import { useToast } from '../../ui/toast-provider';
 
 export function useDocumentActions(
@@ -34,12 +35,7 @@ export function useDocumentActions(
     const options = { method: 'POST', signal: operation.signal, timeoutMs: 60000 };
     try {
       if (action === DocumentAction.Download) {
-        const authorization = await request(path, downloadAuthorizationSchema, {
-          ...options,
-          body: '{}',
-        });
-        operation.signal.throwIfAborted();
-        handOffDownload(authorization.url, document.filename);
+        await downloadDocument(request, document, operation.signal);
         toast('Download requested. Check your browser’s downloads.');
       } else {
         await request(path, documentSchema, {

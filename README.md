@@ -25,6 +25,9 @@ Native PDF extraction, Textract OCR, bounded recovery, and monitoring are implem
 - **Human review:** versioned fact corrections, Staff rejection, administrator approval/reopening,
   immutable evidence, and protected review history. See [human review](docs/human-review.md).
 
+- **Case timeline and reviewed summary:** read-only approved facts across available case documents,
+  precise dates, category counts, source quotations, and authorized downloads. See [case history](docs/case-history.md).
+
 ## Stack and structure
 
 | Location                                                   | Responsibility                                                               |
@@ -108,6 +111,7 @@ individually, integration-test prerequisites, and dependency maintenance.
 | [Authentication](docs/authentication.md)           | Entra registration, token validation, session behavior, and sign-in verification            |
 | [Users and cases](docs/users-and-cases.md)         | Permission matrix, Super Admin setup, assignments, editing, and archiving                   |
 | [Fact extraction](docs/fact-extraction.md)         | OpenAI facts, evidence, allowance controls, verification, and reviewed deployment           |
+| [Case history](docs/case-history.md)               | Approved timeline, structured summary, sources, permissions, and freshness                  |
 | [Human review](docs/human-review.md)               | Corrections, approval permissions, immutable evidence, revision history, and release checks |
 | [API reference](docs/api.md)                       | Route organization, request/response contracts, pagination, and errors                      |
 | [Document management](docs/document-management.md) | S3 configuration, uploads, library, downloads, removal, and consistency rules               |

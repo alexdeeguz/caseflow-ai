@@ -7,6 +7,7 @@ import {
   type FactReviewAction,
 } from '@caseflow/schemas';
 import { AppError } from '../errors.js';
+import { factEvidenceProjection } from './fact-projections.js';
 
 const factProjection = `r.values || jsonb_build_object(
   'id', f.id, 'extractionJobId', f.extraction_job_id,
@@ -15,10 +16,7 @@ const factProjection = `r.values || jsonb_build_object(
   'corrected', r.values <> caseflow.fact_original_values(f),
   'reviewedBy', r.reviewed_by,
   'reviewedAt', to_char(r.reviewed_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
-  'evidence', (select jsonb_agg(jsonb_build_object(
-    'id', e.id, 'documentId', e.document_id, 'processingResultId', e.processing_result_id,
-    'page', e.page, 'quote', e.quote, 'start', e.start_offset, 'end', e.end_offset
-  ) order by e.page,e.start_offset,e.id) from caseflow.fact_evidence e where e.fact_id=f.id)
+  'evidence', ${factEvidenceProjection}
 )`;
 
 export async function getReviewedFact(client: PoolClient, input: Record<string, unknown>) {

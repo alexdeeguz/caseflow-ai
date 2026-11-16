@@ -2,7 +2,8 @@
 
 Human review adds versioned corrections and approval to completed extracted facts. Original AI
 values and source evidence remain immutable. No model call, document preview, manual fact creation,
-bulk approval, timeline, or summary is part of this feature.
+or bulk approval is part of this feature. Approved facts feed the separate
+[case timeline and reviewed summary](case-history.md).
 
 ## Permissions and states
 
@@ -85,7 +86,8 @@ profiles, assignments, documents, jobs, dispatches, and audit history.
   quotations remain in protected fact/history endpoints so removal cannot leak them through audit.
 - `caseflow.approved_facts` is a security-invoker view over current approved revisions. Future
   consumers must use it under the caller's authorization context and recheck access at use time.
-  It excludes Unreviewed, Rejected, removed, and inaccessible facts. No downstream consumer is added.
+  It excludes Unreviewed, Rejected, removed, and inaccessible facts. Case timeline and reviewed
+  summary queries use this view for current approved information.
 
 Contracts and constants live in `packages/schemas`; routes and queries are in separate
 `apps/api/src/routes/fact-review.ts` and `apps/api/src/database/fact-review.ts` modules. Shared
@@ -107,7 +109,7 @@ Saving, discarding, sign-out, role/workspace disposal, or access rejection clear
 
 Transient read failures retain verified content with a stale notice and disable review actions.
 Authorization rejection clears protected content. Review mutations invalidate only affected fact
-lists, detail/history resources, and audit queries. The workspace shell and existing navigation
+lists, detail/history resources, case timeline/summary resources, and audit queries. The workspace shell and existing navigation
 context remain mounted; polling does not move keyboard focus.
 
 ## Verification and release
