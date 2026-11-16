@@ -73,6 +73,10 @@
 }
 .submit {
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
   min-height: 40px;
   padding: 0.4375rem 0.875rem;
   border: 1px solid var(--brand-line);

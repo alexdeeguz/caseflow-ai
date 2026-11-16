@@ -3,23 +3,27 @@
 import { useState } from 'react';
 import { SearchLimits } from '@caseflow/schemas';
 import { CloseIcon, Icon } from '../../ui/icon';
+import { Spinner } from '../../ui/spinner';
 import styles from './search.module.css';
 
 /**
  * Search input that only searches on Enter or the Search button, so typing never sends requests.
- * `value` is the active search; the field keeps its own draft until submitted.
+ * `value` is the active search; the field keeps its own draft until submitted. `busy` shows that a
+ * submitted search is still loading; the button stays enabled so a corrected search can replace it.
  */
 export function SearchField({
   label,
   value,
   placeholder,
   size = 'md',
+  busy = false,
   onSearch,
 }: {
   label: string;
   value: string;
   placeholder: string;
   size?: 'md' | 'lg';
+  busy?: boolean;
   onSearch: (query: string) => void;
 }) {
   const [draft, setDraft] = useState(value);
@@ -73,8 +77,15 @@ export function SearchField({
           </button>
         )}
       </div>
-      <button type="submit" className={styles.submit}>
-        Search
+      <button type="submit" className={styles.submit} aria-busy={busy}>
+        {busy ? (
+          <>
+            <Spinner size={size === 'lg' ? 18 : 14} />
+            Searching…
+          </>
+        ) : (
+          'Search'
+        )}
       </button>
     </form>
   );

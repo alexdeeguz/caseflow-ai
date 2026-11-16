@@ -211,6 +211,9 @@ export function DocumentLibrary({
               label="Search this case’s documents"
               value={location.documentQuery}
               placeholder="Search text in these documents"
+              busy={
+                pendingLocation !== null && pendingLocation.documentQuery !== location.documentQuery
+              }
               onSearch={(documentQuery) =>
                 void navigate(
                   { ...location, documentQuery, documentQueryPage: 1 },

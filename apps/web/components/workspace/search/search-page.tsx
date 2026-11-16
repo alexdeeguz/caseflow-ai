@@ -115,6 +115,7 @@ export function SearchPage({
           label="Search documents"
           value={location.query}
           placeholder="e.g. lumbar MRI, or “when did physical therapy start”"
+          busy={pendingLocation !== null}
           onSearch={(query) => apply({ query })}
         />
         <div className={styles.controls}>
@@ -162,7 +163,12 @@ export function SearchPage({
 
       {accessError && <StatusMessage tone="error">{accessError}</StatusMessage>}
       {!searchable ? (
-        <SearchTips />
+        // A first search runs before the URL changes; show progress instead of the tips meanwhile.
+        pendingLocation && isSearchable(pendingLocation.query) ? (
+          <LoadState error={null} label="Searching documents…" />
+        ) : (
+          <SearchTips />
+        )
       ) : !data ? (
         <LoadState error={error} label="Searching documents…" />
       ) : (
