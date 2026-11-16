@@ -21,6 +21,7 @@ export const ErrorCode = {
   InternalError: 'INTERNAL_ERROR',
   LastSuperAdmin: 'LAST_SUPER_ADMIN',
   RequestFailed: 'REQUEST_FAILED',
+  RateLimited: 'RATE_LIMITED',
 } as const;
 
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];

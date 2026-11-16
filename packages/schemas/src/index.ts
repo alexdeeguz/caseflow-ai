@@ -23,3 +23,4 @@ export * from './contracts/case-history.js';
 export * from './constants/search.js';
 export * from './contracts/search-index.js';
 export * from './contracts/document-search.js';
+export * from './contracts/demo-session.js';

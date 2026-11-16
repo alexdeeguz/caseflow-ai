@@ -1,4 +1,5 @@
 import { Pool, type PoolClient } from 'pg';
+import { DemoIdentity } from '../demo.js';
 import { userSchema } from '@caseflow/schemas';
 import type { Identity } from '../auth.js';
 import { databaseError } from './errors.js';
@@ -40,11 +41,19 @@ export function createDatabase(connectionString: string): WorkspaceStore {
           [identity.tenantId, identity.subject],
         );
 
-        // Only /me provisions users; other endpoints require an existing active profile.
+        // Only /me provisions users; other endpoints require an existing active profile. The
+        // demo identity is provisioned as the shared Demo Admin instead of a Staff profile.
+        const demo =
+          identity.tenantId === DemoIdentity.tenantId && identity.subject === DemoIdentity.subject;
+        const provisioning =
+          operation === Operation.StartDemoSession || (operation === Operation.GetProfile && demo)
+            ? 'ensure_demo_admin()'
+            : operation === Operation.GetProfile
+              ? 'provision($1)'
+              : 'require_actor()';
         const current = await client.query(
-          `select ${userColumns}
-           from caseflow.${operation === Operation.GetProfile ? 'provision($1)' : 'require_actor()'}`,
-          operation === Operation.GetProfile ? [identity.name] : [],
+          `select ${userColumns} from caseflow.${provisioning}`,
+          provisioning === 'provision($1)' ? [identity.name] : [],
         );
         const actor = userSchema.parse(current.rows[0]);
         const result = await executeOperation(client, actor, operation, input);

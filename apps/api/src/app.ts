@@ -3,6 +3,8 @@ import { registerFactReviewRoutes } from './routes/fact-review.js';
 import { DispatchTarget } from './processing/store.js';
 import { registerFactExtractionRoutes } from './routes/fact-extraction.js';
 import { registerSearchRoutes } from './routes/search.js';
+import { registerDemoRoutes } from './routes/demo.js';
+import { createDemoSessions } from './demo.js';
 import { createOpenAIQueryEmbedder, type QueryEmbedder } from './search/embeddings.js';
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
@@ -105,6 +107,10 @@ export async function buildApp(
   });
 
   const route = createProtectedRouteRegistrar(app, verify, store);
+
+  if (config.demo) {
+    registerDemoRoutes(app, createDemoSessions(config.demo), store);
+  }
 
   registerProfileRoutes(route);
   registerUserRoutes(route);

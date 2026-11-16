@@ -1,6 +1,6 @@
 'use client';
 
-import { ErrorCode, userSchema, type User } from '@caseflow/schemas';
+import { ErrorCode, userSchema, type DemoSession, type User } from '@caseflow/schemas';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { InteractionRequiredAuthError, type AccountInfo } from '@azure/msal-browser';
 
@@ -9,6 +9,13 @@ import { getPublicConfig } from '../lib/config';
 import { apiRequest, ApiError, type Parser, type ApiRequestOptions } from '../lib/api';
 import { isAccessRejected } from '../lib/auth-errors';
 import { rememberWorkspaceShell } from '../lib/session-presentation';
+import {
+  clearDemoSession,
+  isDemoSessionUsable,
+  readDemoSession,
+  saveDemoSession,
+  startDemoSession,
+} from '../lib/demo-session';
 
 const permissionsChangedEvent = 'caseflow:permissions';
 
@@ -22,6 +29,8 @@ export function useAuthentication() {
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
   const [account, setAccount] = useState<AccountInfo | null>(null);
+  // Shared demo Admin session (from /demo); used instead of Microsoft tokens while present.
+  const [demo, setDemo] = useState<DemoSession | null>(null);
   const [identity, setIdentity] = useState<User | null>(null);
   const [error, setError] = useState<string | null>(null);
   const lifecycle = useRef({ generation: 0, profileRequest: 0 });
@@ -29,9 +38,19 @@ export function useAuthentication() {
   useEffect(() => {
     let live = true;
     const state = lifecycle.current;
+    const stored = readDemoSession();
 
-    void getAuthClient()
+    // A demo session needs no Microsoft client; Microsoft sign-in initializes on demand later.
+    void (stored ? Promise.resolve(null) : getAuthClient())
       .then((client) => {
+        if (live && stored) {
+          setDemo(stored);
+          setReady(true);
+          return;
+        }
+        if (!client) {
+          return;
+        }
         if (live) {
           setAccount(client.getActiveAccount());
           setReady(true);
@@ -53,6 +72,44 @@ export function useAuthentication() {
   const request: AuthRequest = useCallback(
     async <T>(path: string, schema: Parser<T>, options: ApiRequestOptions = {}) => {
       const version = lifecycle.current.generation;
+
+      if (demo) {
+        if (!isDemoSessionUsable(demo)) {
+          lifecycle.current.generation++;
+          clearDemoSession();
+          rememberWorkspaceShell(false);
+          setDemo(null);
+          setIdentity(null);
+          setError('Your demo session has ended. Start a new one to keep exploring.');
+          throw new Error('Your demo session has ended.');
+        }
+
+        try {
+          const data = await apiRequest(demo.accessToken, path, schema, options);
+
+          if (version !== lifecycle.current.generation) {
+            throw new DOMException('Request cancelled', 'AbortError');
+          }
+          return data;
+        } catch (error) {
+          if (
+            error instanceof ApiError &&
+            (error.status === 401 || error.code === ErrorCode.AccountDisabled)
+          ) {
+            lifecycle.current.generation++;
+            clearDemoSession();
+            rememberWorkspaceShell(false);
+            setDemo(null);
+            setIdentity(null);
+            setError(
+              error.status === 401 ? 'Your demo session has ended.' : 'Demo access is turned off.',
+            );
+          } else if (error instanceof ApiError && error.status === 403 && path !== '/me') {
+            window.dispatchEvent(new Event(permissionsChangedEvent));
+          }
+          throw error;
+        }
+      }
 
       if (!account) {
         throw new Error('Sign in to continue.');
@@ -102,11 +159,11 @@ export function useAuthentication() {
         throw error;
       }
     },
-    [account, lifecycle],
+    [account, demo, lifecycle],
   );
 
   const refreshProfile = useCallback(() => {
-    if (!account) {
+    if (!account && !demo) {
       return Promise.resolve();
     }
 
@@ -135,7 +192,7 @@ export function useAuthentication() {
         }
       },
     );
-  }, [account, request, lifecycle]);
+  }, [account, demo, request, lifecycle]);
 
   useEffect(() => {
     let active = true;
@@ -178,11 +235,42 @@ export function useAuthentication() {
     }
   }
 
+  /** Starts a shared demo Admin session; only offered on the /demo page. Resolves to success. */
+  async function signInDemo(): Promise<boolean> {
+    setBusy(true);
+    setError(null);
+
+    try {
+      const session = await startDemoSession();
+
+      saveDemoSession(session);
+      rememberWorkspaceShell(true);
+      lifecycle.current.generation++;
+      setDemo(session);
+      setReady(true);
+      return true;
+    } catch (issue) {
+      rememberWorkspaceShell(false);
+      setError(issue instanceof Error ? issue.message : 'The demo could not start.');
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function signOut() {
     rememberWorkspaceShell(false);
     lifecycle.current.generation++;
     setIdentity(null);
     setBusy(true);
+
+    if (demo) {
+      clearDemoSession();
+      setDemo(null);
+      // Full navigation, like Microsoft sign-out: leaves no workspace state behind.
+      window.location.replace(new URL('/demo', window.location.origin));
+      return;
+    }
 
     try {
       const client = await getAuthClient();
@@ -195,7 +283,7 @@ export function useAuthentication() {
   }
 
   const hasIdentity = identity !== null;
-  const hasAccount = account !== null;
+  const hasAccount = account !== null || demo !== null;
 
   useEffect(() => {
     if (hasIdentity) {
@@ -205,16 +293,18 @@ export function useAuthentication() {
     }
   }, [hasIdentity, hasAccount, ready]);
 
-  const restoring = !error && (!ready || (account !== null && identity === null));
+  const restoring = !error && (!ready || (hasAccount && identity === null));
 
   return {
     ready,
     restoring,
     busy,
     account,
+    demo: demo !== null,
     identity,
     error,
     signIn,
+    signInDemo,
     signOut,
     request,
     refreshProfile,

@@ -1,5 +1,6 @@
 import { createRemoteJWKSet, decodeJwt, errors, jwtVerify, type RemoteJWKSet } from 'jose';
 import type { ApiConfig } from './config.js';
+import { DEMO_ISSUER, DemoIdentity, createDemoSessions, type DemoSessions } from './demo.js';
 
 export interface Identity {
   subject: string;
@@ -31,13 +32,26 @@ export function microsoftKeys() {
 }
 
 // The resolver is injectable for signed-token tests; production always uses Microsoft's fixed URL.
-export function createTokenVerifier(config: ApiConfig, keys: RemoteJWKSet = microsoftKeys()) {
+// Demo sessions are accepted only when demo sign-in is configured.
+export function createTokenVerifier(
+  config: ApiConfig,
+  keys: RemoteJWKSet = microsoftKeys(),
+  demo: DemoSessions | undefined = config.demo ? createDemoSessions(config.demo) : undefined,
+) {
   return async (token: string): Promise<Identity> => {
     try {
-      // Unverified tid only selects an expected issuer, never a network destination or identity.
-      const { tid } = decodeJwt(token);
+      // Unverified claims only select which verifier applies, never an identity or destination.
+      const { tid, iss } = decodeJwt(token);
+
+      if (iss === DEMO_ISSUER) {
+        if (!demo) {
+          throw new AuthError(401);
+        }
+        return await demo.verify(token);
+      }
 
       if (
+        tid === DemoIdentity.tenantId ||
         typeof tid !== 'string' ||
         !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tid)
       ) {

@@ -2,6 +2,7 @@ import { readDispatcherConfig, type DispatcherConfig } from './processing/config
 import { readStorageConfig, type StorageConfig } from './storage/config.js';
 import { parseDatabaseUrl } from './database/connection-config.js';
 import { readSearchConfig } from './search/embeddings.js';
+import { readDemoConfig, type DemoConfig } from './demo.js';
 
 export interface ApiConfig {
   clientId: string;
@@ -14,6 +15,8 @@ export interface ApiConfig {
   searchDispatcher?: DispatcherConfig;
   /** Enables semantic (embedding) matching for search queries. */
   search?: { apiKey: string };
+  /** Enables the public demo sign-in endpoint and demo session tokens. */
+  demo?: DemoConfig;
 }
 
 const guid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -61,6 +64,7 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
   const factDispatcher = readDispatcherConfig(env, databaseUrl, 'facts');
   const searchDispatcher = readDispatcherConfig(env, databaseUrl, 'search');
   const search = readSearchConfig(env);
+  const demo = readDemoConfig(env);
 
   return {
     clientId,
@@ -72,5 +76,6 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
     ...(factDispatcher ? { factDispatcher } : {}),
     ...(searchDispatcher ? { searchDispatcher } : {}),
     ...(search ? { search } : {}),
+    ...(demo ? { demo } : {}),
   };
 }

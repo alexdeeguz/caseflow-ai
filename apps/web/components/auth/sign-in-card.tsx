@@ -1,6 +1,7 @@
 'use client';
 
 import { Suspense } from 'react';
+import { useRouter } from 'next/navigation';
 
 import { useAuthentication } from '../../hooks/use-authentication';
 import { Button } from '../ui/button';
@@ -11,7 +12,9 @@ import { AuthPanel } from './auth-panel';
 import { SessionLoading } from './session-loading';
 import styles from './session-presentation.module.css';
 
-export function SignInCard() {
+/** Sign-in entry point. `demo` (the /demo page) also offers the shared demo Admin account. */
+export function SignInCard({ demo = false }: { demo?: boolean }) {
+  const router = useRouter();
   const {
     ready,
     restoring,
@@ -20,6 +23,7 @@ export function SignInCard() {
     identity,
     error,
     signIn,
+    signInDemo,
     refreshProfile,
     signOut,
     request,
@@ -41,6 +45,47 @@ export function SignInCard() {
         />
       </Suspense>
     );
+  }
+
+  const demoView = (
+    <AuthShell>
+      <AuthPanel
+        eyebrow="LIVE DEMO"
+        title="Explore CaseFlow."
+        description="Continue as a demo administrator to try every feature with fictional case files. No Microsoft account needed."
+      >
+        <Button
+          disabled={busy}
+          aria-busy={busy}
+          onClick={() =>
+            void signInDemo().then((started) => {
+              if (started) {
+                router.replace('/');
+              }
+            })
+          }
+        >
+          {busy ? 'Starting demo…' : 'Continue as demo admin'}
+        </Button>
+        <Button
+          variant="secondary"
+          disabled={!ready || busy}
+          aria-busy={!ready}
+          onClick={() => void signIn()}
+        >
+          Sign in with Microsoft instead
+        </Button>
+        <p className="text-sm leading-6 text-ink-soft">
+          The demo account is shared, so other visitors may see or change the same fictional data.
+          Sessions last one hour.
+        </p>
+        {error && <StatusMessage tone="error">{error}</StatusMessage>}
+      </AuthPanel>
+    </AuthShell>
+  );
+
+  if (demo && !account) {
+    return demoView;
   }
 
   const signInView = (

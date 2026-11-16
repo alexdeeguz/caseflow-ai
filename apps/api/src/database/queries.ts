@@ -84,6 +84,7 @@ export async function executeOperation(
     case Operation.ReopenFact:
       return reviewFact(client, input, FactReviewAction.Reopen);
     case Operation.GetProfile:
+    case Operation.StartDemoSession:
       return actor;
 
     case Operation.UpdateProfile: {
