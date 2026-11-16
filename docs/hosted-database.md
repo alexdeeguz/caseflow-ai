@@ -2,7 +2,7 @@
 
 [Back to README](../README.md)
 
-The API can use hosted Supabase PostgreSQL (AWS Ohio, `us-east-2`) while the frontend and API run
+The API can use hosted Supabase PostgreSQL while the frontend and API run
 locally. Local and hosted databases are independent: migrations create the schema, not a copy of
 local users, assignments, cases, or document metadata. Microsoft Entra remains the authentication
 provider; the application does not use Supabase Auth or browser keys, and the `caseflow` schema is
@@ -31,31 +31,22 @@ an audited, operator-only database function that also protects the last active S
 Disabling a user blocks access; deleting a profile allows automatic provisioning on the next
 sign-in.
 
-## Local tests and switching environments
+## Local tests and environment isolation
 
-`npm run db:configure` is **local-only** and overwrites the API's `DATABASE_URL`. Do not run it
-while expecting to retain hosted configuration. Keep local and hosted credentials in separately
-protected configuration and restart the API when switching. Existing uploaded S3 objects do not
-automatically acquire metadata in a new database.
+Local and hosted data remain separate. Integration fixtures accept only a local server,
+create disposable databases, and do not reset the working database. Test configuration
+is independent of the application's current database connection; see
+[local verification](development.md#verification).
 
-Integration tests create and drop disposable databases. They require explicit **local** operator
-and runtime URLs pointing at the same local server; the runtime username must be
-`caseflow_runtime`. Their fixture rejects hosted targets. When `apps/api/.env` targets hosted
-Supabase, supply local test credentials as shell environment variables before
-`npm run test:integration`; shell values take precedence over the environment files. Do not rotate
-a shared local role password just to run tests. Use an isolated PostgreSQL instance when local
-credentials are unavailable.
+## Data boundaries
 
-## Data and backups
+PostgreSQL holds application records and document metadata; S3 holds file bytes.
+Metadata binds each document and generated artifact to its exact object version.
+An object alone does not recreate its database record, permissions, or audit history.
+Restricted runtime roles cannot perform database administration or delete stored versions.
 
-PostgreSQL holds application records and document metadata; S3 holds file bytes. A usable backup
-therefore needs both a database export and the referenced S3 object versions. Restores are verified
-against an isolated database, never the working one, and runtime credentials are re-established
-separately. The Free plan does not include long backup retention and can pause idle projects.
-
-References: [connection modes](https://supabase.com/docs/guides/database/connecting-to-postgres),
-[SSL enforcement](https://supabase.com/docs/guides/platform/ssl-enforcement), and
-[backup guidance](https://supabase.com/docs/guides/platform/backups).
+References: [connection modes](https://supabase.com/docs/guides/database/connecting-to-postgres)
+and [SSL enforcement](https://supabase.com/docs/guides/platform/ssl-enforcement).
 
 ## Related guides
 

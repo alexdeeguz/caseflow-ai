@@ -13,36 +13,34 @@ Storage configuration, the upload protocol, library behavior, and document lifec
 
 The API supports upload authorization, verified completion, paginated document listing,
 short-lived downloads, and administrative removal/restoration. The case document UI
-supports these workflows. File previews and background processing remain later work.
+supports these workflows. Verified uploads also start [text processing](document-processing.md).
+File previews remain outside this feature.
 
 Storage configuration and S3 adapters live in `apps/api/src/storage`. Upload and download
 orchestration live in `src/documents`, HTTP definitions in
 `src/routes/documents.ts`, and database queries in `src/database/documents.ts`.
-Shared contracts and limits live in `packages/schemas`. Install dependencies with
-`npm install` and apply additive migrations with `npm run db:migrate`.
+Shared contracts and limits live in `packages/schemas`.
 
 ## Configuration
 
-Configure these values only in the ignored `apps/api/.env`:
+Storage settings are server-only:
 
-```dotenv
-S3_BUCKET=your-private-document-bucket
-AWS_REGION=us-east-2
-S3_ENVIRONMENT=dev
-AWS_PROFILE=caseflow-api-dev
-```
+| Setting          | Purpose                                     |
+| ---------------- | ------------------------------------------- |
+| `S3_BUCKET`      | Private versioned document storage          |
+| `AWS_REGION`     | Selected Region for storage requests        |
+| `S3_ENVIRONMENT` | Object prefix separating environments       |
+| `AWS_PROFILE`    | Optional restricted local workload identity |
 
-`AWS_PROFILE` selects a restricted local assume-role profile outside the repository.
-It takes precedence over ambient access keys. Refresh its source login with
-`aws login --profile <source-profile>`. For deployment, omit `AWS_PROFILE` and
-configure temporary workload credentials supported by the SDK's default chain.
-Keep credentials and storage configuration out of frontend environment variables.
+An explicitly selected local profile takes precedence over ambient credentials.
+Cloud workloads use temporary execution-role credentials through the SDK's default
+credential chain. Storage credentials never enter frontend configuration.
 
 When both S3-specific settings are absent, storage is disabled; existing features
 remain available, including document listing and removal/restoration. Upload endpoints
 return 503 after checking case access; download authorization returns 503 after checking
 document access and availability.
-Partial settings fail startup. Restart the API after changing its environment.
+Partial settings fail startup.
 The shared client uses bounded retries, timeouts, and sockets and closes with Fastify.
 
 The bucket must remain private, enforce HTTPS, disable ACLs, use encryption, and
@@ -52,9 +50,8 @@ need bucket administration, listing, or deletion. Missing objects can therefore
 return S3 403; completion treats unavailable objects as retryable rather than
 claiming a file failed validation.
 
-Browser CORS must allow the intended frontend origin, `PUT`, and the request headers
-`Content-Type`, `If-None-Match`, and `x-amz-checksum-sha256`. A matching wildcard
-header rule also works. Completion obtains the S3 version server-side, so the
+Browser CORS is restricted to the intended frontend origin, `PUT`, and the request headers
+`Content-Type`, `If-None-Match`, and `x-amz-checksum-sha256`. Completion obtains the S3 version server-side, so the
 browser does not need to read or submit S3 version headers.
 
 ## Upload protocol
@@ -202,9 +199,8 @@ state already matches. A matching-version no-op leaves timestamps, version, and 
 history unchanged. Pending documents return `409 DOCUMENT_UNAVAILABLE`; archived cases
 return `409 CASE_ARCHIVED`.
 
-Apply the additive migration with `npm run db:migrate` before running the updated API.
-It adds private permission-checked functions and preserves existing data, indexes, and
-RLS policies. It does not reset the database, seed documents, or grant direct runtime writes.
+Removal and restoration use private permission-checked functions. Existing data,
+indexes, and RLS policies are preserved; runtime credentials have no direct table-write access.
 
 ## Verification and consistency
 

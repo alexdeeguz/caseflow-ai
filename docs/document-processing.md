@@ -2,7 +2,7 @@
 
 [Back to README](../README.md)
 
-The database lifecycle, API dispatcher, processing endpoints, Python extraction and completion workers, bounded recovery, monitoring, and document-library controls are implemented. See [workflow verification](processing-verification.md) for what has been verified and known limits.
+The database lifecycle, API dispatcher, processing endpoints, Python extraction and completion workers, bounded recovery, monitoring, and document-library controls are implemented. See [workflow verification](processing-verification.md) for test coverage and its limits.
 
 - [Processing in the document library](#processing-in-the-document-library)
 - [Processing API](#processing-api)
@@ -97,18 +97,15 @@ snapshot. The indexed latest-job join runs only for the requested page, with no 
 request or SQL round trip per document. Upload and remove/restore response contracts
 remain unchanged; clients refresh the library after mutations.
 
-Apply `20261115195228_processing_api.sql` after the existing processing/worker migrations
-through the [reviewed migration workflow](hosted-database.md). It grants the runtime role
-only four result-summary columns and adds a SELECT policy following the existing
-job/document/case RLS chain. Artifact fields remain inaccessible, and no table-write
-permissions are added. API startup does not apply migrations.
+The API runtime can read only four result-summary columns under the existing
+job/document/case RLS chain. Artifact fields remain inaccessible, and the API receives
+no direct table-write permissions.
 
-These routes can be developed and tested without Lambda deployment or Secrets Manager.
-Starting a job records work in PostgreSQL; execution still requires the dispatcher and
-both configured consumers. Leave continuous dispatching disabled until recovery and full
-workflow verification are complete.
+Starting a job records work in PostgreSQL. Execution requires a dispatcher and consumers;
+the database itself does not send messages or perform OCR. API tests use local fixtures
+without cloud credentials.
 
-`npm run test:integration` verifies signed-token requests, roles, cross-case IDs,
+Integration tests verify signed-token requests, roles, cross-case IDs,
 archived/removed/pending documents, strict inputs, idempotency, concurrent retries,
 permission races, audit rollback, RLS/column grants, safe native/OCR summaries, missing
 results, and migration preservation on disposable PostgreSQL databases.
@@ -119,7 +116,7 @@ The processing migration adds `document_processing_jobs` and `processing_dispatc
 to the private `caseflow` schema. Processing lifecycle is separate from document
 availability and document versions. Historical documents are not automatically queued.
 
-After this migration is applied, verified upload completion atomically saves the
+Verified upload completion atomically saves the
 available document, completed upload session, queued processing job, dispatch record,
 and audit events. Repeated completion requests return the existing upload without
 creating another job. Each job snapshots the verified source object version and checksum.
@@ -151,13 +148,13 @@ exposes job state and the document library provides authorized start/retry contr
 [API dispatcher](#api-processing-dispatcher) sends queued jobs once enabled; until then, new jobs
 remain queued in PostgreSQL. Starting the API never applies migrations.
 
-`npm run test:integration` covers atomic rollback, completion and retry idempotency,
+Integration tests cover atomic rollback, completion and retry idempotency,
 role changes, RLS, dispatch concurrency and expired claims, migration preservation,
 and repeatable seeds using disposable local databases.
 
 ## Processor database
 
-The additive `20261115170546_processor_database.sql` migration adds restricted worker
+The processor database interface provides restricted worker
 functions, 180-second job leases, separate extraction/collection retry counters,
 versioned artifact references, service audit events, and a shared OCR allowance of
 100 pages per UTC day (maximum 20 PDF pages per job). Removal and archival cancel
@@ -210,19 +207,18 @@ users, and it is never granted runtime or operator membership. Connections use f
 verification against a trusted CA. The API's AWS identity needs only `sqs:SendMessage` on the
 processing queue, in addition to its scoped S3 permissions; it has no receive or delete rights.
 
-Set these **server-only** values in the API environment or deployment secret store:
+Server-only dispatcher settings:
 
-| Setting                              | Value                                                                         |
+| Setting                              | Purpose                                                                       |
 | ------------------------------------ | ----------------------------------------------------------------------------- |
 | `PROCESSING_DISPATCHER_ENABLED`      | `false` by default; `true` enables dispatching                                |
 | `PROCESSING_DISPATCHER_DATABASE_URL` | Restricted dispatcher connection described above                              |
 | `PROCESSING_QUEUE_URL`               | HTTPS URL of the standard processing queue, not the completion queue or a DLQ |
-| `AWS_REGION`                         | `us-east-2`                                                                   |
-| `AWS_PROFILE`                        | Local restricted workload profile; omit when using a deployment workload role |
+| `AWS_REGION`                         | Selected Region for queue requests                                            |
+| `AWS_PROFILE`                        | Optional restricted local workload identity                                   |
 
 The queue URL must match `AWS_REGION`. Explicit local profiles are used without falling
-back to unrelated environment credentials. Deployment uses the SDK credential chain
-and should supply a workload role, not static keys. Invalid enabled configuration fails
+back to unrelated environment credentials. Cloud workloads use temporary role credentials through the SDK credential chain. Invalid enabled configuration fails
 at startup with value-free errors. Disabled configuration creates no dispatcher clients.
 
 Dispatching is off by default. Existing uploaded documents are not automatically backfilled.

@@ -13,14 +13,17 @@ Route definitions are grouped by feature under `apps/api/src/routes`:
 - `audit.ts`: case, permission, profile, and document audit history.
 - `documents.ts`: upload sessions, document listing, download authorization, removal, and restoration.
 - `processing.ts`: processing status and administrator start/retry actions.
+- `fact-extraction.ts`: extraction status, retries, and source-linked facts.
+- `fact-review.ts`: corrections, review decisions, and revision history.
+- `search.ts`: authorized document search and indexing requests.
 - `protected-route.ts`: shared bearer-token verification and request/response validation.
 
 `app.ts` configures Fastify, CORS, error handling, and registers the feature routes.
 Database authorization and queries remain in `src/database`.
 
 All endpoints require a Microsoft bearer access token. Shared contracts live in
-`packages/schemas`; root scripts build that package before consumers, and root
-`npm run dev` watches it. If running an app individually, build schemas first.
+`packages/schemas` and are validated at the HTTP boundary. Development commands
+are documented in [local development](development.md#running-individual-apps).
 
 ## Profile, administration, and case endpoints
 

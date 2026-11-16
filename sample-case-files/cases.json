@@ -1,0 +1,2707 @@
+[
+  {
+    "sample_id": "DEMO-001",
+    "folder": "01-rear-end-collision",
+    "client_name": "Maya Bennett",
+    "title": "Rear-end collision - Maya Bennett",
+    "incident_date": "2025-02-03",
+    "incident_location": "Harbor Glen / Alder Avenue intersection",
+    "other_party": "Jordan Vale",
+    "insurer": "Cedar Point Insurance",
+    "provider": "Dr. Avery Quinn",
+    "facility": "Harbor Glen Clinic",
+    "recorded_assessment": "Cervical strain and right shoulder pain",
+    "initial_visit": "2025-02-04",
+    "follow_up": "2025-04-15",
+    "total_billed_usd": 1335,
+    "summary": "Maya Bennett: rear-end collision with cervical strain and right shoulder pain. Client reports stopping for a red light when the following sedan struck the rear bumper. Both vehicles remained upright and the client exited without assistance.",
+    "treatment_pdf_format": "Text PDF",
+    "files": [
+      "01-incident-report.pdf",
+      "02-treatment-record.pdf",
+      "03-itemized-bill.pdf",
+      "04-correspondence.pdf",
+      "05-interim-statement.pdf",
+      "06-imaging-report.pdf",
+      "07-activity-statement.pdf"
+    ],
+    "dob": "1988-09-14",
+    "medical_record_number": "810273",
+    "billing_account": "42137-01",
+    "claim_reference": "2025-000731",
+    "report_reference": "IR-2025-00193",
+    "interim_visits": [
+      "2025-02-08",
+      "2025-02-13",
+      "2025-02-20",
+      "2025-02-27",
+      "2025-03-06",
+      "2025-03-18",
+      "2025-04-01",
+      "2025-04-08"
+    ],
+    "payments_usd": 100,
+    "adjustments_usd": 35,
+    "balance_usd": 1200,
+    "service_lines": [
+      {
+        "date": "2025-02-04",
+        "description": "Initial evaluation",
+        "units": 1,
+        "charge_usd": 225,
+        "visit_index": 1
+      },
+      {
+        "date": "2025-02-04",
+        "description": "Shoulder imaging",
+        "units": 1,
+        "charge_usd": 180,
+        "visit_index": 1
+      },
+      {
+        "date": "2025-02-08",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 100,
+        "visit_index": 2
+      },
+      {
+        "date": "2025-02-13",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 100,
+        "visit_index": 3
+      },
+      {
+        "date": "2025-02-20",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 100,
+        "visit_index": 4
+      },
+      {
+        "date": "2025-02-27",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 100,
+        "visit_index": 5
+      },
+      {
+        "date": "2025-03-06",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 100,
+        "visit_index": 6
+      },
+      {
+        "date": "2025-03-18",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 100,
+        "visit_index": 7
+      },
+      {
+        "date": "2025-04-01",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 100,
+        "visit_index": 8
+      },
+      {
+        "date": "2025-04-08",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 100,
+        "visit_index": 9
+      },
+      {
+        "date": "2025-04-15",
+        "description": "Final scheduled review",
+        "units": 1,
+        "charge_usd": 130,
+        "visit_index": 10
+      }
+    ],
+    "statement_date": "2025-04-19",
+    "document_pages": {
+      "01-incident-report.pdf": 2,
+      "02-treatment-record.pdf": 11,
+      "03-itemized-bill.pdf": 1,
+      "04-correspondence.pdf": 4,
+      "05-interim-statement.pdf": 1,
+      "06-imaging-report.pdf": 1,
+      "07-activity-statement.pdf": 1
+    },
+    "record_release_date": "2025-04-23",
+    "outcome": "Discharged to independent activity with occasional residual stiffness",
+    "attendance_gap": null,
+    "visits": [
+      {
+        "date": "2025-02-04",
+        "type": "Initial evaluation",
+        "charge": 225,
+        "pain": 6,
+        "report": "Sustained keyboard work, checking a vehicle blind spot and reaching a high kitchen shelf provoke discomfort. The patient remains independent with dressing and basic household activity but takes breaks more often. Sleep was interrupted twice by difficulty finding a comfortable neck position.",
+        "focus": "Alert and conversant. Gait is steady. Tenderness is greatest over the right upper trapezius and lower cervical paraspinal region. Cervical rotation is more limited to the right than to the left. Shoulder elevation is possible but uncomfortable near the end of the movement. Upper-extremity light-touch sensation is intact on screening, with no focal motor deficit recorded.",
+        "provider": "Dr. Avery Quinn"
+      },
+      {
+        "date": "2025-02-08",
+        "type": "Rehabilitation visit",
+        "charge": 100,
+        "pain": 6,
+        "report": "Neck stiffness increases during the morning drive. The patient turns the whole torso when checking the adjacent lane. Desk work remains possible with frequent breaks.",
+        "focus": "Guarding with right rotation; shoulder movement is easier below shoulder height. Practiced comfortable cervical movement and supported scapular control.",
+        "provider": "A. Sutton, PT"
+      },
+      {
+        "date": "2025-02-13",
+        "type": "Rehabilitation visit",
+        "charge": 100,
+        "pain": 5,
+        "report": "Sleep is less interrupted, but reaching for an upper shelf still produces shoulder pain. The patient is using a lower shelf for frequently used dishes.",
+        "focus": "Right cervical rotation reaches 50 degrees. Light reaching tasks were completed with slower speed and correction of trunk compensation.",
+        "provider": "A. Sutton, PT"
+      },
+      {
+        "date": "2025-02-20",
+        "type": "Rehabilitation visit",
+        "charge": 100,
+        "pain": 4,
+        "report": "A forty-minute commute was completed without stopping. Tightness returned after a two-hour payroll deadline at the computer.",
+        "focus": "Tenderness is less diffuse. Added sustained postural-control tasks with planned position changes.",
+        "provider": "A. Sutton, PT"
+      },
+      {
+        "date": "2025-02-27",
+        "type": "Rehabilitation visit",
+        "charge": 100,
+        "pain": 6,
+        "report": "Symptoms flared after helping move several storage boxes over the weekend. There was no fall or new collision; soreness increased later the same evening.",
+        "focus": "Shoulder elevation was reduced relative to the prior visit because of discomfort. Load was reduced and response to ordinary unloaded movement was reassessed.",
+        "provider": "A. Sutton, PT"
+      },
+      {
+        "date": "2025-03-06",
+        "type": "Rehabilitation visit",
+        "charge": 100,
+        "pain": 4,
+        "report": "The weekend flare has largely settled. The patient is back to usual desk duties and avoids carrying boxes away from the body.",
+        "focus": "Movement is less guarded. Resumed light resisted reaching, stopping before pain changed movement quality.",
+        "provider": "A. Sutton, PT"
+      },
+      {
+        "date": "2025-03-18",
+        "type": "Rehabilitation visit",
+        "charge": 100,
+        "pain": 3,
+        "report": "The patient drove for one hour with a short break and reports no new arm symptoms. Carrying groceries is easier when divided into smaller bags.",
+        "focus": "Right neck rotation is 60 degrees. Increased functional reaching volume without increasing load.",
+        "provider": "A. Sutton, PT"
+      },
+      {
+        "date": "2025-04-01",
+        "type": "Rehabilitation visit",
+        "charge": 100,
+        "pain": 2,
+        "report": "Most daily tasks are manageable. Mild neck tightness remains after a long meeting, and overhead household tasks are still performed more slowly.",
+        "focus": "Symmetric light-load carrying was observed. Reviewed the independent activity routine and readiness for final clinical review.",
+        "provider": "A. Sutton, PT"
+      },
+      {
+        "date": "2025-04-08",
+        "type": "Rehabilitation visit",
+        "charge": 100,
+        "pain": 2,
+        "report": "No further flare is reported. The patient completed a full payroll cycle with planned breaks and resumed ordinary grocery shopping.",
+        "focus": "Movement is fluid during basic tasks. Final functional measures were collected for the referring clinician.",
+        "provider": "A. Sutton, PT"
+      },
+      {
+        "date": "2025-04-15",
+        "type": "Final scheduled review",
+        "charge": 130,
+        "pain": 2,
+        "report": "The patient reports occasional stiffness after prolonged sitting but no routine interruption of sleep. Ordinary driving and household tasks have resumed. A brief increase after moving boxes resolved without a new injury. The treating clinician closes the scheduled course with independent activity and return as needed; no permanent impairment assessment was performed.",
+        "focus": "Discharged to independent activity with occasional residual stiffness",
+        "provider": "Dr. Avery Quinn"
+      }
+    ],
+    "visit_count": 10,
+    "billing_transactions": [
+      {
+        "date": "2025-04-16",
+        "type": "Patient payment",
+        "credit_usd": 100
+      },
+      {
+        "date": "2025-04-17",
+        "type": "Courtesy adjustment",
+        "credit_usd": 35
+      }
+    ],
+    "interim_statement": {
+      "date": "2025-03-07",
+      "charges_usd": 905,
+      "superseded_by": "2025-04-19"
+    },
+    "correspondence": [
+      {
+        "date": "2025-02-06",
+        "subject": "Acknowledgment of reported incident",
+        "sender": "L. Warren, File Coordinator"
+      },
+      {
+        "date": "2025-02-16",
+        "subject": "Request for clinical records and itemized charges",
+        "sender": "L. Warren, File Coordinator"
+      },
+      {
+        "date": "2025-03-07",
+        "subject": "Client activity update",
+        "sender": "Client Services Coordinator"
+      },
+      {
+        "date": "2025-04-23",
+        "subject": "Clinical record release and account reconciliation",
+        "sender": "Harbor Glen Clinic Records Coordinator"
+      }
+    ],
+    "total_pages": 21,
+    "format_version": "expanded-v3",
+    "ocr_required_pages": []
+  },
+  {
+    "sample_id": "DEMO-002",
+    "folder": "02-grocery-slip-fall",
+    "client_name": "Noah Castillo",
+    "title": "Grocery store slip and fall - Noah Castillo",
+    "incident_date": "2025-03-12",
+    "incident_location": "Meadow Market / produce aisle",
+    "other_party": "Meadow Market LLC",
+    "insurer": "Meadowline Casualty",
+    "provider": "Dr. Ellis Hart",
+    "facility": "Brookfield Care",
+    "recorded_assessment": "Left ankle sprain",
+    "initial_visit": "2025-03-13",
+    "follow_up": "2025-05-01",
+    "total_billed_usd": 1025,
+    "summary": "Noah Castillo: grocery store slip and fall with left ankle sprain. Client reports slipping on a clear liquid near a refrigerated display. The store incident form records that an employee cleaned the area after the fall.",
+    "treatment_pdf_format": "Scanned treatment PDF",
+    "files": [
+      "01-incident-report.pdf",
+      "02-treatment-record.pdf",
+      "03-itemized-bill.pdf",
+      "04-correspondence.pdf",
+      "05-interim-statement.pdf",
+      "06-imaging-report.pdf"
+    ],
+    "dob": "1993-02-21",
+    "medical_record_number": "810546",
+    "billing_account": "42274-01",
+    "claim_reference": "2025-001462",
+    "report_reference": "IR-2025-00386",
+    "interim_visits": ["2025-03-18", "2025-03-25", "2025-04-02", "2025-04-10", "2025-04-21"],
+    "payments_usd": 150,
+    "adjustments_usd": 25,
+    "balance_usd": 850,
+    "service_lines": [
+      {
+        "date": "2025-03-13",
+        "description": "Ankle imaging",
+        "units": 1,
+        "charge_usd": 160,
+        "visit_index": 1
+      },
+      {
+        "date": "2025-03-13",
+        "description": "Initial evaluation",
+        "units": 1,
+        "charge_usd": 210,
+        "visit_index": 1
+      },
+      {
+        "date": "2025-03-18",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 105,
+        "visit_index": 2
+      },
+      {
+        "date": "2025-03-25",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 105,
+        "visit_index": 3
+      },
+      {
+        "date": "2025-04-02",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 105,
+        "visit_index": 4
+      },
+      {
+        "date": "2025-04-10",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 105,
+        "visit_index": 5
+      },
+      {
+        "date": "2025-04-21",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 105,
+        "visit_index": 6
+      },
+      {
+        "date": "2025-05-01",
+        "description": "Final scheduled review",
+        "units": 1,
+        "charge_usd": 130,
+        "visit_index": 7
+      }
+    ],
+    "statement_date": "2025-05-05",
+    "document_pages": {
+      "01-incident-report.pdf": 2,
+      "02-treatment-record.pdf": 8,
+      "03-itemized-bill.pdf": 1,
+      "04-correspondence.pdf": 3,
+      "05-interim-statement.pdf": 1,
+      "06-imaging-report.pdf": 1
+    },
+    "record_release_date": "2025-05-09",
+    "outcome": "Rehabilitation completed; prolonged standing still mildly symptomatic",
+    "attendance_gap": null,
+    "visits": [
+      {
+        "date": "2025-03-13",
+        "type": "Initial evaluation",
+        "charge": 210,
+        "pain": 7,
+        "report": "Standing longer than ten minutes increases discomfort. The patient uses a handrail and takes stairs one step at a time. A family member has helped with shopping. The patient is able to transfer independently but walks more slowly than usual and avoids pivoting on the left foot.",
+        "focus": "Mild lateral ankle swelling and tenderness are present. Skin is intact. Active ankle movement is limited by pain, particularly inversion. Distal sensation and perfusion are preserved. The patient bears weight with an antalgic gait. Plain-film assessment records preserved alignment and no acute fracture. The absence of fracture does not resolve the soft-tissue complaint.",
+        "provider": "Dr. Ellis Hart"
+      },
+      {
+        "date": "2025-03-18",
+        "type": "Rehabilitation visit",
+        "charge": 105,
+        "pain": 6,
+        "report": "Swelling is less marked in the morning but returns after a standing shift. Descending stairs is slower than climbing them.",
+        "focus": "Antalgic gait persists. Practiced controlled weight transfer and comfortable ankle movement with support available.",
+        "provider": "R. Blake, PT"
+      },
+      {
+        "date": "2025-03-25",
+        "type": "Rehabilitation visit",
+        "charge": 105,
+        "pain": 5,
+        "report": "The patient can walk through the restaurant but avoids carrying a full tray while turning. A seated administrative shift was tolerated.",
+        "focus": "Dorsiflexion is 8 degrees. Balance tasks were performed with hand support and gradual changes in direction.",
+        "provider": "R. Blake, PT"
+      },
+      {
+        "date": "2025-04-02",
+        "type": "Rehabilitation visit",
+        "charge": 105,
+        "pain": 4,
+        "report": "A longer shift caused increased soreness near closing time. There was no new twist, fall or visible increase in bruising.",
+        "focus": "Lateral tenderness remains. Work-simulation standing intervals were shortened to preserve normal gait.",
+        "provider": "R. Blake, PT"
+      },
+      {
+        "date": "2025-04-10",
+        "type": "Rehabilitation visit",
+        "charge": 105,
+        "pain": 3,
+        "report": "Walking to nearby shops is manageable. The patient still uses a handrail and prefers supportive shoes.",
+        "focus": "Gait is nearly symmetric. Increased step-control activity and reviewed symptoms after prolonged standing.",
+        "provider": "R. Blake, PT"
+      },
+      {
+        "date": "2025-04-21",
+        "type": "Rehabilitation visit",
+        "charge": 105,
+        "pain": 2,
+        "report": "The patient has resumed most floor duties with a brief seated break during longer shifts. Swelling is minimal by the next morning.",
+        "focus": "Dorsiflexion is 12 degrees and single-leg balance has improved. Reviewed maintenance activity and final follow-up arrangements.",
+        "provider": "R. Blake, PT"
+      },
+      {
+        "date": "2025-05-01",
+        "type": "Final scheduled review",
+        "charge": 130,
+        "pain": 2,
+        "report": "The patient has returned to ordinary shifts with brief breaks during prolonged standing. Daily walking is comfortable, although a full evening on the restaurant floor can leave mild lateral soreness. The scheduled rehabilitation course is complete. The clinician documents residual symptoms and a return-as-needed plan without assigning a permanent limitation.",
+        "focus": "Rehabilitation completed; prolonged standing still mildly symptomatic",
+        "provider": "Dr. Ellis Hart"
+      }
+    ],
+    "visit_count": 7,
+    "billing_transactions": [
+      {
+        "date": "2025-05-02",
+        "type": "Patient payment",
+        "credit_usd": 150
+      },
+      {
+        "date": "2025-05-03",
+        "type": "Courtesy adjustment",
+        "credit_usd": 25
+      }
+    ],
+    "interim_statement": {
+      "date": "2025-04-03",
+      "charges_usd": 685,
+      "superseded_by": "2025-05-05"
+    },
+    "correspondence": [
+      {
+        "date": "2025-03-15",
+        "subject": "Acknowledgment of reported incident",
+        "sender": "L. Warren, File Coordinator"
+      },
+      {
+        "date": "2025-03-25",
+        "subject": "Request for clinical records and itemized charges",
+        "sender": "L. Warren, File Coordinator"
+      },
+      {
+        "date": "2025-05-09",
+        "subject": "Clinical record release and account reconciliation",
+        "sender": "Brookfield Care Records Coordinator"
+      }
+    ],
+    "total_pages": 16,
+    "format_version": "expanded-v3",
+    "ocr_required_pages": [1, 2, 3, 4, 5, 6, 7, 8]
+  },
+  {
+    "sample_id": "DEMO-003",
+    "folder": "03-bicycle-door-collision",
+    "client_name": "Lena Park",
+    "title": "Bicycle collision with vehicle door - Lena Park",
+    "incident_date": "2025-04-08",
+    "incident_location": "Juniper Quay / marked bicycle lane",
+    "other_party": "Taylor Reed",
+    "insurer": "Juniper Mutual",
+    "provider": "Dr. Morgan Wynn",
+    "facility": "Juniper Orthopedic Center",
+    "recorded_assessment": "Right wrist sprain and knee abrasions",
+    "initial_visit": "2025-04-09",
+    "follow_up": "2025-05-14",
+    "total_billed_usd": 985,
+    "summary": "Lena Park: bicycle collision with vehicle door with right wrist sprain and knee abrasions. Client reports riding in a marked bicycle lane when the door of a parked vehicle opened into the lane. The client braked and fell onto the right hand and knees.",
+    "treatment_pdf_format": "Text PDF",
+    "files": [
+      "01-incident-report.pdf",
+      "02-treatment-record.pdf",
+      "03-itemized-bill.pdf",
+      "04-correspondence.pdf",
+      "05-interim-statement.pdf",
+      "06-imaging-report.pdf"
+    ],
+    "dob": "1996-06-08",
+    "medical_record_number": "810819",
+    "billing_account": "42411-01",
+    "claim_reference": "2025-002193",
+    "report_reference": "IR-2025-00579",
+    "interim_visits": ["2025-04-13", "2025-04-19", "2025-04-27", "2025-05-05"],
+    "payments_usd": 50,
+    "adjustments_usd": 25,
+    "balance_usd": 910,
+    "service_lines": [
+      {
+        "date": "2025-04-09",
+        "description": "Initial evaluation",
+        "units": 1,
+        "charge_usd": 240,
+        "visit_index": 1
+      },
+      {
+        "date": "2025-04-09",
+        "description": "Wrist imaging",
+        "units": 1,
+        "charge_usd": 175,
+        "visit_index": 1
+      },
+      {
+        "date": "2025-04-13",
+        "description": "Hand therapy visit",
+        "units": 1,
+        "charge_usd": 110,
+        "visit_index": 2
+      },
+      {
+        "date": "2025-04-19",
+        "description": "Hand therapy visit",
+        "units": 1,
+        "charge_usd": 110,
+        "visit_index": 3
+      },
+      {
+        "date": "2025-04-27",
+        "description": "Hand therapy visit",
+        "units": 1,
+        "charge_usd": 110,
+        "visit_index": 4
+      },
+      {
+        "date": "2025-05-05",
+        "description": "Hand therapy visit",
+        "units": 1,
+        "charge_usd": 110,
+        "visit_index": 5
+      },
+      {
+        "date": "2025-05-14",
+        "description": "Final scheduled review",
+        "units": 1,
+        "charge_usd": 130,
+        "visit_index": 6
+      }
+    ],
+    "statement_date": "2025-05-18",
+    "document_pages": {
+      "01-incident-report.pdf": 2,
+      "02-treatment-record.pdf": 7,
+      "03-itemized-bill.pdf": 1,
+      "04-correspondence.pdf": 3,
+      "05-interim-statement.pdf": 1,
+      "06-imaging-report.pdf": 1
+    },
+    "record_release_date": "2025-05-22",
+    "outcome": "Discharged after functional improvement",
+    "attendance_gap": null,
+    "visits": [
+      {
+        "date": "2025-04-09",
+        "type": "Initial evaluation",
+        "charge": 240,
+        "pain": 6,
+        "report": "Opening a jar, carrying a laptop bag and using the bicycle brake lever are painful. The patient has reduced drawing sessions and alternates input devices. Knee discomfort is mainly from contact with clothing over the abrasions. The patient can walk normally but has avoided cycling.",
+        "focus": "Superficial knee abrasions are dry without spreading redness. Right-wrist tenderness is diffuse over the dorsal soft tissues. Active extension and loaded gripping reproduce pain. Finger movement and screening sensation are intact. Plain films record no acute fracture or malalignment. Symptoms remain compatible with a soft-tissue injury requiring interval review.",
+        "provider": "Dr. Morgan Wynn"
+      },
+      {
+        "date": "2025-04-13",
+        "type": "Hand therapy visit",
+        "charge": 110,
+        "pain": 5,
+        "report": "The knee abrasions are dry. Mouse use is manageable, but gripping a stylus for more than ten minutes increases wrist discomfort.",
+        "focus": "Dorsal tenderness remains. Practiced gentle wrist movement and alternatives for handling the work stylus.",
+        "provider": "J. Arden, OT"
+      },
+      {
+        "date": "2025-04-19",
+        "type": "Hand therapy visit",
+        "charge": 110,
+        "pain": 4,
+        "report": "The patient completed a short design assignment using alternating input devices. Lifting a pan remains uncomfortable.",
+        "focus": "Right grip is 21 kg compared with 28 kg on the left. Added light grasp-and-release tasks and ergonomic positioning.",
+        "provider": "J. Arden, OT"
+      },
+      {
+        "date": "2025-04-27",
+        "type": "Hand therapy visit",
+        "charge": 110,
+        "pain": 3,
+        "report": "Drawing blocks are longer and the patient reports no new swelling. The bicycle has not yet been used for commuting.",
+        "focus": "Wrist extension is 50 degrees. Introduced light sustained grip and a simulated brake-lever task.",
+        "provider": "J. Arden, OT"
+      },
+      {
+        "date": "2025-05-05",
+        "type": "Hand therapy visit",
+        "charge": 110,
+        "pain": 1,
+        "report": "The patient reports a short bicycle ride on a quiet route without increased pain that evening. Heavy kitchen objects still feel awkward.",
+        "focus": "Grip is 26 kg on the right. Reviewed progression to ordinary work and household tasks with symptom monitoring.",
+        "provider": "J. Arden, OT"
+      },
+      {
+        "date": "2025-05-14",
+        "type": "Final scheduled review",
+        "charge": 130,
+        "pain": 1,
+        "report": "The abrasions have healed, wrist movement is nearly symmetric and the patient has resumed full computer work and short bicycle commutes. Mild soreness occurs with unusually heavy gripping but does not limit ordinary tasks. The scheduled hand-therapy course is closed. No scar, fracture or permanent impairment determination is made.",
+        "focus": "Discharged after functional improvement",
+        "provider": "Dr. Morgan Wynn"
+      }
+    ],
+    "visit_count": 6,
+    "billing_transactions": [
+      {
+        "date": "2025-05-15",
+        "type": "Patient payment",
+        "credit_usd": 50
+      },
+      {
+        "date": "2025-05-16",
+        "type": "Courtesy adjustment",
+        "credit_usd": 25
+      }
+    ],
+    "interim_statement": {
+      "date": "2025-04-28",
+      "charges_usd": 745,
+      "superseded_by": "2025-05-18"
+    },
+    "correspondence": [
+      {
+        "date": "2025-04-11",
+        "subject": "Acknowledgment of reported incident",
+        "sender": "L. Warren, File Coordinator"
+      },
+      {
+        "date": "2025-04-21",
+        "subject": "Request for clinical records and itemized charges",
+        "sender": "L. Warren, File Coordinator"
+      },
+      {
+        "date": "2025-05-22",
+        "subject": "Clinical record release and account reconciliation",
+        "sender": "Juniper Orthopedic Center Records Coordinator"
+      }
+    ],
+    "total_pages": 15,
+    "format_version": "expanded-v3",
+    "ocr_required_pages": []
+  },
+  {
+    "sample_id": "DEMO-004",
+    "folder": "04-pedestrian-crosswalk",
+    "client_name": "Owen Brooks",
+    "title": "Pedestrian crosswalk incident - Owen Brooks",
+    "incident_date": "2025-05-19",
+    "incident_location": "Crescent Bay / Willow Street crossing",
+    "other_party": "Alex Rowan",
+    "insurer": "Crescent Assurance",
+    "provider": "Dr. Casey Lane",
+    "facility": "Willow Medical Group",
+    "recorded_assessment": "Left knee contusion and low-back pain",
+    "initial_visit": "2025-05-20",
+    "follow_up": "2025-10-07",
+    "total_billed_usd": 2245,
+    "summary": "Owen Brooks: pedestrian crosswalk incident with left knee contusion and low-back pain. Client reports entering a marked crossing when a slowly turning vehicle contacted the left leg. The client fell backward and was assisted to the sidewalk.",
+    "treatment_pdf_format": "Text PDF",
+    "files": [
+      "01-incident-report.pdf",
+      "02-treatment-record.pdf",
+      "03-itemized-bill.pdf",
+      "04-correspondence.pdf",
+      "05-interim-statement.pdf",
+      "06-imaging-report.pdf",
+      "07-activity-statement.pdf",
+      "08-continuation-referral.pdf"
+    ],
+    "dob": "1979-11-03",
+    "medical_record_number": "811092",
+    "billing_account": "42548-01",
+    "claim_reference": "2025-002924",
+    "report_reference": "IR-2025-00772",
+    "interim_visits": [
+      "2025-05-23",
+      "2025-05-27",
+      "2025-06-01",
+      "2025-06-07",
+      "2025-06-14",
+      "2025-06-21",
+      "2025-06-28",
+      "2025-07-06",
+      "2025-07-15",
+      "2025-08-07",
+      "2025-08-16",
+      "2025-08-26",
+      "2025-09-05",
+      "2025-09-16",
+      "2025-09-26",
+      "2025-10-03"
+    ],
+    "payments_usd": 250,
+    "adjustments_usd": 75,
+    "balance_usd": 1920,
+    "service_lines": [
+      {
+        "date": "2025-05-20",
+        "description": "Initial evaluation",
+        "units": 1,
+        "charge_usd": 280,
+        "visit_index": 1
+      },
+      {
+        "date": "2025-05-20",
+        "description": "Knee imaging",
+        "units": 1,
+        "charge_usd": 190,
+        "visit_index": 1
+      },
+      {
+        "date": "2025-05-23",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 100,
+        "visit_index": 2
+      },
+      {
+        "date": "2025-05-27",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 100,
+        "visit_index": 3
+      },
+      {
+        "date": "2025-06-01",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 100,
+        "visit_index": 4
+      },
+      {
+        "date": "2025-06-07",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 100,
+        "visit_index": 5
+      },
+      {
+        "date": "2025-06-14",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 100,
+        "visit_index": 6
+      },
+      {
+        "date": "2025-06-21",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 100,
+        "visit_index": 7
+      },
+      {
+        "date": "2025-06-28",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 100,
+        "visit_index": 8
+      },
+      {
+        "date": "2025-07-06",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 100,
+        "visit_index": 9
+      },
+      {
+        "date": "2025-07-15",
+        "description": "Clinical reassessment",
+        "units": 1,
+        "charge_usd": 145,
+        "visit_index": 10
+      },
+      {
+        "date": "2025-08-07",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 100,
+        "visit_index": 11
+      },
+      {
+        "date": "2025-08-16",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 100,
+        "visit_index": 12
+      },
+      {
+        "date": "2025-08-26",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 100,
+        "visit_index": 13
+      },
+      {
+        "date": "2025-09-05",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 100,
+        "visit_index": 14
+      },
+      {
+        "date": "2025-09-16",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 100,
+        "visit_index": 15
+      },
+      {
+        "date": "2025-09-26",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 100,
+        "visit_index": 16
+      },
+      {
+        "date": "2025-10-03",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 100,
+        "visit_index": 17
+      },
+      {
+        "date": "2025-10-07",
+        "description": "Final scheduled review",
+        "units": 1,
+        "charge_usd": 130,
+        "visit_index": 18
+      }
+    ],
+    "statement_date": "2025-10-11",
+    "document_pages": {
+      "01-incident-report.pdf": 3,
+      "02-treatment-record.pdf": 19,
+      "03-itemized-bill.pdf": 2,
+      "04-correspondence.pdf": 6,
+      "05-interim-statement.pdf": 1,
+      "06-imaging-report.pdf": 1,
+      "07-activity-statement.pdf": 1,
+      "08-continuation-referral.pdf": 1
+    },
+    "record_release_date": "2025-10-15",
+    "outcome": "Ongoing intermittent low-back symptoms; further follow-up planned",
+    "attendance_gap": {
+      "start": "2025-07-16",
+      "end": "2025-08-06",
+      "reason": "Family caregiving interrupted attendance; no sessions or charges during the gap"
+    },
+    "visits": [
+      {
+        "date": "2025-05-20",
+        "type": "Initial evaluation",
+        "charge": 280,
+        "pain": 6,
+        "report": "Sitting beyond thirty minutes aggravates the back. Descending stairs and kneeling are limited by knee discomfort. The patient uses a chair with armrests to rise more easily. A shorter walking route is currently used. Household tasks are divided into smaller periods rather than completed in a single session.",
+        "focus": "Visible bruising is present over the lateral left knee. Active flexion is limited by discomfort but extension is preserved. Knee films show no acute fracture. Lumbar paraspinal tenderness and discomfort with forward flexion are recorded. Lower-extremity screening strength and sensation are intact, with no focal weakness documented.",
+        "provider": "Dr. Casey Lane"
+      },
+      {
+        "date": "2025-05-23",
+        "type": "Rehabilitation visit",
+        "charge": 100,
+        "pain": 6,
+        "report": "Knee bruising is prominent and sitting in a low chair increases back pain. The patient uses the chair arms to stand.",
+        "focus": "Knee flexion is guarded. Practiced transfers, short walking intervals and supported lumbar movement.",
+        "provider": "T. Monroe, PT"
+      },
+      {
+        "date": "2025-05-27",
+        "type": "Rehabilitation visit",
+        "charge": 100,
+        "pain": 6,
+        "report": "Walking around the apartment is easier than sitting. The patient has not resumed pushing loaded book carts.",
+        "focus": "Gait is cautious; no focal weakness is observed. Reviewed pacing and supported lower-extremity control.",
+        "provider": "T. Monroe, PT"
+      },
+      {
+        "date": "2025-06-01",
+        "type": "Rehabilitation visit",
+        "charge": 100,
+        "pain": 5,
+        "report": "Stairs are improving, but a seated meeting caused back soreness that lasted into the evening.",
+        "focus": "Knee flexion reaches 118 degrees. Added controlled step activity and brief seated-tolerance intervals.",
+        "provider": "T. Monroe, PT"
+      },
+      {
+        "date": "2025-06-07",
+        "type": "Rehabilitation visit",
+        "charge": 100,
+        "pain": 5,
+        "report": "Bruising is fading. The patient is taking a shorter route to work and avoids carrying a bag on one shoulder.",
+        "focus": "Transfer quality is improved. Continued trunk-control work and symmetric light carrying.",
+        "provider": "T. Monroe, PT"
+      },
+      {
+        "date": "2025-06-14",
+        "type": "Rehabilitation visit",
+        "charge": 100,
+        "pain": 4,
+        "report": "The knee is less intrusive. Back pain remains after approximately thirty minutes of sitting.",
+        "focus": "Lumbar movement remains guarded at the endpoint. Reviewed workstation setup and movement breaks.",
+        "provider": "T. Monroe, PT"
+      },
+      {
+        "date": "2025-06-21",
+        "type": "Rehabilitation visit",
+        "charge": 100,
+        "pain": 6,
+        "report": "A longer shift involving repeated cart handling increased back discomfort. No new accident or radiating leg pain is reported.",
+        "focus": "Paraspinal tenderness increased. Reduced load and reassessed basic movement before resuming cart simulation.",
+        "provider": "T. Monroe, PT"
+      },
+      {
+        "date": "2025-06-28",
+        "type": "Rehabilitation visit",
+        "charge": 100,
+        "pain": 5,
+        "report": "The flare has partly settled. The patient is asking coworkers for help with loaded carts.",
+        "focus": "Knee motion is near functional range. Reintroduced light push/pull tasks within tolerance.",
+        "provider": "T. Monroe, PT"
+      },
+      {
+        "date": "2025-07-06",
+        "type": "Rehabilitation visit",
+        "charge": 100,
+        "pain": 4,
+        "report": "A family obligation has made scheduling difficult. The patient continues short walks and reports stable symptoms.",
+        "focus": "No focal sensory change is documented. Reviewed an interim activity plan and arranged a clinical reassessment.",
+        "provider": "T. Monroe, PT"
+      },
+      {
+        "date": "2025-07-15",
+        "type": "Clinical reassessment",
+        "charge": 145,
+        "pain": 4,
+        "report": "The knee is comfortable during ordinary walking. Low-back symptoms continue with longer sitting and loaded cart work.",
+        "focus": "Clinical reassessment: lumbar tenderness persists without focal weakness. A rehabilitation continuation referral was issued.",
+        "provider": "Dr. Casey Lane"
+      },
+      {
+        "date": "2025-08-07",
+        "type": "Rehabilitation visit",
+        "charge": 100,
+        "pain": 5,
+        "report": "The patient returns after a caregiving-related attendance gap. Sitting tolerance has decreased, although there was no new injury.",
+        "focus": "Movement endurance is below the prior session. Restarted with lower volume; the gap is recorded as missed care, not treatment.",
+        "provider": "T. Monroe, PT"
+      },
+      {
+        "date": "2025-08-16",
+        "type": "Rehabilitation visit",
+        "charge": 100,
+        "pain": 4,
+        "report": "Attendance has resumed. The patient can sit through a short meeting if allowed to change position.",
+        "focus": "Improved transfer control. Increased functional walking and low-load trunk activity.",
+        "provider": "T. Monroe, PT"
+      },
+      {
+        "date": "2025-08-26",
+        "type": "Rehabilitation visit",
+        "charge": 100,
+        "pain": 4,
+        "report": "A workday with mixed seated and standing duties was better tolerated than a fully seated assignment.",
+        "focus": "Symptoms are activity-dependent. Practiced alternating work tasks and light cart handling.",
+        "provider": "T. Monroe, PT"
+      },
+      {
+        "date": "2025-09-05",
+        "type": "Rehabilitation visit",
+        "charge": 100,
+        "pain": 3,
+        "report": "The patient can walk the usual route to work. A full meeting still produces back discomfort afterward.",
+        "focus": "Knee flexion is 130 degrees. Back endurance remains the main limiting factor.",
+        "provider": "T. Monroe, PT"
+      },
+      {
+        "date": "2025-09-16",
+        "type": "Rehabilitation visit",
+        "charge": 100,
+        "pain": 4,
+        "report": "Several consecutive seated tasks increased stiffness. The patient reports improvement after walking breaks, without new leg symptoms.",
+        "focus": "No new focal finding. Reviewed sustained-position tolerance and modified the independent routine.",
+        "provider": "T. Monroe, PT"
+      },
+      {
+        "date": "2025-09-26",
+        "type": "Rehabilitation visit",
+        "charge": 100,
+        "pain": 3,
+        "report": "The patient has resumed some cart duties with assistance for heavier loads. Symptoms fluctuate with the work schedule.",
+        "focus": "Light push/pull mechanics are improved. Recorded remaining limits for the clinician review.",
+        "provider": "T. Monroe, PT"
+      },
+      {
+        "date": "2025-10-03",
+        "type": "Rehabilitation visit",
+        "charge": 100,
+        "pain": 3,
+        "report": "Walking and stairs are near baseline. Back symptoms remain intermittent, particularly late in the workday.",
+        "focus": "Reassessment measures were repeated. Discussed transition from scheduled sessions to clinician-directed follow-up.",
+        "provider": "T. Monroe, PT"
+      },
+      {
+        "date": "2025-10-07",
+        "type": "Final scheduled review",
+        "charge": 130,
+        "pain": 3,
+        "report": "The knee symptoms have largely resolved, while intermittent low-back discomfort continues with prolonged sitting and heavier cart handling. The record includes an attendance gap due to caregiving rather than clinical discharge. The patient is working with task adjustments. Further clinician follow-up is planned; the file does not establish maximum improvement, a permanent rating or a final future-care estimate.",
+        "focus": "Ongoing intermittent low-back symptoms; further follow-up planned",
+        "provider": "Dr. Casey Lane"
+      }
+    ],
+    "visit_count": 18,
+    "billing_transactions": [
+      {
+        "date": "2025-10-08",
+        "type": "Patient payment",
+        "credit_usd": 250
+      },
+      {
+        "date": "2025-10-09",
+        "type": "Courtesy adjustment",
+        "credit_usd": 75
+      }
+    ],
+    "interim_statement": {
+      "date": "2025-07-16",
+      "charges_usd": 1415,
+      "superseded_by": "2025-10-11"
+    },
+    "correspondence": [
+      {
+        "date": "2025-05-22",
+        "subject": "Acknowledgment of reported incident",
+        "sender": "L. Warren, File Coordinator"
+      },
+      {
+        "date": "2025-06-01",
+        "subject": "Request for clinical records and itemized charges",
+        "sender": "L. Warren, File Coordinator"
+      },
+      {
+        "date": "2025-08-07",
+        "subject": "Attendance-gap confirmation",
+        "sender": "Appointment Coordinator"
+      },
+      {
+        "date": "2025-08-03",
+        "subject": "Outstanding evidence inquiry",
+        "sender": "L. Warren, File Coordinator"
+      },
+      {
+        "date": "2025-10-15",
+        "subject": "Clinical record release and account reconciliation",
+        "sender": "Willow Medical Group Records Coordinator"
+      },
+      {
+        "date": "2025-10-18",
+        "subject": "Request to confirm remaining follow-up items",
+        "sender": "L. Warren, File Coordinator"
+      }
+    ],
+    "total_pages": 34,
+    "format_version": "expanded-v3",
+    "ocr_required_pages": []
+  },
+  {
+    "sample_id": "DEMO-005",
+    "folder": "05-highway-sideswipe",
+    "client_name": "Amara Lewis",
+    "title": "Highway sideswipe collision - Amara Lewis",
+    "incident_date": "2025-06-06",
+    "incident_location": "Pinehaven / eastbound connector road",
+    "other_party": "Cameron Blake",
+    "insurer": "Pinehaven Indemnity",
+    "provider": "Dr. Riley Shaw",
+    "facility": "Pinehaven Rehabilitation",
+    "recorded_assessment": "Thoracic strain and left shoulder pain",
+    "initial_visit": "2025-06-07",
+    "follow_up": "2025-10-11",
+    "total_billed_usd": 1765,
+    "summary": "Amara Lewis: highway sideswipe collision with thoracic strain and left shoulder pain. Client reports that a merging vehicle contacted the left side of the client vehicle. The client pulled onto the shoulder; no rollover was reported.",
+    "treatment_pdf_format": "Mixed treatment PDF",
+    "files": [
+      "01-incident-report.pdf",
+      "02-treatment-record.pdf",
+      "03-itemized-bill.pdf",
+      "04-correspondence.pdf",
+      "05-interim-statement.pdf",
+      "07-activity-statement.pdf",
+      "08-continuation-referral.pdf"
+    ],
+    "dob": "1985-04-27",
+    "medical_record_number": "811365",
+    "billing_account": "42685-01",
+    "claim_reference": "2025-003655",
+    "report_reference": "IR-2025-00965",
+    "interim_visits": [
+      "2025-06-11",
+      "2025-06-17",
+      "2025-06-24",
+      "2025-07-02",
+      "2025-07-11",
+      "2025-07-21",
+      "2025-08-12",
+      "2025-08-21",
+      "2025-08-30",
+      "2025-09-09",
+      "2025-09-20",
+      "2025-09-30",
+      "2025-10-06"
+    ],
+    "payments_usd": 200,
+    "adjustments_usd": 60,
+    "balance_usd": 1505,
+    "service_lines": [
+      {
+        "date": "2025-06-07",
+        "description": "Initial evaluation",
+        "units": 1,
+        "charge_usd": 230,
+        "visit_index": 1
+      },
+      {
+        "date": "2025-06-11",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 105,
+        "visit_index": 2
+      },
+      {
+        "date": "2025-06-17",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 105,
+        "visit_index": 3
+      },
+      {
+        "date": "2025-06-24",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 105,
+        "visit_index": 4
+      },
+      {
+        "date": "2025-07-02",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 105,
+        "visit_index": 5
+      },
+      {
+        "date": "2025-07-11",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 105,
+        "visit_index": 6
+      },
+      {
+        "date": "2025-07-21",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 105,
+        "visit_index": 7
+      },
+      {
+        "date": "2025-08-12",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 105,
+        "visit_index": 8
+      },
+      {
+        "date": "2025-08-21",
+        "description": "Clinical reassessment",
+        "units": 1,
+        "charge_usd": 145,
+        "visit_index": 9
+      },
+      {
+        "date": "2025-08-30",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 105,
+        "visit_index": 10
+      },
+      {
+        "date": "2025-09-09",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 105,
+        "visit_index": 11
+      },
+      {
+        "date": "2025-09-20",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 105,
+        "visit_index": 12
+      },
+      {
+        "date": "2025-09-30",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 105,
+        "visit_index": 13
+      },
+      {
+        "date": "2025-10-06",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 105,
+        "visit_index": 14
+      },
+      {
+        "date": "2025-10-11",
+        "description": "Final scheduled review",
+        "units": 1,
+        "charge_usd": 130,
+        "visit_index": 15
+      }
+    ],
+    "statement_date": "2025-10-15",
+    "document_pages": {
+      "01-incident-report.pdf": 3,
+      "02-treatment-record.pdf": 16,
+      "03-itemized-bill.pdf": 2,
+      "04-correspondence.pdf": 6,
+      "05-interim-statement.pdf": 1,
+      "07-activity-statement.pdf": 1,
+      "08-continuation-referral.pdf": 1
+    },
+    "record_release_date": "2025-10-19",
+    "outcome": "Shoulder symptoms persist with overhead inventory work",
+    "attendance_gap": {
+      "start": "2025-07-22",
+      "end": "2025-08-11",
+      "reason": "Travel and shift changes caused a scheduling gap; the return visit documents reduced tolerance"
+    },
+    "visits": [
+      {
+        "date": "2025-06-07",
+        "type": "Initial evaluation",
+        "charge": 230,
+        "pain": 6,
+        "report": "Reaching overhead and lifting a carton away from the body provoke discomfort. Computer work is manageable with breaks, but sustained rounding of the shoulders increases upper-back tightness. The patient is avoiding heavier household lifting. Sleep is disturbed when lying on the left side.",
+        "focus": "Thoracic paraspinal tenderness is present with reduced tolerance for sustained flexed posture. Left-shoulder elevation is limited by pain near the upper range. Screening strength is preserved when pain is controlled; there is no documented focal sensory loss. No diagnostic imaging was ordered at the initial encounter.",
+        "provider": "Dr. Riley Shaw"
+      },
+      {
+        "date": "2025-06-11",
+        "type": "Rehabilitation visit",
+        "charge": 105,
+        "pain": 6,
+        "report": "Upper-back tightness is prominent after computer work. Overhead inventory checks are being delegated.",
+        "focus": "Tenderness is localized to thoracic paraspinals and left shoulder soft tissues. Practiced supported movement.",
+        "provider": "N. Emery, PT"
+      },
+      {
+        "date": "2025-06-17",
+        "type": "Rehabilitation visit",
+        "charge": 105,
+        "pain": 5,
+        "report": "Sleep is easier on the opposite side. The patient is avoiding lifting cartons to high shelves.",
+        "focus": "Shoulder elevation reaches 135 degrees. Introduced light scapular control below the painful range.",
+        "provider": "N. Emery, PT"
+      },
+      {
+        "date": "2025-06-24",
+        "type": "Rehabilitation visit",
+        "charge": 105,
+        "pain": 4,
+        "report": "Desk tasks are manageable with breaks. Repeated reaching produces a dull shoulder ache later in the shift.",
+        "focus": "Control improves with slower movement. Practiced short bouts of light reaching.",
+        "provider": "N. Emery, PT"
+      },
+      {
+        "date": "2025-07-02",
+        "type": "Rehabilitation visit",
+        "charge": 105,
+        "pain": 4,
+        "report": "The patient completed an ordinary inventory review with coworker help for overhead items.",
+        "focus": "Thoracic movement is less guarded. Gradually increased reach repetitions without increasing weight.",
+        "provider": "N. Emery, PT"
+      },
+      {
+        "date": "2025-07-11",
+        "type": "Rehabilitation visit",
+        "charge": 105,
+        "pain": 6,
+        "report": "A busy shift involving unexpected upper-shelf work caused a flare. There was no fall or separate impact.",
+        "focus": "Shoulder elevation decreased with pain. Reduced repetitions and reviewed workplace task limits.",
+        "provider": "N. Emery, PT"
+      },
+      {
+        "date": "2025-07-21",
+        "type": "Rehabilitation visit",
+        "charge": 105,
+        "pain": 5,
+        "report": "The flare is settling, but the patient will be away and cannot attend the next scheduled period.",
+        "focus": "Reviewed the current routine and documented a scheduling gap rather than completion of care.",
+        "provider": "N. Emery, PT"
+      },
+      {
+        "date": "2025-08-12",
+        "type": "Rehabilitation visit",
+        "charge": 105,
+        "pain": 5,
+        "report": "The patient returns after travel and changed shifts. Desk tolerance is stable; overhead endurance has declined.",
+        "focus": "Repeated reaching provokes soreness earlier. Resumed a lower-volume program.",
+        "provider": "N. Emery, PT"
+      },
+      {
+        "date": "2025-08-21",
+        "type": "Clinical reassessment",
+        "charge": 145,
+        "pain": 4,
+        "report": "Back tightness is less frequent. Shoulder symptoms remain with sustained elevated-arm tasks.",
+        "focus": "Clinical review documented persistent shoulder complaints. A referral for further rehabilitation review was issued; no new imaging was ordered.",
+        "provider": "Dr. Riley Shaw"
+      },
+      {
+        "date": "2025-08-30",
+        "type": "Rehabilitation visit",
+        "charge": 105,
+        "pain": 4,
+        "report": "The patient is consistently using a step platform to reduce reach height during approved work tasks.",
+        "focus": "Movement quality improves when the load stays close. Practiced graded lift-and-place tasks.",
+        "provider": "N. Emery, PT"
+      },
+      {
+        "date": "2025-09-09",
+        "type": "Rehabilitation visit",
+        "charge": 105,
+        "pain": 3,
+        "report": "The patient tolerates short periods of inventory work but still needs assistance for repeated overhead placement.",
+        "focus": "Shoulder elevation is 150 degrees. Increased task duration while monitoring delayed soreness.",
+        "provider": "N. Emery, PT"
+      },
+      {
+        "date": "2025-09-20",
+        "type": "Rehabilitation visit",
+        "charge": 105,
+        "pain": 4,
+        "report": "A long desk meeting was followed by upper-back stiffness. Shoulder soreness remained at the usual level.",
+        "focus": "No new neurologic finding. Reviewed alternating seated and standing tasks.",
+        "provider": "N. Emery, PT"
+      },
+      {
+        "date": "2025-09-30",
+        "type": "Rehabilitation visit",
+        "charge": 105,
+        "pain": 3,
+        "report": "Ordinary home activity is manageable. Repeated high-shelf work is the main remaining complaint.",
+        "focus": "Light functional carrying is symmetric. Recorded endurance limits for final review.",
+        "provider": "N. Emery, PT"
+      },
+      {
+        "date": "2025-10-06",
+        "type": "Rehabilitation visit",
+        "charge": 105,
+        "pain": 3,
+        "report": "The patient reports stable symptoms and no new incident. The current routine is being completed independently.",
+        "focus": "Final rehabilitation measurements were collected; overhead endurance remains below reported baseline.",
+        "provider": "N. Emery, PT"
+      },
+      {
+        "date": "2025-10-11",
+        "type": "Final scheduled review",
+        "charge": 130,
+        "pain": 3,
+        "report": "Upper-back symptoms are improved, but overhead inventory work continues to provoke left-shoulder pain. Progress was interrupted by a scheduling gap and a work-related symptom flare without a new accident. The patient continues modified task allocation. Further review is planned if improvement stalls; no discharge to unrestricted overhead work is documented.",
+        "focus": "Shoulder symptoms persist with overhead inventory work",
+        "provider": "Dr. Riley Shaw"
+      }
+    ],
+    "visit_count": 15,
+    "billing_transactions": [
+      {
+        "date": "2025-10-12",
+        "type": "Patient payment",
+        "credit_usd": 200
+      },
+      {
+        "date": "2025-10-13",
+        "type": "Courtesy adjustment",
+        "credit_usd": 60
+      }
+    ],
+    "interim_statement": {
+      "date": "2025-08-13",
+      "charges_usd": 965,
+      "superseded_by": "2025-10-15"
+    },
+    "correspondence": [
+      {
+        "date": "2025-06-09",
+        "subject": "Acknowledgment of reported incident",
+        "sender": "L. Warren, File Coordinator"
+      },
+      {
+        "date": "2025-06-19",
+        "subject": "Request for clinical records and itemized charges",
+        "sender": "L. Warren, File Coordinator"
+      },
+      {
+        "date": "2025-08-12",
+        "subject": "Attendance-gap confirmation",
+        "sender": "Appointment Coordinator"
+      },
+      {
+        "date": "2025-08-14",
+        "subject": "Outstanding evidence inquiry",
+        "sender": "L. Warren, File Coordinator"
+      },
+      {
+        "date": "2025-10-19",
+        "subject": "Clinical record release and account reconciliation",
+        "sender": "Pinehaven Rehabilitation Records Coordinator"
+      },
+      {
+        "date": "2025-10-22",
+        "subject": "Request to confirm remaining follow-up items",
+        "sender": "L. Warren, File Coordinator"
+      }
+    ],
+    "total_pages": 30,
+    "format_version": "expanded-v3",
+    "ocr_required_pages": [3, 6, 9, 12, 15]
+  },
+  {
+    "sample_id": "DEMO-006",
+    "folder": "06-dog-bite",
+    "client_name": "Eli Morgan",
+    "title": "Dog bite on neighborhood walkway - Eli Morgan",
+    "incident_date": "2025-07-14",
+    "incident_location": "Oakmere / shared neighborhood walkway",
+    "other_party": "Jamie Ellis",
+    "insurer": "Oakmere Home Cover",
+    "provider": "Dr. Drew Mercer",
+    "facility": "Oakmere Urgent Care",
+    "recorded_assessment": "Right forearm bite wound",
+    "initial_visit": "2025-07-15",
+    "follow_up": "2025-08-05",
+    "total_billed_usd": 660,
+    "summary": "Eli Morgan: dog bite on neighborhood walkway with right forearm bite wound. Client reports passing a driveway when a dog moved beyond its handler and bit the right forearm. The handler separated the dog and provided contact details.",
+    "treatment_pdf_format": "Text PDF",
+    "files": [
+      "01-incident-report.pdf",
+      "02-treatment-record.pdf",
+      "03-itemized-bill.pdf",
+      "04-correspondence.pdf"
+    ],
+    "dob": "1990-08-19",
+    "medical_record_number": "811638",
+    "billing_account": "42822-01",
+    "claim_reference": "2025-004386",
+    "report_reference": "IR-2025-01158",
+    "interim_visits": ["2025-07-18", "2025-07-24"],
+    "payments_usd": 75,
+    "adjustments_usd": 0,
+    "balance_usd": 585,
+    "service_lines": [
+      {
+        "date": "2025-07-15",
+        "description": "Initial evaluation",
+        "units": 1,
+        "charge_usd": 260,
+        "visit_index": 1
+      },
+      {
+        "date": "2025-07-15",
+        "description": "Wound care",
+        "units": 1,
+        "charge_usd": 145,
+        "visit_index": 1
+      },
+      {
+        "date": "2025-07-18",
+        "description": "Wound review",
+        "units": 1,
+        "charge_usd": 85,
+        "visit_index": 2
+      },
+      {
+        "date": "2025-07-24",
+        "description": "Wound review",
+        "units": 1,
+        "charge_usd": 85,
+        "visit_index": 3
+      },
+      {
+        "date": "2025-08-05",
+        "description": "Final scheduled review",
+        "units": 1,
+        "charge_usd": 85,
+        "visit_index": 4
+      }
+    ],
+    "statement_date": "2025-08-09",
+    "document_pages": {
+      "01-incident-report.pdf": 2,
+      "02-treatment-record.pdf": 5,
+      "03-itemized-bill.pdf": 1,
+      "04-correspondence.pdf": 2
+    },
+    "record_release_date": "2025-08-13",
+    "outcome": "Wound episode closed; no final cosmetic determination",
+    "attendance_gap": null,
+    "visits": [
+      {
+        "date": "2025-07-15",
+        "type": "Initial evaluation",
+        "charge": 260,
+        "pain": 5,
+        "report": "Contact from a sleeve and carrying a bag against the arm cause localized discomfort. Hand use remains possible, with soreness on sustained gripping. The patient is concerned about the appearance of the wounds and avoids the original walking route. No formal psychological assessment was performed.",
+        "focus": "Two small puncture sites are described on the dorsal right forearm, with localized tenderness and a narrow area of surrounding redness. Active finger and wrist motion are preserved. No sensory deficit or spreading streaking is documented. Wound assessment and cleaning were completed. The released excerpt does not include medication administration details.",
+        "provider": "Dr. Drew Mercer"
+      },
+      {
+        "date": "2025-07-18",
+        "type": "Wound review",
+        "charge": 85,
+        "pain": 3,
+        "report": "The patient reports localized tenderness but no fever, drainage or new hand numbness. Clothing rubbing the forearm remains uncomfortable.",
+        "focus": "The puncture sites were inspected. Redness remains localized, movement is preserved and dressing status was reviewed.",
+        "provider": "Dr. Drew Mercer"
+      },
+      {
+        "date": "2025-07-24",
+        "type": "Wound review",
+        "charge": 85,
+        "pain": 2,
+        "report": "The sites are dry and closing. The patient can carry a light bag but avoids pressure directly on the wounds.",
+        "focus": "No extension of redness is documented. Wound-care review and activity tolerance were recorded; no rehabilitation session occurred.",
+        "provider": "Dr. Drew Mercer"
+      },
+      {
+        "date": "2025-08-05",
+        "type": "Final scheduled review",
+        "charge": 85,
+        "pain": 1,
+        "report": "The sites are closed, there is no reported drainage and ordinary hand use has resumed. Mild pressure sensitivity remains. Scheduled wound reviews are complete, with return as needed for a change in the local condition. The record does not make a permanent scar determination or establish the outcome of any separate animal-control inquiry.",
+        "focus": "Wound episode closed; no final cosmetic determination",
+        "provider": "Dr. Drew Mercer"
+      }
+    ],
+    "visit_count": 4,
+    "billing_transactions": [
+      {
+        "date": "2025-08-06",
+        "type": "Patient payment",
+        "credit_usd": 75
+      },
+      {
+        "date": "2025-08-07",
+        "type": "Courtesy adjustment",
+        "credit_usd": 0
+      }
+    ],
+    "interim_statement": null,
+    "correspondence": [
+      {
+        "date": "2025-07-17",
+        "subject": "Acknowledgment of reported incident",
+        "sender": "L. Warren, File Coordinator"
+      },
+      {
+        "date": "2025-08-13",
+        "subject": "Clinical record release and account reconciliation",
+        "sender": "Oakmere Urgent Care Records Coordinator"
+      }
+    ],
+    "total_pages": 10,
+    "format_version": "expanded-v3",
+    "ocr_required_pages": []
+  },
+  {
+    "sample_id": "DEMO-007",
+    "folder": "07-apartment-trip-fall",
+    "client_name": "Sofia Rivera",
+    "title": "Apartment walkway trip and fall - Sofia Rivera",
+    "incident_date": "2025-08-02",
+    "incident_location": "Maple Court Apartments / courtyard",
+    "other_party": "Maple Court Property LLC",
+    "insurer": "Maple Property Cover",
+    "provider": "Dr. Reese Nolan",
+    "facility": "Maple Community Clinic",
+    "recorded_assessment": "Right knee contusion and wrist soreness",
+    "initial_visit": "2025-08-03",
+    "follow_up": "2025-10-05",
+    "total_billed_usd": 1110,
+    "summary": "Sofia Rivera: apartment walkway trip and fall with right knee contusion and wrist soreness. Client reports catching a shoe on an uneven walkway edge near the courtyard lighting. A tenant submitted a photograph of the pavement the next morning.",
+    "treatment_pdf_format": "Scanned treatment PDF",
+    "files": [
+      "01-incident-report.pdf",
+      "02-treatment-record.pdf",
+      "03-itemized-bill.pdf",
+      "04-correspondence.pdf",
+      "05-interim-statement.pdf",
+      "06-imaging-report.pdf"
+    ],
+    "dob": "1982-12-05",
+    "medical_record_number": "811911",
+    "billing_account": "42959-01",
+    "claim_reference": "2025-005117",
+    "report_reference": "IR-2025-01351",
+    "interim_visits": [
+      "2025-08-07",
+      "2025-08-14",
+      "2025-08-22",
+      "2025-09-01",
+      "2025-09-13",
+      "2025-09-25"
+    ],
+    "payments_usd": 100,
+    "adjustments_usd": 20,
+    "balance_usd": 990,
+    "service_lines": [
+      {
+        "date": "2025-08-03",
+        "description": "Initial evaluation",
+        "units": 1,
+        "charge_usd": 215,
+        "visit_index": 1
+      },
+      {
+        "date": "2025-08-03",
+        "description": "Wrist imaging",
+        "units": 1,
+        "charge_usd": 165,
+        "visit_index": 1
+      },
+      {
+        "date": "2025-08-07",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 100,
+        "visit_index": 2
+      },
+      {
+        "date": "2025-08-14",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 100,
+        "visit_index": 3
+      },
+      {
+        "date": "2025-08-22",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 100,
+        "visit_index": 4
+      },
+      {
+        "date": "2025-09-01",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 100,
+        "visit_index": 5
+      },
+      {
+        "date": "2025-09-13",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 100,
+        "visit_index": 6
+      },
+      {
+        "date": "2025-09-25",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 100,
+        "visit_index": 7
+      },
+      {
+        "date": "2025-10-05",
+        "description": "Final scheduled review",
+        "units": 1,
+        "charge_usd": 130,
+        "visit_index": 8
+      }
+    ],
+    "statement_date": "2025-10-09",
+    "document_pages": {
+      "01-incident-report.pdf": 2,
+      "02-treatment-record.pdf": 9,
+      "03-itemized-bill.pdf": 1,
+      "04-correspondence.pdf": 4,
+      "05-interim-statement.pdf": 1,
+      "06-imaging-report.pdf": 1
+    },
+    "record_release_date": "2025-10-13",
+    "outcome": "Returned to ordinary office activity; occasional kneeling discomfort",
+    "attendance_gap": null,
+    "visits": [
+      {
+        "date": "2025-08-03",
+        "type": "Initial evaluation",
+        "charge": 215,
+        "pain": 5,
+        "report": "Kneeling and stair descent are painful. Wrist soreness interferes with opening heavy doors and lifting a kettle. The patient can type but avoids pushing up from a chair with the left hand. Standing to greet visitors is manageable if the knee is not kept flexed for long periods.",
+        "focus": "Anterior right-knee bruising and tenderness are noted without an open wound. Flexion is mildly limited by pain. Left-wrist swelling is mild and movement is preserved with discomfort at extension. The wrist imaging report describes no acute fracture. The patient walks independently with a guarded pace.",
+        "provider": "Dr. Reese Nolan"
+      },
+      {
+        "date": "2025-08-07",
+        "type": "Rehabilitation visit",
+        "charge": 100,
+        "pain": 5,
+        "report": "The patient uses the elevator and avoids pushing open a heavy door with the left hand.",
+        "focus": "Knee bruising persists and wrist extension is sore. Practiced controlled transfers and comfortable wrist movement.",
+        "provider": "C. Parker, PT"
+      },
+      {
+        "date": "2025-08-14",
+        "type": "Rehabilitation visit",
+        "charge": 100,
+        "pain": 4,
+        "report": "Typing is easier. Descending stairs remains uncomfortable and requires a handrail.",
+        "focus": "Wrist swelling is reduced. Added gentle step control and grip tasks.",
+        "provider": "C. Parker, PT"
+      },
+      {
+        "date": "2025-08-22",
+        "type": "Rehabilitation visit",
+        "charge": 100,
+        "pain": 3,
+        "report": "Ordinary walking is easier, but kneeling to access a low drawer remains painful.",
+        "focus": "Knee flexion is 122 degrees. Reviewed ways to avoid direct pressure while movement improves.",
+        "provider": "C. Parker, PT"
+      },
+      {
+        "date": "2025-09-01",
+        "type": "Rehabilitation visit",
+        "charge": 100,
+        "pain": 4,
+        "report": "A school event requiring repeated stairs increased knee soreness. The wrist did not flare.",
+        "focus": "No new swelling or fall. Reduced step repetitions and reassessed walking quality.",
+        "provider": "C. Parker, PT"
+      },
+      {
+        "date": "2025-09-13",
+        "type": "Rehabilitation visit",
+        "charge": 100,
+        "pain": 2,
+        "report": "The event-related soreness has settled. The patient is again using stairs for short trips.",
+        "focus": "Wrist motion is functional and swelling has resolved. Increased controlled step-down activity.",
+        "provider": "C. Parker, PT"
+      },
+      {
+        "date": "2025-09-25",
+        "type": "Rehabilitation visit",
+        "charge": 100,
+        "pain": 1,
+        "report": "Work duties are near baseline. Kneeling directly on the knee still produces mild discomfort.",
+        "focus": "Gait is normal during the visit. Completed functional review and independent activity instruction.",
+        "provider": "C. Parker, PT"
+      },
+      {
+        "date": "2025-10-05",
+        "type": "Final scheduled review",
+        "charge": 130,
+        "pain": 1,
+        "report": "The patient has resumed ordinary office duties and stair use. Wrist symptoms have resolved in daily activity. Mild discomfort remains with direct kneeling, without an observed gait limitation. Scheduled treatment is complete. The pavement condition and any property response remain separate from the clinical outcome.",
+        "focus": "Returned to ordinary office activity; occasional kneeling discomfort",
+        "provider": "Dr. Reese Nolan"
+      }
+    ],
+    "visit_count": 8,
+    "billing_transactions": [
+      {
+        "date": "2025-10-06",
+        "type": "Patient payment",
+        "credit_usd": 100
+      },
+      {
+        "date": "2025-10-07",
+        "type": "Courtesy adjustment",
+        "credit_usd": 20
+      }
+    ],
+    "interim_statement": {
+      "date": "2025-09-02",
+      "charges_usd": 780,
+      "superseded_by": "2025-10-09"
+    },
+    "correspondence": [
+      {
+        "date": "2025-08-05",
+        "subject": "Acknowledgment of reported incident",
+        "sender": "L. Warren, File Coordinator"
+      },
+      {
+        "date": "2025-08-15",
+        "subject": "Request for clinical records and itemized charges",
+        "sender": "L. Warren, File Coordinator"
+      },
+      {
+        "date": "2025-09-02",
+        "subject": "Client activity update",
+        "sender": "Client Services Coordinator"
+      },
+      {
+        "date": "2025-10-13",
+        "subject": "Clinical record release and account reconciliation",
+        "sender": "Maple Community Clinic Records Coordinator"
+      }
+    ],
+    "total_pages": 18,
+    "format_version": "expanded-v3",
+    "ocr_required_pages": [1, 2, 3, 4, 5, 6, 7, 8, 9]
+  },
+  {
+    "sample_id": "DEMO-008",
+    "folder": "08-bus-passenger-fall",
+    "client_name": "Theo Nguyen",
+    "title": "Bus passenger fall during braking - Theo Nguyen",
+    "incident_date": "2025-09-09",
+    "incident_location": "Silverfield Shuttle / Route D",
+    "other_party": "Silverfield Transit LLC",
+    "insurer": "Silverfield Transport Cover",
+    "provider": "Dr. Skyler Hayes",
+    "facility": "Silverfield Sports Clinic",
+    "recorded_assessment": "Left shoulder strain",
+    "initial_visit": "2025-09-10",
+    "follow_up": "2025-12-17",
+    "total_billed_usd": 1600,
+    "summary": "Theo Nguyen: bus passenger fall during braking with left shoulder strain. Client reports standing near a handrail when the shuttle braked abruptly. The client lost balance and struck the shoulder against a seat partition.",
+    "treatment_pdf_format": "Text PDF",
+    "files": [
+      "01-incident-report.pdf",
+      "02-treatment-record.pdf",
+      "03-itemized-bill.pdf",
+      "04-correspondence.pdf",
+      "05-interim-statement.pdf",
+      "06-imaging-report.pdf",
+      "07-activity-statement.pdf"
+    ],
+    "dob": "1991-05-16",
+    "medical_record_number": "812184",
+    "billing_account": "43096-01",
+    "claim_reference": "2025-005848",
+    "report_reference": "IR-2025-01544",
+    "interim_visits": [
+      "2025-09-14",
+      "2025-09-20",
+      "2025-09-27",
+      "2025-10-05",
+      "2025-10-15",
+      "2025-10-30",
+      "2025-11-10",
+      "2025-11-21",
+      "2025-12-02",
+      "2025-12-11"
+    ],
+    "payments_usd": 150,
+    "adjustments_usd": 40,
+    "balance_usd": 1410,
+    "service_lines": [
+      {
+        "date": "2025-09-10",
+        "description": "Initial evaluation",
+        "units": 1,
+        "charge_usd": 235,
+        "visit_index": 1
+      },
+      {
+        "date": "2025-09-10",
+        "description": "Shoulder imaging",
+        "units": 1,
+        "charge_usd": 185,
+        "visit_index": 1
+      },
+      {
+        "date": "2025-09-14",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 105,
+        "visit_index": 2
+      },
+      {
+        "date": "2025-09-20",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 105,
+        "visit_index": 3
+      },
+      {
+        "date": "2025-09-27",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 105,
+        "visit_index": 4
+      },
+      {
+        "date": "2025-10-05",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 105,
+        "visit_index": 5
+      },
+      {
+        "date": "2025-10-15",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 105,
+        "visit_index": 6
+      },
+      {
+        "date": "2025-10-30",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 105,
+        "visit_index": 7
+      },
+      {
+        "date": "2025-11-10",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 105,
+        "visit_index": 8
+      },
+      {
+        "date": "2025-11-21",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 105,
+        "visit_index": 9
+      },
+      {
+        "date": "2025-12-02",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 105,
+        "visit_index": 10
+      },
+      {
+        "date": "2025-12-11",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 105,
+        "visit_index": 11
+      },
+      {
+        "date": "2025-12-17",
+        "description": "Final scheduled review",
+        "units": 1,
+        "charge_usd": 130,
+        "visit_index": 12
+      }
+    ],
+    "statement_date": "2025-12-21",
+    "document_pages": {
+      "01-incident-report.pdf": 3,
+      "02-treatment-record.pdf": 13,
+      "03-itemized-bill.pdf": 2,
+      "04-correspondence.pdf": 5,
+      "05-interim-statement.pdf": 1,
+      "06-imaging-report.pdf": 1,
+      "07-activity-statement.pdf": 1
+    },
+    "record_release_date": "2025-12-25",
+    "outcome": "Improved daily use; heavy carrying still symptomatic",
+    "attendance_gap": {
+      "start": "2025-10-16",
+      "end": "2025-10-29",
+      "reason": "Shift conflicts delayed two planned appointments; neither was billed"
+    },
+    "visits": [
+      {
+        "date": "2025-09-10",
+        "type": "Initial evaluation",
+        "charge": 235,
+        "pain": 6,
+        "report": "Putting on a coat, reaching behind the back and carrying a shoulder bag aggravate symptoms. The patient has switched to carrying lighter items on the opposite side. Sleep on the left side is uncomfortable. Desk tasks remain possible with the forearm supported.",
+        "focus": "Left-shoulder tenderness is present over the lateral soft tissues. Active elevation is reduced by discomfort; passive movement is greater but still sore near the endpoint. Screening strength and sensation are preserved. Plain films show no acute fracture. No deformity or open wound is noted.",
+        "provider": "Dr. Skyler Hayes"
+      },
+      {
+        "date": "2025-09-14",
+        "type": "Rehabilitation visit",
+        "charge": 105,
+        "pain": 6,
+        "report": "Dressing and carrying a bag remain painful. The patient avoids sleeping on the left side.",
+        "focus": "Active elevation is guarded. Practiced supported motion and simple task adjustments.",
+        "provider": "M. Avery, PT"
+      },
+      {
+        "date": "2025-09-20",
+        "type": "Rehabilitation visit",
+        "charge": 105,
+        "pain": 5,
+        "report": "The patient can put on a jacket more easily but still asks for help with supply boxes.",
+        "focus": "Elevation reaches 135 degrees. Added light control tasks below shoulder height.",
+        "provider": "M. Avery, PT"
+      },
+      {
+        "date": "2025-09-27",
+        "type": "Rehabilitation visit",
+        "charge": 105,
+        "pain": 4,
+        "report": "Sleep is improving. A shoulder bag after work increases soreness.",
+        "focus": "External rotation is less restricted. Practiced keeping loads close to the body.",
+        "provider": "M. Avery, PT"
+      },
+      {
+        "date": "2025-10-05",
+        "type": "Rehabilitation visit",
+        "charge": 105,
+        "pain": 4,
+        "report": "The patient completed visitor-desk duties without interruption. Repeated overhead stocking is still avoided.",
+        "focus": "Light reaching is smoother. Increased repetitions within symptom tolerance.",
+        "provider": "M. Avery, PT"
+      },
+      {
+        "date": "2025-10-15",
+        "type": "Rehabilitation visit",
+        "charge": 105,
+        "pain": 5,
+        "report": "A crowded event shift required more carrying than usual and symptoms increased. The next appointments conflict with work.",
+        "focus": "No new impact or neurologic change. Reviewed a temporary routine during the anticipated scheduling gap.",
+        "provider": "M. Avery, PT"
+      },
+      {
+        "date": "2025-10-30",
+        "type": "Rehabilitation visit",
+        "charge": 105,
+        "pain": 4,
+        "report": "The patient returns after shift conflicts. Basic movement is preserved but endurance has not progressed.",
+        "focus": "Resumed graded functional activity with reduced volume. No services were recorded during the gap.",
+        "provider": "M. Avery, PT"
+      },
+      {
+        "date": "2025-11-10",
+        "type": "Rehabilitation visit",
+        "charge": 105,
+        "pain": 3,
+        "report": "Dressing is comfortable. Carrying a heavier supply bag remains the principal complaint.",
+        "focus": "Elevation is 150 degrees. Increased low-load carry distance.",
+        "provider": "M. Avery, PT"
+      },
+      {
+        "date": "2025-11-21",
+        "type": "Rehabilitation visit",
+        "charge": 105,
+        "pain": 3,
+        "report": "The patient is helping with smaller supply boxes and taking breaks between trips.",
+        "focus": "Improved load control. Practiced carry-and-place tasks below shoulder height.",
+        "provider": "M. Avery, PT"
+      },
+      {
+        "date": "2025-12-02",
+        "type": "Rehabilitation visit",
+        "charge": 105,
+        "pain": 2,
+        "report": "Most daily tasks are manageable. A full shift of supply handling still causes soreness that evening.",
+        "focus": "Active movement is nearly symmetric. Assessed response to repeated tasks rather than a single reach.",
+        "provider": "M. Avery, PT"
+      },
+      {
+        "date": "2025-12-11",
+        "type": "Rehabilitation visit",
+        "charge": 105,
+        "pain": 2,
+        "report": "No further flare is reported. The patient wants to resume all stocking duties but remains uncertain about heavier bags.",
+        "focus": "Collected final measures and reviewed gradual activity progression for the clinician follow-up.",
+        "provider": "M. Avery, PT"
+      },
+      {
+        "date": "2025-12-17",
+        "type": "Final scheduled review",
+        "charge": 130,
+        "pain": 2,
+        "report": "Daily arm use and dressing have improved substantially. Heavy carrying and repeated overhead stocking still cause discomfort. Two planned visits were delayed by shift conflicts and were not billed. The provider recommends an independent routine with reassessment for persistent symptoms. No opinion about the reason for the bus braking is made.",
+        "focus": "Improved daily use; heavy carrying still symptomatic",
+        "provider": "Dr. Skyler Hayes"
+      }
+    ],
+    "visit_count": 12,
+    "billing_transactions": [
+      {
+        "date": "2025-12-18",
+        "type": "Patient payment",
+        "credit_usd": 150
+      },
+      {
+        "date": "2025-12-19",
+        "type": "Courtesy adjustment",
+        "credit_usd": 40
+      }
+    ],
+    "interim_statement": {
+      "date": "2025-10-31",
+      "charges_usd": 1050,
+      "superseded_by": "2025-12-21"
+    },
+    "correspondence": [
+      {
+        "date": "2025-09-12",
+        "subject": "Acknowledgment of reported incident",
+        "sender": "L. Warren, File Coordinator"
+      },
+      {
+        "date": "2025-09-22",
+        "subject": "Request for clinical records and itemized charges",
+        "sender": "L. Warren, File Coordinator"
+      },
+      {
+        "date": "2025-10-30",
+        "subject": "Attendance-gap confirmation",
+        "sender": "Appointment Coordinator"
+      },
+      {
+        "date": "2025-11-03",
+        "subject": "Outstanding evidence inquiry",
+        "sender": "L. Warren, File Coordinator"
+      },
+      {
+        "date": "2025-12-25",
+        "subject": "Clinical record release and account reconciliation",
+        "sender": "Silverfield Sports Clinic Records Coordinator"
+      }
+    ],
+    "total_pages": 26,
+    "format_version": "expanded-v3",
+    "ocr_required_pages": []
+  },
+  {
+    "sample_id": "DEMO-009",
+    "folder": "09-falling-merchandise",
+    "client_name": "Zoe Mitchell",
+    "title": "Falling merchandise at retail store - Zoe Mitchell",
+    "incident_date": "2025-10-17",
+    "incident_location": "Alder Home Store / storage aisle",
+    "other_party": "Alder Home Retail LLC",
+    "insurer": "Alder Commercial Cover",
+    "provider": "Dr. Peyton Cole",
+    "facility": "Alder Medical Center",
+    "recorded_assessment": "Right shoulder contusion",
+    "initial_visit": "2025-10-18",
+    "follow_up": "2025-11-15",
+    "total_billed_usd": 815,
+    "summary": "Zoe Mitchell: falling merchandise at retail store with right shoulder contusion. Client reports that a boxed display item fell from a shelf and struck the right shoulder. The store report attributes the fall to shelf movement; the client could not confirm the cause.",
+    "treatment_pdf_format": "Text PDF",
+    "files": [
+      "01-incident-report.pdf",
+      "02-treatment-record.pdf",
+      "03-itemized-bill.pdf",
+      "04-correspondence.pdf",
+      "06-imaging-report.pdf"
+    ],
+    "dob": "1987-07-30",
+    "medical_record_number": "812457",
+    "billing_account": "43233-01",
+    "claim_reference": "2025-006579",
+    "report_reference": "IR-2025-01737",
+    "interim_visits": ["2025-10-22", "2025-10-29", "2025-11-06"],
+    "payments_usd": 50,
+    "adjustments_usd": 0,
+    "balance_usd": 765,
+    "service_lines": [
+      {
+        "date": "2025-10-18",
+        "description": "Initial evaluation",
+        "units": 1,
+        "charge_usd": 220,
+        "visit_index": 1
+      },
+      {
+        "date": "2025-10-18",
+        "description": "Shoulder imaging",
+        "units": 1,
+        "charge_usd": 180,
+        "visit_index": 1
+      },
+      {
+        "date": "2025-10-22",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 95,
+        "visit_index": 2
+      },
+      {
+        "date": "2025-10-29",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 95,
+        "visit_index": 3
+      },
+      {
+        "date": "2025-11-06",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 95,
+        "visit_index": 4
+      },
+      {
+        "date": "2025-11-15",
+        "description": "Final scheduled review",
+        "units": 1,
+        "charge_usd": 130,
+        "visit_index": 5
+      }
+    ],
+    "statement_date": "2025-11-19",
+    "document_pages": {
+      "01-incident-report.pdf": 2,
+      "02-treatment-record.pdf": 6,
+      "03-itemized-bill.pdf": 1,
+      "04-correspondence.pdf": 3,
+      "06-imaging-report.pdf": 1
+    },
+    "record_release_date": "2025-11-23",
+    "outcome": "Discharged after contusion improved",
+    "attendance_gap": null,
+    "visits": [
+      {
+        "date": "2025-10-18",
+        "type": "Initial evaluation",
+        "charge": 220,
+        "pain": 5,
+        "report": "Direct pressure from a bag strap and overhead reaching provoke pain. The patient can use a keyboard and drive short distances but has asked for help with loading supplies. Clothing over the bruise is uncomfortable. Sleep is affected when rolling onto the right side.",
+        "focus": "Localized bruising and tenderness are present at the superior-lateral shoulder. Active movement is preserved but uncomfortable above shoulder height. No palpable deformity or focal neurologic deficit is recorded. The imaging report describes no acute fracture or dislocation. Soft-tissue symptoms are followed clinically.",
+        "provider": "Dr. Peyton Cole"
+      },
+      {
+        "date": "2025-10-22",
+        "type": "Rehabilitation visit",
+        "charge": 95,
+        "pain": 4,
+        "report": "Bruising is tender to a bag strap. The patient has delegated heavier event setup work.",
+        "focus": "Localized tenderness remains without deformity. Practiced comfortable reaching below the painful range.",
+        "provider": "D. Quinn, PT"
+      },
+      {
+        "date": "2025-10-29",
+        "type": "Rehabilitation visit",
+        "charge": 95,
+        "pain": 3,
+        "report": "Dressing is easier and the bruise is fading. A loaded shoulder bag still causes soreness.",
+        "focus": "Elevation reaches 155 degrees. Added light carry tasks with the strap away from the tender area.",
+        "provider": "D. Quinn, PT"
+      },
+      {
+        "date": "2025-11-06",
+        "type": "Rehabilitation visit",
+        "charge": 95,
+        "pain": 1,
+        "report": "The patient completed a small setup assignment with help for heavier equipment. No increase in bruising occurred.",
+        "focus": "Movement is near baseline. Reviewed gradual return to routine carrying and final clinical review.",
+        "provider": "D. Quinn, PT"
+      },
+      {
+        "date": "2025-11-15",
+        "type": "Final scheduled review",
+        "charge": 130,
+        "pain": 1,
+        "report": "The bruise has resolved on examination and ordinary shoulder use has resumed. Mild sensitivity occurs only with direct pressure or unusually heavy carrying. The scheduled course is closed. The medical findings do not establish why the merchandise fell; the differing incident accounts remain unresolved.",
+        "focus": "Discharged after contusion improved",
+        "provider": "Dr. Peyton Cole"
+      }
+    ],
+    "visit_count": 5,
+    "billing_transactions": [
+      {
+        "date": "2025-11-16",
+        "type": "Patient payment",
+        "credit_usd": 50
+      },
+      {
+        "date": "2025-11-17",
+        "type": "Courtesy adjustment",
+        "credit_usd": 0
+      }
+    ],
+    "interim_statement": null,
+    "correspondence": [
+      {
+        "date": "2025-10-20",
+        "subject": "Acknowledgment of reported incident",
+        "sender": "L. Warren, File Coordinator"
+      },
+      {
+        "date": "2025-10-30",
+        "subject": "Request for clinical records and itemized charges",
+        "sender": "L. Warren, File Coordinator"
+      },
+      {
+        "date": "2025-11-23",
+        "subject": "Clinical record release and account reconciliation",
+        "sender": "Alder Medical Center Records Coordinator"
+      }
+    ],
+    "total_pages": 13,
+    "format_version": "expanded-v3",
+    "ocr_required_pages": []
+  },
+  {
+    "sample_id": "DEMO-010",
+    "folder": "10-rideshare-collision",
+    "client_name": "Leo Patel",
+    "title": "Rideshare passenger rear-end collision - Leo Patel",
+    "incident_date": "2025-11-04",
+    "incident_location": "Brookhaven / Lantern Road",
+    "other_party": "Robin Dale",
+    "insurer": "Lantern Motor Cover",
+    "provider": "Dr. Finley Stone",
+    "facility": "Lantern Family Care",
+    "recorded_assessment": "Cervical strain and headache complaint",
+    "initial_visit": "2025-11-05",
+    "follow_up": "2026-02-25",
+    "total_billed_usd": 1825,
+    "summary": "Leo Patel: rideshare passenger rear-end collision with cervical strain and headache complaint. Client reports being a rear-seat passenger in a stopped rideshare vehicle when another vehicle struck it from behind. The client reports wearing a seat belt.",
+    "treatment_pdf_format": "Text PDF",
+    "files": [
+      "01-incident-report.pdf",
+      "02-treatment-record.pdf",
+      "03-itemized-bill.pdf",
+      "04-correspondence.pdf",
+      "05-interim-statement.pdf",
+      "07-activity-statement.pdf",
+      "08-continuation-referral.pdf"
+    ],
+    "dob": "1994-10-12",
+    "medical_record_number": "812730",
+    "billing_account": "43370-01",
+    "claim_reference": "2025-007310",
+    "report_reference": "IR-2025-01930",
+    "interim_visits": [
+      "2025-11-08",
+      "2025-11-12",
+      "2025-11-17",
+      "2025-11-23",
+      "2025-11-30",
+      "2025-12-08",
+      "2025-12-17",
+      "2025-12-26",
+      "2026-01-04",
+      "2026-01-14",
+      "2026-01-24",
+      "2026-02-04",
+      "2026-02-14",
+      "2026-02-21"
+    ],
+    "payments_usd": 200,
+    "adjustments_usd": 50,
+    "balance_usd": 1575,
+    "service_lines": [
+      {
+        "date": "2025-11-05",
+        "description": "Initial evaluation",
+        "units": 1,
+        "charge_usd": 250,
+        "visit_index": 1
+      },
+      {
+        "date": "2025-11-08",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 100,
+        "visit_index": 2
+      },
+      {
+        "date": "2025-11-12",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 100,
+        "visit_index": 3
+      },
+      {
+        "date": "2025-11-17",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 100,
+        "visit_index": 4
+      },
+      {
+        "date": "2025-11-23",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 100,
+        "visit_index": 5
+      },
+      {
+        "date": "2025-11-30",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 100,
+        "visit_index": 6
+      },
+      {
+        "date": "2025-12-08",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 100,
+        "visit_index": 7
+      },
+      {
+        "date": "2025-12-17",
+        "description": "Clinical reassessment",
+        "units": 1,
+        "charge_usd": 145,
+        "visit_index": 8
+      },
+      {
+        "date": "2025-12-26",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 100,
+        "visit_index": 9
+      },
+      {
+        "date": "2026-01-04",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 100,
+        "visit_index": 10
+      },
+      {
+        "date": "2026-01-14",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 100,
+        "visit_index": 11
+      },
+      {
+        "date": "2026-01-24",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 100,
+        "visit_index": 12
+      },
+      {
+        "date": "2026-02-04",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 100,
+        "visit_index": 13
+      },
+      {
+        "date": "2026-02-14",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 100,
+        "visit_index": 14
+      },
+      {
+        "date": "2026-02-21",
+        "description": "Rehabilitation visit",
+        "units": 1,
+        "charge_usd": 100,
+        "visit_index": 15
+      },
+      {
+        "date": "2026-02-25",
+        "description": "Final scheduled review",
+        "units": 1,
+        "charge_usd": 130,
+        "visit_index": 16
+      }
+    ],
+    "statement_date": "2026-03-01",
+    "document_pages": {
+      "01-incident-report.pdf": 3,
+      "02-treatment-record.pdf": 17,
+      "03-itemized-bill.pdf": 2,
+      "04-correspondence.pdf": 6,
+      "05-interim-statement.pdf": 1,
+      "07-activity-statement.pdf": 1,
+      "08-continuation-referral.pdf": 1
+    },
+    "record_release_date": "2026-03-05",
+    "outcome": "Reduced headaches and improved neck function; follow-up as needed",
+    "attendance_gap": null,
+    "visits": [
+      {
+        "date": "2025-11-05",
+        "type": "Initial evaluation",
+        "charge": 250,
+        "pain": 5,
+        "report": "Screen use longer than thirty minutes increases neck discomfort. Looking over the shoulder and sustained reading in bed are difficult. The patient continues remote work with more frequent breaks. Sleep was initially interrupted by neck stiffness but is gradually improving.",
+        "focus": "Alert, oriented and speaking normally. Cervical paraspinal tenderness and guarded rotation are recorded. Screening cranial nerve function, upper-extremity strength and sensation are without a focal deficit in the documented examination. The patient denies loss of consciousness. No diagnostic imaging was ordered at this encounter.",
+        "provider": "Dr. Finley Stone"
+      },
+      {
+        "date": "2025-11-08",
+        "type": "Rehabilitation visit",
+        "charge": 100,
+        "pain": 5,
+        "report": "The patient reports headaches on most days since the collision, usually after screen work. No new visual or sensory symptom is described.",
+        "focus": "Cervical rotation remains guarded. Practiced supported movement and workstation pacing.",
+        "provider": "S. Morgan, PT"
+      },
+      {
+        "date": "2025-11-12",
+        "type": "Rehabilitation visit",
+        "charge": 100,
+        "pain": 5,
+        "report": "The patient completed shortened work blocks but needed more frequent breaks than before the event.",
+        "focus": "Right rotation is 52 degrees. Reviewed symptom tracking and ordinary activity tolerance.",
+        "provider": "S. Morgan, PT"
+      },
+      {
+        "date": "2025-11-17",
+        "type": "Rehabilitation visit",
+        "charge": 100,
+        "pain": 4,
+        "report": "Sleep is improving. Headache was present the prior evening but is absent during this visit.",
+        "focus": "No new focal finding. Continued cervical movement and postural-control work.",
+        "provider": "S. Morgan, PT"
+      },
+      {
+        "date": "2025-11-23",
+        "type": "Rehabilitation visit",
+        "charge": 100,
+        "pain": 4,
+        "report": "The patient reports three headache days in the preceding week. Longer video calls still aggravate neck stiffness.",
+        "focus": "Rotation is less guarded. Added endurance tasks with planned rests.",
+        "provider": "S. Morgan, PT"
+      },
+      {
+        "date": "2025-11-30",
+        "type": "Rehabilitation visit",
+        "charge": 100,
+        "pain": 3,
+        "report": "The patient is working a full day with breaks and has resumed short leisure walks.",
+        "focus": "Cervical movement is improved. Reviewed gradual increases in screen duration.",
+        "provider": "S. Morgan, PT"
+      },
+      {
+        "date": "2025-12-08",
+        "type": "Rehabilitation visit",
+        "charge": 100,
+        "pain": 5,
+        "report": "A software release required several late work sessions. Headache frequency and neck stiffness increased, without new trauma.",
+        "focus": "Tenderness increased but screening remains without a new focal deficit. Reduced sustained-position work in the session.",
+        "provider": "S. Morgan, PT"
+      },
+      {
+        "date": "2025-12-17",
+        "type": "Clinical reassessment",
+        "charge": 145,
+        "pain": 4,
+        "report": "The deadline has passed and symptoms are settling. The patient is keeping a headache calendar.",
+        "focus": "Clinical review of persistent symptoms completed. A continuation referral was issued; no concussion diagnosis or new imaging order is recorded.",
+        "provider": "Dr. Finley Stone"
+      },
+      {
+        "date": "2025-12-26",
+        "type": "Rehabilitation visit",
+        "charge": 100,
+        "pain": 3,
+        "report": "Headache occurred twice in the preceding week. Screen breaks are being used more consistently.",
+        "focus": "Right rotation is 60 degrees. Continued endurance work and reviewed the calendar.",
+        "provider": "S. Morgan, PT"
+      },
+      {
+        "date": "2026-01-04",
+        "type": "Rehabilitation visit",
+        "charge": 100,
+        "pain": 3,
+        "report": "The patient tolerated a longer meeting if able to change position. No new symptom pattern is reported.",
+        "focus": "Improved movement control. Increased duration of functional desk simulation.",
+        "provider": "S. Morgan, PT"
+      },
+      {
+        "date": "2026-01-14",
+        "type": "Rehabilitation visit",
+        "charge": 100,
+        "pain": 2,
+        "report": "The patient reports one headache day during a quieter workweek. Neck stiffness remains at the end of long days.",
+        "focus": "Rotation is nearly symmetric. Independent routine was reviewed for consistency.",
+        "provider": "S. Morgan, PT"
+      },
+      {
+        "date": "2026-01-24",
+        "type": "Rehabilitation visit",
+        "charge": 100,
+        "pain": 3,
+        "report": "Travel and laptop use in a hotel increased stiffness temporarily. The patient reports no collision or separate injury.",
+        "focus": "Symptoms reproduced by sustained posture. Reviewed portable workstation adjustments.",
+        "provider": "S. Morgan, PT"
+      },
+      {
+        "date": "2026-02-04",
+        "type": "Rehabilitation visit",
+        "charge": 100,
+        "pain": 2,
+        "report": "The travel-related increase has settled. Work and ordinary household tasks are manageable.",
+        "focus": "No focal finding. Practiced a longer sequence of ordinary work tasks with fewer rests.",
+        "provider": "S. Morgan, PT"
+      },
+      {
+        "date": "2026-02-14",
+        "type": "Rehabilitation visit",
+        "charge": 100,
+        "pain": 2,
+        "report": "The patient reports one to two headache days per week and better sleep. The calendar does not show a clear food or weather pattern.",
+        "focus": "Collected repeat movement measures and reviewed remaining triggers.",
+        "provider": "S. Morgan, PT"
+      },
+      {
+        "date": "2026-02-21",
+        "type": "Rehabilitation visit",
+        "charge": 100,
+        "pain": 1,
+        "report": "Most workdays are completed with planned breaks. No headache occurred during the last several days, although occasional symptoms continue over the month.",
+        "focus": "Prepared the final rehabilitation summary for the clinician review. No new diagnosis was assigned.",
+        "provider": "S. Morgan, PT"
+      },
+      {
+        "date": "2026-02-25",
+        "type": "Final scheduled review",
+        "charge": 130,
+        "pain": 2,
+        "report": "Neck movement and work tolerance have improved. The headache calendar shows intermittent symptoms, usually during sustained screen work, without a new focal complaint. The scheduled rehabilitation course is complete with follow-up as needed. The provider does not assign a concussion diagnosis, determine permanent impairment or estimate future care costs from this record alone.",
+        "focus": "Reduced headaches and improved neck function; follow-up as needed",
+        "provider": "Dr. Finley Stone"
+      }
+    ],
+    "visit_count": 16,
+    "billing_transactions": [
+      {
+        "date": "2026-02-26",
+        "type": "Patient payment",
+        "credit_usd": 200
+      },
+      {
+        "date": "2026-02-27",
+        "type": "Courtesy adjustment",
+        "credit_usd": 50
+      }
+    ],
+    "interim_statement": {
+      "date": "2025-12-27",
+      "charges_usd": 1095,
+      "superseded_by": "2026-03-01"
+    },
+    "correspondence": [
+      {
+        "date": "2025-11-07",
+        "subject": "Acknowledgment of reported incident",
+        "sender": "L. Warren, File Coordinator"
+      },
+      {
+        "date": "2025-11-17",
+        "subject": "Request for clinical records and itemized charges",
+        "sender": "L. Warren, File Coordinator"
+      },
+      {
+        "date": "2025-12-27",
+        "subject": "Client activity update",
+        "sender": "Client Services Coordinator"
+      },
+      {
+        "date": "2026-01-05",
+        "subject": "Outstanding evidence inquiry",
+        "sender": "L. Warren, File Coordinator"
+      },
+      {
+        "date": "2026-03-05",
+        "subject": "Clinical record release and account reconciliation",
+        "sender": "Lantern Family Care Records Coordinator"
+      },
+      {
+        "date": "2026-03-08",
+        "subject": "Request to confirm remaining follow-up items",
+        "sender": "L. Warren, File Coordinator"
+      }
+    ],
+    "total_pages": 31,
+    "format_version": "expanded-v3",
+    "ocr_required_pages": []
+  }
+]

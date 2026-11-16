@@ -19,20 +19,12 @@ CaseFlow uses one shared fictional workspace. Application roles and case assignm
 | View audit history                      | No                    | Yes                   | Yes                   |
 | Grant/remove Super Admin                | Operator command only | Operator command only | Operator command only |
 
-Configure the operator connection for the same database as the API using the [local setup](development.md#first-time-database-setup).
-
-New users start as active Staff with no assignments. After first sign-in, copy the
-application user ID from **Profile** and run:
-
-```sh
-npm run operator:role -- USER_UUID super_admin
-```
-
-The same operator command accepts `staff` or `admin` for controlled role recovery.
-It rejects disabled targets and removal of the last active Super Admin, and records
-changes with the database operator's name. It never matches accounts by email or
-display name. The web app cannot change a Super Admin's role/access status; they
-can still edit their own display name.
+New users start as active Staff with no assignments. Super Admin changes use an
+audited operator-only function, identified by application user ID rather than email
+or display name. It rejects disabled targets and removal of the last active Super Admin.
+The web app cannot change a Super Admin's role or access status; they can still edit
+their own display name. Local operator tooling is covered by
+[development](development.md#local-role-administration).
 
 Admins manage Staff access; Super Admins also manage Admin access. Demotion retains
 explicit assignments. Disabling blocks protected endpoints while retaining those
@@ -70,11 +62,8 @@ Workspace URLs retain the selected tab, case, search, status, archive filter, an
 bookmarks, refresh, and browser Back/Forward. Add `mode=edit` to a case URL to open its edit form. Form drafts are not stored in URLs.
 The desktop list uses a table; narrow screens use case cards.
 
-For an existing local installation, run `npm run db:migrate` before starting the
-updated API. The additive migration preserves existing profiles, case IDs, assignments,
-and audit events, and fills the seeded cases with fictional client metadata.
-Legacy cases have no recorded creator; newly created cases always do. No reset or
-credential rotation is required.
+The additive case schema preserves profiles, case IDs, assignments, and audit history.
+Legacy cases have no recorded creator; newly created cases always do.
 
 ## Editing, archiving, and restoring cases
 
@@ -101,8 +90,8 @@ Successful case, profile, role, access, and assignment changes use shared toast
 notifications. Toasts dismiss automatically, pause while hovered or focused, and have
 a keyboard-accessible dismiss button. Errors remain beside the relevant controls.
 Confirmation dialogs contain keyboard focus, support Escape, and return focus to the
-trigger when closed. Existing installations only need `npm run db:migrate`: new case
-metadata starts at version 1 with `updatedAt` equal to the original creation time.
+trigger when closed. Existing case metadata starts at version 1 with `updatedAt`
+equal to the original creation time.
 
 ## Related guides
 

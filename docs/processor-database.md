@@ -2,23 +2,22 @@
 
 [Back to README](../README.md)
 
-The additive `20261115170546_processor_database.sql` migration supplies the database
-interface for document workers. It does not start processing, create Lambda
-functions, or enable the API dispatcher.
+The processor database interface coordinates claims, OCR allowance, result publication,
+and cancellation. Background workers use restricted functions rather than direct table writes.
 
 ## Tables and access
 
 | Table                         | Purpose                                                                                             | Direct application access                                                                          |
 | ----------------------------- | --------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
 | `document_processing_jobs`    | Source snapshot, lifecycle, extraction/collection attempts, leases, OCR intent and provider receipt | Runtime can select its existing safe columns through case-aware RLS; processor uses functions only |
-| `document_processing_results` | Published manifest/text/OCR references, exact S3 versions, checksums, method and page count         | None                                                                                               |
+| `document_processing_results` | Published manifest/text/OCR references, exact S3 versions, checksums, method and page count         | Safe result-summary columns through case-aware RLS; artifact references remain private             |
 | `processing_ocr_days`         | Workspace OCR pages reserved per UTC day                                                            | None                                                                                               |
 | `processing_ocr_reservations` | One immutable allowance reservation per job                                                         | None                                                                                               |
 | `audit_events`                | Existing history with an additional nullable service identity                                       | Existing administrator-only RLS                                                                    |
 
-The three new tables have RLS enabled without direct runtime or processor policies.
-This is intentional: their service operations run through narrowly granted functions
-in the private `caseflow` schema. Do not expose that schema through the Data API.
+The tables use RLS. Runtime access is limited to authorized job/result summaries;
+OCR reservation data has no direct runtime access. Worker operations use narrowly granted
+functions in the private `caseflow` schema, outside the Data API.
 The processor role cannot select application tables, update rows directly, provision
 users, change roles, or call dispatcher/operator functions.
 
@@ -28,7 +27,7 @@ default to pipeline version `1`, zero collection attempts, and no OCR request.
 
 ## Worker interface
 
-Every call runs in a short transaction. Commit before S3 or Textract I/O. Each write
+Every call runs in a short transaction that commits before S3 or Textract I/O. Each write
 uses the existing permission lock, then case, document, and job locks. Workers do not
 set Entra identity variables or impersonate the requester.
 
@@ -59,13 +58,10 @@ response with `stale`/`terminal`. Boolean mutations return false for a stale lea
 terminal job. A false result must never be interpreted as permission to publish.
 Invalid input and mismatched provider/request parameters raise stable database errors.
 
-The additive `20261115184408_textract_completion_correlation.sql` migration verifies
-provider IDs before returning `terminal` for completion claims. A saved OCR intent
+Completion claims verify provider IDs before returning `terminal`. A saved OCR intent
 with no provider receipt returns `awaiting_binding` while still active. A job without
 an OCR intent, an unbound terminal job, or a mismatched provider ID raises
 `PROCESSING_CONFLICT`; the notification remains eligible for retry/DLQ investigation.
-This replacement preserves rows, RLS, existing function signatures, and restricted grants.
-Apply it after the processor migration and before enabling the completion consumer.
 
 Leases last 180 seconds. Extraction and collection each allow five claims. A transient
 external failure can leave the lease to expire and return the SQS message for retry;
@@ -83,7 +79,7 @@ starts. A later administrator retry creates a new job and needs a new reservatio
 
 The request token and job tag are the application job UUID. Bucket, key, and source
 version come from the database snapshot. Topic and notification-role ARNs must have
-matching project IDs; the topic must be an `AmazonTextract-` topic in `us-east-2`.
+matching project IDs and satisfy the notification topic naming and selected-Region constraints.
 The saved request cannot be changed by a retry. An uncertain start must reuse those
 parameters. Unresolved OCR intents become ineligible for restart after six days.
 

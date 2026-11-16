@@ -1,5 +1,7 @@
 # Human review
 
+[Back to README](../README.md)
+
 Human review adds versioned corrections and approval to completed extracted facts. Original AI
 values and source evidence remain immutable. No model call, document preview, manual fact creation,
 or bulk approval is part of this feature. Approved facts feed the separate
@@ -74,7 +76,7 @@ document content; it does not grant review or approval permissions.
 
 ## Database and organization
 
-Migration `20261116011952_human_review.sql` is additive. It preserves extracted facts, evidence,
+The review schema is additive. It preserves extracted facts, evidence,
 profiles, assignments, documents, jobs, dispatches, and audit history.
 
 - `caseflow.fact_reviews` stores the current full values, status, and optimistic version.
@@ -116,7 +118,7 @@ Authorization rejection clears protected content. Review mutations invalidate on
 lists, detail/history resources, case timeline/summary resources, and audit queries. The workspace shell and existing navigation
 context remain mounted; polling does not move keyboard focus.
 
-## Verification and release
+## Verification
 
 Tests use signed test tokens and disposable local PostgreSQL databases. Coverage includes the role
 matrix, cross-case IDs, strict input validation, immutable evidence, concurrent edit/approval,
@@ -127,7 +129,8 @@ Draft retention, access-loss cleanup, and cache invalidation have frontend unit 
 Desktop browser verification uses real components with isolated fictional request fixtures; it
 covers save, approval, reopening, rejection, reasons, history, draft retention, explicit conflict
 reload, keyboard modal containment, Staff controls, archived cases, and service failures. It is not
-a hosted end-to-end extraction-to-review check. Mobile visual verification remains a release check.
+a hosted end-to-end extraction-to-review check. Automated coverage does not establish
+mobile visual quality.
 
 The migration is additive: extraction tables stay immutable, and review tables and history are
 never dropped. The fact response includes review metadata, so the API and frontend change together.

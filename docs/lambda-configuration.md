@@ -35,8 +35,7 @@ cancellation, attempt limits, and OCR allowance checks still apply.
 
 ## Database credentials and trust
 
-Both functions use a restricted `caseflow_processor_login`, which inherits only
-`caseflow_processor` and has no direct table-write or operator privileges; the API and dispatcher
+Both functions use a restricted processor login, which inherits only the processor capability role and has no direct table-write or operator privileges; the API and dispatcher
 use separate credentials. Credentials live in AWS Secrets Manager. Lambda receives only the
 secret's ARN, never a password or connection string in its environment, and retrieves the current
 version with its execution role.
@@ -49,10 +48,8 @@ never falls back to expired credentials. SDK clients are reused across warm invo
 credential-bearing application objects are rebuilt so rotated credentials take effect.
 
 The package includes [Supabase's public root CA](../services/document-processor/src/caseflow_processor/certs/supabase-ca.crt).
-Its SHA-256 DER fingerprint is
-`AD:62:1A:B5:F1:62:31:97:13:A6:91:C7:3D:D0:52:C3:B4:CD:49:B6:02:49:96:2A:D8:B5:FB:6B:D1:A0:D4:B5`;
-it expires on April 26, 2031. Replace it through a reviewed source/build update if Supabase
-rotates its trust chain. This certificate is public trust material, not a credential.
+This certificate is public trust material, not a credential.
+
 The runtime resolves its packaged path and always uses `sslmode=verify-full`, checking both
 chain and hostname. It never uses a developer's certificate path or disables verification.
 
@@ -73,7 +70,7 @@ adds a bounded API call, not a persistent database connection.
 | Read original S3 version         | Configured environment's `original/` prefix  | None                       |
 | Write / verify artifact versions | Configured environment's `processed/` prefix | Same                       |
 | Textract operation               | `StartDocumentTextDetection`                 | `GetDocumentTextDetection` |
-| Pass notification role           | Named role, only to `textract.amazonaws.com` | None                       |
+| Pass notification role           | Notification role, only to Textract          | None                       |
 
 All file reads require `s3:GetObjectVersion`; neither role can read an unspecified latest
 version, delete objects, list buckets, write originals, or send arbitrary SQS messages.
@@ -84,10 +81,10 @@ document structure. Application authorization and trusted job snapshots provide 
 
 [Textract's authorization reference](https://docs.aws.amazon.com/service-authorization/latest/reference/list_textract.html)
 does not support resource-level scoping for these two operations. Only those statements use
-`Resource: "*"`, with an Ohio Region condition. `GetDocumentTextDetection` cannot be restricted
+`Resource: "*"`, with a selected-Region condition. `GetDocumentTextDetection` cannot be restricted
 to one job ID in IAM; trusted database correlation restricts the IDs the completion code uses.
 The processor can pass only the existing notification role. That role must trust Textract and
-allow publication only to the configured `AmazonTextract-...` SNS topic. Its topic subscription,
+allow publication only to the configured completion SNS topic. Its topic subscription,
 queue policy, redrive settings, and DLQs stay outside this stack.
 
 The policies assume SSE-SQS queues, SSE-S3 documents, and the AWS-managed Secrets Manager key.
@@ -96,24 +93,12 @@ data-key permissions. No wildcard KMS, S3 ACL/tag/retention, or administrative p
 
 ## Build and validation
 
-Install Docker and uv 0.13.8. From the repository root:
-
-```sh
-uv sync --project infra/document-processing --locked
-uv sync --project services/document-processor --locked
-uv run --project infra/document-processing --locked sam validate --lint --region us-east-2 --template-file infra/document-processing/template.yaml
-uv run --project infra/document-processing --locked python infra/document-processing/scripts/validate_security.py
-uv run --project infra/document-processing --locked pytest infra/document-processing/tests
-uv run --project infra/document-processing --locked python infra/document-processing/scripts/build.py
-uv run --project infra/document-processing --locked python infra/document-processing/scripts/verify_build.py
-```
-
-Use the build wrapper rather than calling `sam build` directly on the source template. It
-exports hash-pinned runtime requirements from `services/document-processor/uv.lock` into a temporary
-source directory, copies only the Python package and public certificate, and builds all three
-functions using SAM's versioned Python 3.13 x86-64 Linux image. It excludes local environment
-files, tests, editor files, and development dependencies. SAM output is ignored under
-`.aws-sam/document-processing/`. Build tools have a separate lockfile and never enter Lambda.
+The build wrapper exports hash-pinned runtime requirements from the service lockfile
+into a temporary source directory, copies only the Python package and public certificate,
+and builds the functions in a Python 3.13 x86-64 Linux container. It excludes local
+environment files, tests, editor files, and development dependencies. Build tools have
+a separate lockfile and never enter Lambda. Local commands are in
+[development](development.md#infrastructure-validation).
 
 Security validation uses checksum-verified CloudFormation Guard 3.2.1. Rules check runtime
 limits, stack ownership, logging, and default-disabled consumption. Permission tests cover
@@ -121,7 +106,7 @@ both allowed and denied queues, prefixes, secrets, logs, operations, and PassRol
 Package checks verify ELF architecture, size, imports, and bundled CA loading inside an offline,
 read-only Linux container, including the parser memory ceiling. Bundles are staged in a temporary
 directory so Docker Desktop does not need to mount the source checkout. Builds need package/image network access, but no AWS deployment
-credentials. CI performs these checks and does not run `deploy`, `sync`, or cloud login.
+credentials. These CI checks use no live cloud resources.
 
 Local secret tests cover validation, rotation caching, malformed responses, and provider errors. The PostgreSQL integration suite creates an additional disposable TLS server
 to verify trusted connections succeed and wrong CA/hostname connections fail. It also tests

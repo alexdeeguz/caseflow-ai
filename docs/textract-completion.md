@@ -11,7 +11,7 @@ for results and known limits.
 
 The Lambda entry point is `caseflow_processor.handlers.completion.handler`.
 `TEXTRACT_COMPLETION_QUEUE_ARN` identifies the existing standard completion queue.
-It must differ from the processing queue and share its project and `us-east-2` Region.
+It must differ from the processing queue and share its project and selected Region.
 The remaining server-only settings are described in [Python processor setup](python-processor.md).
 
 The SNS subscription must use **raw message delivery**. The SQS body is Textract's
@@ -115,7 +115,8 @@ will stop subsequent publication when cancellation is observed.
 
 ## Verification
 
-Run the Python checks and disposable PostgreSQL tests in [the processor guide](python-processor.md).
+Automated coverage uses the Python and disposable PostgreSQL suites described in
+[local development](development.md#python-services).
 The suite covers multi-response graphs, raw/confidence preservation, early/duplicate
 notifications, failure statuses, expiry, actual bounded SDK retries against a local HTTP
 server, storage failures, stale leases, cancellation, audit rollback, unreferenced-artifact

@@ -20,7 +20,6 @@ port 54321. `npm run db:status` displays connection details and local developmen
 keys. Keep privileged keys out of frontend code.
 
 Run `npm run db:stop` when finished. This preserves local data for the next start.
-Do not use `--no-backup` unless you intend to delete local database volumes.
 Stopping the app with Ctrl+C does not stop these containers.
 
 Configuration lives in `supabase/config.toml`. Microsoft Entra remains the sign-in provider.
@@ -28,12 +27,9 @@ Local data is separate from any hosted Supabase project and does not sync automa
 
 ### First-time database setup
 
-After copying the app environment examples, create the ignored
-`apps/api/.env.operator` with this **local-only** operator connection:
-
-```dotenv
-OPERATOR_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres
-```
+After copying the app environment examples, create the ignored `apps/api/.env.operator`
+with `OPERATOR_DATABASE_URL` pointing to the local Docker PostgreSQL instance. Keep its
+value private. The connection is for local operator tooling, not the API or browser.
 
 Then run from the repository root:
 
@@ -46,7 +42,7 @@ npm run dev
 ```
 
 `db:configure` generates a random runtime password and writes `DATABASE_URL` to
-`apps/api/.env`. Running it again rotates that local password; restart the API.
+`apps/api/.env`. This command is local-only and replaces existing local runtime settings.
 The API requires `caseflow_runtime`, never the operator role. Hosted database
 connections require TLS verification (`sslmode=verify-full`). Connection URLs accept
 TLS options and `application_name`; credentials and host belong in the URL itself,
@@ -91,7 +87,17 @@ They create and drop a uniquely named disposable database, apply migrations and
 seeds there, and exercise real restricted-login permissions. They never reset the
 working database and do not silently skip when the database is unavailable. Coverage includes partial edits, archive access/filtering, retained assignments, concurrent writes, demotion/disable races, audit rollback, migration preservation, and direct runtime-role restrictions.
 
-When the application uses hosted Supabase, follow [local tests and switching environments](hosted-database.md#local-tests-and-switching-environments) to keep integration tests on a disposable local database.
+When the application uses hosted Supabase, test credentials must still point to an
+isolated local server. Shell environment values take precedence over app environment files.
+Do not change the application's hosted settings to run local tests.
+
+| Setting                       | Local test purpose                                                  |
+| ----------------------------- | ------------------------------------------------------------------- |
+| `OPERATOR_DATABASE_URL`       | Create and remove disposable API test databases on the local server |
+| `DATABASE_URL`                | Restricted API test connection to that same local server            |
+| `PROCESSOR_TEST_DATABASE_URL` | Local database fixture for processor lifecycle tests                |
+| `FACT_TEST_DATABASE_URL`      | Local database fixture for extraction lifecycle and allowance tests |
+| `SEARCH_TEST_DATABASE_URL`    | Local database fixture for search indexing and authorization tests  |
 
 ## Code organization
 
@@ -149,13 +155,14 @@ upstream dependency resolves a patched version. Regenerate the lockfile and reru
 
 Use `npm run format:python` for the processor and `npm run format:python:check` to
 check it without changes. The root `format` and `format:check` commands include both
-Prettier and Ruff. See [Python setup and style](python-processor.md#formatting-and-readability)
-for the required uv environment and editor integration.
+Prettier and Ruff. Install the locked Python environments below first. The workspace recommends the
+Python and Ruff editor extensions and uses Ruff for Python format-on-save.
 
 ## Python services
 
 Independently deployed Python workloads live under `services/`: `document-processor` handles
-native text/OCR and `fact-extractor` handles OpenAI facts. Each has its own `pyproject.toml`, pinned
+native text/OCR, `fact-extractor` handles OpenAI facts, and `search-indexer` handles
+passages and embeddings. Each has its own `pyproject.toml`, pinned
 `uv.lock`, adapters, services, handlers, and tests. JavaScript workspaces remain under `apps/` and
 `packages/`; Python environments are not npm workspaces.
 
@@ -164,5 +171,67 @@ After moving an existing checkout, recreate its virtual environment or run
 Formatting uses Ruff with four spaces, single quotes, and 100-character lines. Prettier continues
 to format TypeScript, CSS, JSON, and Markdown.
 
-See [fact extraction](fact-extraction.md) for the new service's database tests, provider evaluation,
-and disabled deployment configuration. Live provider tests are never part of CI.
+Use Python 3.13 and uv with the committed lockfiles:
+
+```sh
+uv sync --project services/document-processor --locked
+uv sync --project services/fact-extractor --locked
+uv sync --project services/search-indexer --locked
+npm run test:processor
+npm run test:facts
+npm run test:search
+```
+
+Python integration fixtures require the corresponding local test setting listed above.
+The processor can require database coverage explicitly:
+
+```sh
+uv run --project services/document-processor --locked pytest services/document-processor/tests --require-database
+uv run --project services/fact-extractor --locked pytest services/fact-extractor/tests
+uv run --project services/search-indexer --locked pytest services/search-indexer/tests
+```
+
+Lint, type, and dependency checks use each service's locked environment. For example:
+
+```sh
+uv run --project services/document-processor --locked ruff check services infra
+uv run --project services/document-processor --locked mypy services/document-processor/src --strict
+uv run --project services/document-processor --locked pip-audit --skip-editable
+```
+
+The same checks apply to the fact extractor and search indexer with their own project
+and source paths. Live provider evaluations are separate from CI; their behavior and
+limitations are described in [fact extraction](fact-extraction.md#verification).
+
+## Infrastructure validation
+
+Local infrastructure checks need Docker and the locked tooling environment, not cloud
+credentials. The wrapper builds Linux-compatible packages from temporary source directories.
+
+```sh
+uv sync --project infra/document-processing --locked
+uv run --project infra/document-processing --locked python infra/document-processing/scripts/validate_security.py
+uv run --project infra/document-processing --locked pytest infra/document-processing/tests
+uv run --project infra/document-processing --locked python infra/document-processing/scripts/build.py
+uv run --project infra/document-processing --locked python infra/document-processing/scripts/verify_build.py
+```
+
+## Authentication settings
+
+Next.js reads `apps/web/.env.local`; the API reads `apps/api/.env`. Public frontend
+identifiers are fixed at build time. The local SPA callback is
+`http://localhost:3000/auth/callback`; it must match the Entra registration.
+The [authentication guide](authentication.md) explains registration and token boundaries.
+
+## Local role administration
+
+After signing in to the local application once, copy the application user ID from
+**Profile**. With the operator connection pointing to that same local database:
+
+```sh
+npm run operator:role -- <application-user-id> super_admin
+```
+
+Replace the angle-bracket argument with the profile ID before running the command.
+The tool also supports `staff` and `admin`, audits changes, and protects the last active
+Super Admin. This is local developer tooling; hosted operations are documented privately.

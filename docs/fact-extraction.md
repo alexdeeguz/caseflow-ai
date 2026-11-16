@@ -1,5 +1,7 @@
 # OpenAI fact extraction
 
+[Back to README](../README.md)
+
 Fact extraction is a separate stage queued automatically when document text processing reaches
 Ready for an available document in a current case, including assigned Staff uploads. The feature
 creates unreviewed dates, providers, treatments, and findings with exact source quotations. Human
@@ -80,13 +82,12 @@ or differently supported facts remain separate.
 
 ## Database and permissions
 
-Migration `20261115230115_fact_extraction.sql` adds private-schema jobs, tasks, dispatches,
+The extraction schema contains private jobs, tasks, dispatches,
 versioned model prices, daily usage/reservations, facts, and evidence. Existing profiles, cases,
 documents, assignments, processing results, and audit history are preserved. It does not backfill
-extraction jobs or create login passwords.
+extraction jobs.
 
-Migration `20261116031252_automatic_fact_extraction.sql` adds the Ready-transition trigger and a
-private shared creation function. It does not change existing rows or grant new table-write
+A Ready-transition trigger uses a private shared creation function. It does not change existing rows or grant new table-write
 permissions. Duplicate completion, a no-op Ready update, or an existing extraction job cannot
 create another automatic job. Failed/cancelled jobs therefore remain terminal until an explicit
 administrator retry. The shared permission lock serializes the handoff with removal and archival.
@@ -151,37 +152,19 @@ reservation. Settlement after UTC rollover adjusts the original reservation day.
 is terminal until an administrator explicitly retries. This allowance does not cover AWS costs,
 other OpenAI projects, or the separate fixture evaluation command.
 
-## Local verification
+## Verification
 
-```sh
-uv sync --project services/fact-extractor --locked
-npm test
-npm run test:integration
-uv run --project services/fact-extractor --locked pytest services/fact-extractor/tests
-uv run --project services/fact-extractor --locked ruff check services/fact-extractor
-uv run --project services/fact-extractor --locked mypy services/fact-extractor/src --strict
-uv run --project services/fact-extractor --locked pip-audit --skip-editable
-```
+Automated tests use disposable local PostgreSQL databases and provider substitutes;
+they do not call OpenAI or require hosted credentials. The committed fictional fixtures
+exercise dates, ambiguity, negation, recommendations, conflicts, Unicode, irrelevant
+content, and document instructions. Commands are in [local development](development.md#python-services).
 
-For Python database tests, explicitly set `FACT_TEST_DATABASE_URL` to the local PostgreSQL operator
-connection. The fixture accepts only a loopback server and creates/drops isolated databases. Without
-that variable, database tests are skipped; CI supplies it. Tests do not use hosted credentials or call
-OpenAI. Existing processor checks now run from `services/document-processor`.
-
-The committed fictional fixtures exercise dates, ambiguity, negation, recommendations, conflicts,
-Unicode, irrelevant content, and document instructions. A live release evaluation is separate:
-
-```sh
-uv run --project services/fact-extractor --locked python services/fact-extractor/scripts/evaluate.py \
-  --output /absolute/private/path/fact-evaluation.json
-```
-
-Set `OPENAI_API_KEY` privately in the command environment. Never put it on the command line or in
-Git. The evaluation sends only committed fictional fixtures, has a separate conservative $0.50
-per-invocation ceiling, and creates a private report outside the repository. Repeated invocations
-have separate ceilings. Review every actual fact against the source and expected facts; record
-unsupported facts and missed expected facts. Citation validation alone is insufficient. The report
-never automatically approves release. Material errors block release.
+Provider evaluation is separate from the automated suite. It sends committed fictional
+fixtures to OpenAI, has a conservative $0.50 per-invocation ceiling independent of the
+application allowance, and produces a private report. Repeated evaluations have separate
+ceilings. Reports compare actual facts with source text and expected facts, including
+unsupported statements and missed information. Exact citation matching alone does not
+prove semantic correctness.
 
 ## Monitoring and recovery
 
@@ -194,19 +177,19 @@ Metrics use environment-only dimensions. Logs omit text, quotations, responses, 
 
 Scheduled recovery checks overdue work in bounded batches, preserves task IDs and reservations,
 and uses the outbox rather than direct queue sends. It cannot call OpenAI or reserve additional
-usage. Exhausted jobs require an explicit administrative retry. Do not purge or redrive whole
-queues automatically.
+usage. Exhausted jobs require an explicit administrative retry; recovery never purges
+queues or performs an unbounded redrive.
 
 ### Evaluation review checks
 
 The evaluator records a prompt checksum and checks expected provider affiliations and report
-attribution in structured qualifiers. Exact citations alone do not satisfy those checks. Review
-`missingQualifiers` alongside unsupported and missed facts before approving a release. These
-fixture checks do not replace semantic review. Progress messages contain only fixture counts.
-Choose a new report path for each run; existing reports are preserved.
+attribution in structured qualifiers. Exact citations alone do not satisfy those checks.
+The report includes `missingQualifiers`, unsupported facts, and missed facts; these fixture
+checks do not replace semantic review. Progress messages contain only fixture counts,
+and existing reports are preserved.
 
 Evaluation also reports `statusMismatches`, `unexpectedFactsWhenNoneExpected`, and
 `missedExpectedFacts`. Coverage checks compare fixture values case-insensitively and preserve
 category, polarity, date precision, status, and required qualifiers. Semantically equivalent
 wording can still need reviewer adjudication; empty diagnostics do not prove general accuracy.
-A passing small fixture run does not replace full-document verification before release.
+A small fixture evaluation does not establish accuracy on complete documents.

@@ -7,20 +7,17 @@ Use fictional data for demonstrations and testing.
 ## Features
 
 - **Users and permissions:** persistent profiles, Staff/Admin/Super Admin roles,
-  case assignments, account access controls, and audit history.
+  case assignments, account access controls, and audit history. See [users and cases](docs/users-and-cases.md).
 - **Cases:** creation, searchable lists, details, editing, and reversible archiving
-  with version checks to prevent overwriting concurrent changes.
+  with version checks to prevent overwriting concurrent changes. See [case management](docs/users-and-cases.md#creating-and-viewing-cases).
 - **Documents:** direct S3 uploads with server verification, a paginated library,
-  authorized downloads, reversible removal, and processing status with Admin start/retry controls.
-- **Document processing:** atomic job/dispatch creation, an opt-in API dispatcher
-  for SQS, authorized processing status/start/retry endpoints, restricted processor database functions,
-  and Python extraction/completion workers.
-
-Native PDF extraction, Textract OCR, bounded recovery, and monitoring are implemented and verified with fictional documents. Queue consumers and scheduled recovery run in AWS; continuous dispatch runs with the API. See [workflow verification](docs/processing-verification.md). File previews and extracted-text viewing remain outside this phase.
+  authorized downloads, reversible removal, and processing status. See [documents](docs/document-management.md).
+- **Document processing:** native PDF text extraction and Textract OCR, with queued jobs,
+  bounded retries, recovery, and status in the document library. See [processing](docs/document-processing.md).
 
 - **Fact extraction:** OpenAI-only unreviewed facts, queued automatically when document processing
   reaches Ready, with exact source quotations and a shared daily allowance. Retries and human
-  review remain manual. The development consumer and dispatcher are enabled. See [fact extraction](docs/fact-extraction.md).
+  review remain manual. See [fact extraction](docs/fact-extraction.md).
 
 - **Human review:** versioned fact corrections, Staff rejection, administrator approval/reopening,
   immutable evidence, and protected review history. See [human review](docs/human-review.md).
@@ -49,7 +46,7 @@ Native PDF extraction, Textract OCR, bounded recovery, and monitoring are implem
 | [packages/dispatch](packages/dispatch)                     | Shared outbox claims, queue adapters, leases, and bounded delivery                  |
 | [infra/application](infra/application)                     | API container, scheduled dispatcher, and gated application delivery definitions     |
 | [supabase](supabase)                                       | PostgreSQL migrations, local configuration, and fictional seed data                 |
-| [docs](docs)                                               | Setup guides, feature behavior, and technical references                            |
+| [docs](docs)                                               | Local development, feature behavior, and design references                          |
 
 The API connects to a private PostgreSQL schema using restricted credentials.
 Microsoft Entra provides authentication; S3 stores document bytes. The browser does
@@ -72,10 +69,10 @@ Local PostgreSQL requires Docker Desktop; hosted Supabase is also supported.
 
    Preserve existing environment files when updating an installation.
 
-2. Configure [Microsoft Entra authentication](docs/authentication.md#registration-and-configuration)
-   and choose either [local PostgreSQL](docs/development.md#local-database) or
-   [hosted Supabase](docs/hosted-database.md). Complete that guide's migrations and
-   restricted database connection setup before starting the app.
+2. Follow [local database setup](docs/development.md#first-time-database-setup) and
+   [authentication settings](docs/development.md#authentication-settings). The local API
+   uses restricted database credentials; environment files remain outside Git.
+
 3. Start both apps from the repository root:
 
    ```sh
@@ -83,10 +80,10 @@ Local PostgreSQL requires Docker Desktop; hosted Supabase is also supported.
    ```
 
 4. Open [localhost:3000](http://localhost:3000) and sign in. New users start as Staff
-   with no case assignments. Follow [roles and administration](docs/users-and-cases.md#roles-and-administration)
-   to bootstrap a Super Admin in the selected database.
-5. Configure [document storage](docs/document-management.md#configuration) to enable
-   uploads and downloads. Core profile and case features work without S3 configuration.
+   with no case assignments. Use [local role administration](docs/development.md#local-role-administration)
+   when testing administrator features.
+   Core profile and case features work without S3 configuration. File operations depend
+   on the server-only storage settings described in [document management](docs/document-management.md#configuration).
 
 The API binds to `http://127.0.0.1:4000`; its root path returns 404 and `GET /me`
 requires a valid CaseFlow access token. Stop the apps with Ctrl+C. If using local
@@ -113,26 +110,23 @@ individually, integration-test prerequisites, and dependency maintenance.
 
 ## Documentation
 
-| Guide                                                        | Contents                                                                                    |
-| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
-| [Local development](docs/development.md)                     | Docker/PostgreSQL setup, verification, code organization, and dependency maintenance        |
-| [Application architecture](docs/application-architecture.md) | Vercel frontend, Lambda container, outbox delivery, runtime boundaries, and CI checks       |
-| [Hosted database](docs/hosted-database.md)                   | Connection design, TLS, restricted roles, environment switching, and backups                |
-| [Authentication](docs/authentication.md)                     | Entra registration, token validation, session behavior, and sign-in verification            |
-| [Users and cases](docs/users-and-cases.md)                   | Permission matrix, Super Admin setup, assignments, editing, and archiving                   |
-| [Fact extraction](docs/fact-extraction.md)                   | OpenAI facts, evidence, allowance controls, evaluation, and monitoring                      |
-| [Case history](docs/case-history.md)                         | Approved timeline, structured summary, sources, permissions, and freshness                  |
-| [Human review](docs/human-review.md)                         | Corrections, approval permissions, immutable evidence, revision history, and release checks |
-| [API reference](docs/api.md)                                 | Route organization, request/response contracts, pagination, and errors                      |
-| [Document management](docs/document-management.md)           | S3 configuration, uploads, library, downloads, removal, and consistency rules               |
-| [Document processing](docs/document-processing.md)           | Job/dispatch records, the API dispatcher, permissions, and configuration                    |
-| [Processor database](docs/processor-database.md)             | Worker functions, leases, OCR allowance, artifacts, cancellation, and the processor login   |
-| [Python processor](docs/python-processor.md)                 | Extraction, OCR decisions, resource limits, configuration, and verification                 |
-| [Textract completion](docs/textract-completion.md)           | Notification validation, result collection, artifact format, and publication recovery       |
-
-See [Lambda configuration](docs/lambda-configuration.md) for runtime settings, credentials and
-packaged TLS trust, IAM boundaries, and container builds.
-
-See [processing recovery and monitoring](docs/processing-recovery.md) for recovery rules, monitoring, alerts, and operator recovery principles.
-
-See [workflow verification](docs/processing-verification.md) for the automated test matrix, end-to-end results with fictional native, scanned, and image documents, and known limits.
+| Guide                                                        | Contents                                                                                  |
+| ------------------------------------------------------------ | ----------------------------------------------------------------------------------------- |
+| [Local development](docs/development.md)                     | Docker/PostgreSQL setup, verification, code organization, and dependency maintenance      |
+| [Application architecture](docs/application-architecture.md) | Vercel frontend, Lambda container, outbox delivery, runtime boundaries, and CI checks     |
+| [Hosted database](docs/hosted-database.md)                   | Connection design, TLS, restricted roles, and data boundaries                             |
+| [Authentication](docs/authentication.md)                     | Entra identity, token validation, and session behavior                                    |
+| [Users and cases](docs/users-and-cases.md)                   | Permission matrix, assignments, editing, and archiving                                    |
+| [Fact extraction](docs/fact-extraction.md)                   | OpenAI facts, evidence, allowance controls, evaluation, and monitoring                    |
+| [Case history](docs/case-history.md)                         | Approved timeline, structured summary, sources, permissions, and freshness                |
+| [Human review](docs/human-review.md)                         | Corrections, approval permissions, immutable evidence, and revision history               |
+| [API reference](docs/api.md)                                 | Route organization, request/response contracts, pagination, and errors                    |
+| [Document management](docs/document-management.md)           | S3 configuration, uploads, library, downloads, removal, and consistency rules             |
+| [Document processing](docs/document-processing.md)           | Job/dispatch records, the API dispatcher, permissions, and configuration                  |
+| [Processor database](docs/processor-database.md)             | Worker functions, leases, OCR allowance, artifacts, cancellation, and the processor login |
+| [Python processor](docs/python-processor.md)                 | Extraction, OCR decisions, resource limits, configuration, and verification               |
+| [Textract completion](docs/textract-completion.md)           | Notification validation, result collection, artifact format, and publication recovery     |
+| [Document search](docs/document-search.md)                   | Keyword and semantic ranking, authorization, embeddings, and limits                       |
+| [Lambda configuration](docs/lambda-configuration.md)         | Runtime limits, TLS trust, IAM boundaries, and package design                             |
+| [Processing recovery](docs/processing-recovery.md)           | Bounded recovery, monitoring, and allowance boundaries                                    |
+| [Workflow verification](docs/processing-verification.md)     | Automated coverage and verification limitations                                           |

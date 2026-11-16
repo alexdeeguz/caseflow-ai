@@ -1,5 +1,7 @@
 # Document search
 
+[Back to README](../README.md)
+
 Document search finds passages in processed document text across the cases a user can access.
 Results show the case, file, page, and a highlighted snippet. Selecting a result opens the same
 document details drawer as the Documents tab (file details, processing, and extracted facts with

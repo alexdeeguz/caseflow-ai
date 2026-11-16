@@ -3,8 +3,8 @@
 [Back to README](../README.md)
 
 Recovery repairs interrupted delivery and missing OCR notifications while preserving the original
-job, source version, OCR request token, and reserved page allowance. See [workflow verification](processing-verification.md) for what has been
-verified.
+job, source version, OCR request token, and reserved page allowance. See
+[workflow verification](processing-verification.md) for test coverage and its limits.
 
 ## Recovery rules
 

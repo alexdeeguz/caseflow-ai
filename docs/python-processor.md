@@ -6,7 +6,7 @@ The extraction worker is implemented in `services/document-processor`. It consum
 processing jobs, publishes native PDF text, and starts asynchronous Textract OCR.
 The completion worker also collects Textract results and publishes OCR artifacts.
 The [processing API](document-processing.md#processing-api) exposes saved job state; see
-[workflow verification](processing-verification.md) for what has been verified.
+[workflow verification](processing-verification.md) for test coverage and its limits.
 
 ## Structure and local tooling
 
@@ -22,30 +22,12 @@ The [processing API](document-processing.md#processing-api) exposes saved job st
 | `models.py`, `constants.py`, `config.py` | Validated contracts, limits, and server configuration                            |
 | `tests/`                                 | Shared-contract fixtures, parser, AWS adapter, orchestration, and database tests |
 
-Use Python 3.13 and uv. `pyproject.toml` pins direct dependencies; `uv.lock` locks
-the full dependency graph and hashes. Python dependencies are separate from npm.
-From the repository root:
+Python 3.13 dependencies are independent of npm. `pyproject.toml` pins direct
+dependencies and `uv.lock` locks the full graph and hashes. Setup, formatting, and
+test commands are in [local development](development.md#python-services).
 
-```sh
-uv sync --project services/document-processor --locked
-npm run test:processor
-uv run --project services/document-processor --locked ruff check services/document-processor
-uv run --project services/document-processor --locked ruff format --check services/document-processor
-uv run --project services/document-processor --locked mypy services/document-processor/src --strict
-uv build --project services/document-processor
-uv run --project services/document-processor --locked pip-audit --skip-editable
-```
-
-Run database tests with `PROCESSOR_TEST_DATABASE_URL` set to an **operator connection
-on a disposable local PostgreSQL server**, using database `postgres`. They reject
-remote hosts, create a uniquely named test database, apply the repository migrations,
-create a temporary restricted processor login, and remove both afterward. Never use
-hosted credentials. The local server must provide the standard Supabase roles.
-
-```sh
-uv run --project services/document-processor --locked pytest services/document-processor/tests \
-  -m integration --require-database
-```
+Database fixtures accept only a local PostgreSQL server, create isolated databases,
+exercise restricted processor permissions, and remove their own test resources.
 
 The existing Test & Build workflow runs the Python checks, unit and database tests,
 and package build after its PostgreSQL tests. It uses only disposable local data.
@@ -56,29 +38,11 @@ must pass both suites. These are handwritten contracts, not generated models.
 
 ## Formatting and readability
 
-Ruff owns Python formatting; Prettier continues to format JavaScript/TypeScript,
-JSON, CSS, and Markdown. Python uses 100-character lines, single quotes where they
-avoid extra escaping, trailing commas in multiline constructs, LF line endings,
-and four-space indentation. Docstrings retain conventional triple double quotes.
-JavaScript-specific settings such as semicolons and arrow parentheses do not apply.
-
-`pyproject.toml` is the source of truth for Python style. EditorConfig agrees on
-four-space Python indentation. The workspace recommends the Python and Ruff editor
-extensions and selects Ruff for Python format-on-save; install the recommended
-extensions in VS Code or a compatible editor to enable this.
-
-From the repository root:
-
-```sh
-npm run format:python
-npm run format:python:check
-```
-
-`npm run format` and `npm run format:check` run both Prettier and Ruff and therefore
-require the Python/uv setup above. Ruff lint and strict mypy remain separate checks.
-Keep logical phases separated by blank lines, give helpers concrete responsibilities,
-and retain comments that explain constraints or recovery behavior. Share test data
-builders in `tests/factories.py`; tests should not import other test modules.
+Python uses Ruff with four-space indentation, single quotes, and 100-character lines.
+Prettier formats TypeScript, JSON, CSS, and Markdown. See
+[local formatting](development.md#python-formatting) for editor and command details.
+Helpers separate logical phases, and comments explain constraints or recovery behavior.
+Test data builders are shared without importing one test module from another.
 
 ## Queue and database behavior
 
@@ -154,15 +118,14 @@ If a start times out or receipt persistence fails, the next claim reuses the sav
 request unchanged, even after deployment settings change. It does not allocate a new
 token or reservation. Database checks prohibit restarting unresolved intents after
 six days. Textract tokens last seven days, and repeating a successful start returns
-the same ID **without sending another completion notification**. The later recovery
-step must inspect saved jobs; retrying a start cannot replace reconciliation.
+the same ID **without sending another completion notification**. Recovery inspects saved jobs; retrying a start cannot replace reconciliation.
 [Textract asynchronous behavior](https://docs.aws.amazon.com/textract/latest/dg/api-async.html)
 
 ## Configuration
 
 `services/document-processor/.env.example` lists server-only settings. The handler does
-not automatically load `.env` files. Supply values through the local process or a secret
-store; never commit credentials.
+not automatically load `.env` files. Configuration comes from the process environment
+or a secret store; credentials remain outside Git.
 
 | Setting                                                      | Purpose                                                                                        |
 | ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------- |
@@ -170,9 +133,9 @@ store; never commit credentials.
 | `PROCESSOR_QUEUE_ARN`                                        | Only the main processing queue may invoke this handler                                         |
 | `PROCESSOR_STORAGE_BUCKET` / `PROCESSOR_STORAGE_ENVIRONMENT` | Restrict the trusted snapshot to this workload's storage                                       |
 | `TEXTRACT_COMPLETION_QUEUE_ARN`                              | Required by the completion handler; separate standard queue in the same project/Region         |
-| `TEXTRACT_NOTIFICATION_TOPIC_ARN`                            | Existing `AmazonTextract-` SNS topic                                                           |
+| `TEXTRACT_NOTIFICATION_TOPIC_ARN`                            | Configured completion SNS topic                                                                |
 | `TEXTRACT_NOTIFICATION_ROLE_ARN`                             | Existing Textract notification role                                                            |
-| `AWS_REGION`                                                 | `us-east-2`                                                                                    |
+| `AWS_REGION`                                                 | Selected Region for AWS requests                                                               |
 
 The extraction handler is `caseflow_processor.handlers.processing.handler`; the
 completion handler is `caseflow_processor.handlers.completion.handler`. The public

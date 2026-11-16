@@ -1,5 +1,7 @@
 # Case timeline and reviewed summary
 
+[Back to README](../README.md)
+
 Case details provide **Overview**, **Documents**, **Timeline**, and **Reviewed summary** sections.
 The last two are read-only projections of current approved facts. They use ordinary API queries;
 there are no AI calls, queues, saved summaries, or additional background jobs. The manually entered
@@ -91,7 +93,7 @@ failures retain the last verified content with a stale-data notice and pause dow
 rejection clears protected content. Background refresh does not move focus or replace the list
 layout with a loading screen.
 
-## Verification and release
+## Verification
 
 Signed-token integration tests use disposable PostgreSQL databases and restricted runtime
 credentials. They cover effective corrections, approval transitions, role/assignment boundaries,
@@ -105,7 +107,5 @@ Browser checks use real components with isolated fictional responses for desktop
 layouts, expandable evidence, keyboard interaction, pagination, bookmarks/refresh, Back/Forward,
 and transient/denied/empty states. They do not constitute hosted end-to-end verification.
 
-The existing `20261116011952_human_review.sql` migration is a prerequisite; this feature adds no
-migration. Hosted migration review/application and live extraction-to-review verification remain
-separate release tasks. Do not backfill facts or enable extraction to test these read-only views.
-See [human review](human-review.md) and [fact extraction](fact-extraction.md) for those release gates.
+The approved-fact view supplied by [human review](human-review.md) is a prerequisite.
+Timeline and reviewed summary add no tables, stored summaries, or background jobs.
