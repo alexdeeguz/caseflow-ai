@@ -4,7 +4,7 @@ import os
 import re
 from functools import lru_cache
 from time import monotonic
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import boto3
 from botocore.config import Config
@@ -16,6 +16,7 @@ from .adapters.openai import OpenAIFactProvider
 from .adapters.storage import S3TextStorage
 from .config import DatabaseSecret, OpenAISecret, Settings
 from .constants import REGION
+from .ports import RetryQueue
 from .services.extractor import Extractor
 from .telemetry import emit
 
@@ -41,6 +42,23 @@ def aws_clients() -> tuple[SecretsManagerClient, S3Client]:
             endpoint_url=f'https://secretsmanager.{REGION}.amazonaws.com',
         ),
         session.client('s3', config=config, endpoint_url=f'https://s3.{REGION}.amazonaws.com'),
+    )
+
+
+@lru_cache(maxsize=1)
+def retry_queue() -> RetryQueue:
+    """SQS client used only to shorten redelivery waits; short timeouts keep failures cheap."""
+    session = boto3.Session(region_name=REGION)
+    config = Config(
+        region_name=REGION,
+        retries={'mode': 'standard', 'total_max_attempts': 2},
+        connect_timeout=2,
+        read_timeout=3,
+        max_pool_connections=1,
+    )
+    return cast(
+        RetryQueue,
+        session.client('sqs', config=config, endpoint_url=f'https://sqs.{REGION}.amazonaws.com'),
     )
 
 

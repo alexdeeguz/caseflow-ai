@@ -28,6 +28,12 @@ class JobStore(Protocol):
     def retry(self, claim: Claim) -> None: ...
 
 
+class RetryQueue(Protocol):
+    def change_message_visibility(
+        self, *, QueueUrl: str, ReceiptHandle: str, VisibilityTimeout: int
+    ) -> object: ...
+
+
 class TextStorage(Protocol):
     def read(self, claim: Claim) -> dict[int, str]: ...
 

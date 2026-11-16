@@ -260,6 +260,99 @@ def test_unrecordable_or_malformed_deliveries_remain_retryable(caplog):
     assert 'private content' not in caplog.text
 
 
+def _delivery(queue: str, receives: str | None = '1') -> dict[str, object]:
+    record: dict[str, object] = {
+        'messageId': 'test-1',
+        'receiptHandle': 'handle-1',
+        'eventSource': 'aws:sqs',
+        'eventSourceARN': queue,
+        'awsRegion': 'us-east-2',
+        'body': 'invalid',
+    }
+    if receives is not None:
+        record['attributes'] = {'ApproximateReceiveCount': receives}
+    return {'Records': [record]}
+
+
+def _failing_extractor() -> Mock:
+    extractor = Mock()
+    extractor.consume.side_effect = RetryableError('Task is leased')
+    return extractor
+
+
+@pytest.mark.parametrize(
+    ('receives', 'delay'),
+    [('1', 30), ('2', 60), ('3', 120), ('4', 240), ('5', 240), ('9', 240), (None, 30), ('x', 30)],
+)
+def test_failed_delivery_is_redelivered_after_a_growing_delay(receives, delay):
+    context = Mock()
+    context.get_remaining_time_in_millis.return_value = 120000
+    queue_arn = 'arn:aws:sqs:us-east-2:123456789012:facts'
+    sqs = Mock()
+
+    result = consume_batch(
+        _delivery(queue_arn, receives), context, _failing_extractor(), queue_arn, sqs
+    )
+
+    assert result == {'batchItemFailures': [{'itemIdentifier': 'test-1'}]}
+    sqs.change_message_visibility.assert_called_once_with(
+        QueueUrl='https://sqs.us-east-2.amazonaws.com/123456789012/facts',
+        ReceiptHandle='handle-1',
+        VisibilityTimeout=delay,
+    )
+
+
+def test_retry_delays_outlast_the_task_lease_within_the_delivery_limit():
+    from caseflow_facts.handlers.extraction import RETRY_DELAYS_SECONDS
+
+    # Five deliveries before the dead-letter queue leave four waits; together they must exceed
+    # the 180-second lease so a delivery that found the task leased can still claim it.
+    assert sum(RETRY_DELAYS_SECONDS[:4]) > 180
+    assert list(RETRY_DELAYS_SECONDS) == sorted(RETRY_DELAYS_SECONDS)
+
+
+def test_unavailable_retry_delay_keeps_the_delivery_retryable(caplog):
+    context = Mock()
+    context.get_remaining_time_in_millis.return_value = 120000
+    queue_arn = 'arn:aws:sqs:us-east-2:123456789012:facts'
+    sqs = Mock()
+    sqs.change_message_visibility.side_effect = RuntimeError('network down')
+
+    result = consume_batch(_delivery(queue_arn), context, _failing_extractor(), queue_arn, sqs)
+
+    assert result == {'batchItemFailures': [{'itemIdentifier': 'test-1'}]}
+    assert 'fact_retry_delay_unavailable' in caplog.text
+    assert 'network down' not in caplog.text
+
+
+def test_retry_delay_is_not_changed_for_untrusted_or_late_deliveries():
+    queue_arn = 'arn:aws:sqs:us-east-2:123456789012:facts'
+    sqs = Mock()
+
+    other_queue = _delivery('arn:aws:sqs:us-east-2:123456789012:other')
+    context = Mock()
+    context.get_remaining_time_in_millis.return_value = 120000
+    consume_batch(other_queue, context, _failing_extractor(), queue_arn, sqs)
+
+    almost_out_of_time = Mock()
+    almost_out_of_time.get_remaining_time_in_millis.return_value = 1000
+    consume_batch(_delivery(queue_arn), almost_out_of_time, _failing_extractor(), queue_arn, sqs)
+
+    sqs.change_message_visibility.assert_not_called()
+
+
+def test_successful_delivery_does_not_change_visibility():
+    context = Mock()
+    context.get_remaining_time_in_millis.return_value = 120000
+    queue_arn = 'arn:aws:sqs:us-east-2:123456789012:facts'
+    sqs = Mock()
+
+    assert consume_batch(_delivery(queue_arn), context, Mock(), queue_arn, sqs) == {
+        'batchItemFailures': []
+    }
+    sqs.change_message_visibility.assert_not_called()
+
+
 @pytest.mark.parametrize(
     ('category', 'allowed_fields'),
     [

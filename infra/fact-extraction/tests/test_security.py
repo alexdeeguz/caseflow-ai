@@ -31,6 +31,7 @@ def test_runtime_role_has_only_required_scoped_permissions():
         'sqs:ReceiveMessage',
         'sqs:DeleteMessage',
         'sqs:GetQueueAttributes',
+        'sqs:ChangeMessageVisibility',
         'logs:CreateLogStream',
         'logs:PutLogEvents',
         'secretsmanager:GetSecretValue',

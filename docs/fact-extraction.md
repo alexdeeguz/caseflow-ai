@@ -190,6 +190,10 @@ alert topic. The dashboard shows provider attempts, retries, failures, latency, 
 and conservative maximum allowance reservations. Reserved-usage metrics do not subtract later
 settlements; PostgreSQL is authoritative for the actual remaining application allowance. Partial
 batch failures do not count as Lambda invocation errors, so DLQ and queue-age alarms remain important.
+A failed delivery is redelivered after 30, 60, 120, then 240 seconds instead of the queue's
+720-second visibility timeout. The growing waits keep the five deliveries before the DLQ longer
+than the 180-second task lease, and they do not add provider attempts, which stay capped at three
+per chunk. If the wait cannot be shortened, the visibility timeout applies.
 Metrics use environment-only dimensions. Logs omit text, quotations, responses, and secrets.
 
 Scheduled recovery checks overdue work in bounded batches, preserves task IDs and reservations,
